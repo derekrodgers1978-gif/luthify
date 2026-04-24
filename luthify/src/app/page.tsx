@@ -35,7 +35,8 @@ export default function HomePage() {
           </h1>
 
           <p style={{ fontSize: '1.05rem', lineHeight: 1.75, color: 'rgba(245,241,232,0.55)', marginBottom: 44, maxWidth: '30rem', fontWeight: 300 }}>
-            Design your dream instrument. Then request quotes from verified luthiers worldwide. Founded by real instrument sellers — including the team behind <strong style={{ color: '#C9A45C', fontWeight: 500 }}>Tsunami Guitars</strong>.
+            Design your dream instrument. Then request quotes from verified luthiers worldwide. Founded by real instrument sellers — including the team behind <strong style={{ color: '#C9A45C', fontWeight: 500 }}>Tsunami Guitars</strong>{' '}
+            <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 8, padding: '3px 10px', borderRadius: 999, background: 'rgba(201,164,92,0.08)', border: '1px solid rgba(201,164,92,0.2)', color: '#C9A45C', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', verticalAlign: 'middle' }}>Founding Platform</span>.
           </p>
 
           <div style={{ display: 'flex', gap: 14, marginBottom: 44, flexWrap: 'wrap' }}>
@@ -50,7 +51,7 @@ export default function HomePage() {
           {/* Social proof */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex' }}>
-              {['TG','JM','AR','TN','MC'].map((av, i) => (
+              {['JM','AR','TN','MC','WA'].map((av, i) => (
                 <div key={av} style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', border: '2px solid #09090B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 700, color: '#09090B', marginLeft: i === 0 ? 0 : -8 }}>{av}</div>
               ))}
             </div>
@@ -184,7 +185,7 @@ export default function HomePage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 48, marginBottom: 48, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.3rem', fontWeight: 700, marginBottom: 12, background: 'linear-gradient(135deg,#F5F1E8,#C9A45C)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Luthify</div>
-              <p style={{ color: 'rgba(245,241,232,0.55)', fontSize: '0.88rem', lineHeight: 1.7, fontWeight: 300 }}>The premium marketplace for handcrafted and custom stringed instruments. Founded by real instrument sellers — including the team behind Tsunami Guitars.</p>
+              <p style={{ color: 'rgba(245,241,232,0.55)', fontSize: '0.88rem', lineHeight: 1.7, fontWeight: 300 }}>The premium marketplace for handcrafted and custom stringed instruments. A Tsunami Guitars initiative.</p>
             </div>
             {[
               { title: 'Product', links: [['Configurator','/configurator'],['Builders','/builders'],['How It Works','#how-it-works']] },

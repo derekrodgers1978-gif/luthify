@@ -2,21 +2,6 @@ import type { Builder } from '@/types'
 
 export const BUILDERS: Builder[] = [
   {
-    id: 'tsunami-guitars',
-    slug: 'tsunami-guitars',
-    shopName: 'Tsunami Guitars',
-    location: 'Canada',
-    speciality: 'Electric Guitars',
-    bio: 'Founded by real instrument sellers. Builders of exceptional electric guitars and custom instruments. Every build is handcrafted to order.',
-    rating: 4.9,
-    reviewCount: 47,
-    avgBuildWeeks: 8,
-    verified: true,
-    featured: true,
-    avatar: 'TG',
-    listingCount: 12,
-  },
-  {
     id: 'morrison-custom',
     slug: 'morrison-custom',
     shopName: 'J. Morrison Custom',
@@ -92,5 +77,3 @@ export const BUILDERS: Builder[] = [
     listingCount: 9,
   },
 ]
-
-export const FEATURED_BUILDER = BUILDERS.find(b => b.featured)!

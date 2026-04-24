@@ -4,7 +4,7 @@ import { BUILDERS } from '@/lib/builders-data'
 import QuoteModal from '@/components/ui/QuoteModal'
 import type { Builder } from '@/types'
 
-const SPECIALITIES = ['All', 'Electric Guitars', 'Acoustic Guitars', 'Orchestral & Acoustic', 'Ukuleles', 'Hollowbody & Archtop', 'Electric & Semi-Hollow']
+const SPECIALITIES = ['All', 'Electric & Semi-Hollow', 'Acoustic Guitars', 'Orchestral & Acoustic', 'Ukuleles', 'Hollowbody & Archtop']
 
 export default function BuildersClient() {
   const [filter, setFilter] = useState('All')
@@ -43,26 +43,6 @@ export default function BuildersClient() {
           </button>
         ))}
       </div>
-
-      {/* Featured builder */}
-      {filter === 'All' && (
-        <div style={{ background: 'linear-gradient(135deg,rgba(201,164,92,0.08),rgba(201,164,92,0.03))', border: '1px solid rgba(201,164,92,0.25)', borderRadius: 24, padding: '32px 40px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem', color: '#09090B', flexShrink: 0 }}>TG</div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Tsunami Guitars</span>
-                <span style={{ fontSize: '0.62rem', color: '#C9A45C', background: 'rgba(201,164,92,0.1)', border: '1px solid rgba(201,164,92,0.25)', borderRadius: 999, padding: '2px 9px', fontWeight: 600 }}>★ Featured Seller</span>
-              </div>
-              <span style={{ fontSize: '0.84rem', color: 'rgba(245,241,232,0.55)' }}>Founded by real instrument sellers · Canada · Electric Guitars · 4.9★ · Avg 8 wk build</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-ghost" onClick={() => openQuote('tsunami-guitars')} style={{ padding: '11px 20px', fontSize: '0.85rem' }}>Request Quote</button>
-          </div>
-        </div>
-      )}
-
       {/* Builder grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20 }}>
         {filtered.map(b => <BuilderCard key={b.id} builder={b} onQuote={() => openQuote(b.id)} />)}
