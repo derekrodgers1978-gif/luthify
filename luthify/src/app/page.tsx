@@ -70,7 +70,7 @@ export default function HomePage() {
         <div style={{ position: 'relative', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', bottom: -40, left: '50%', transform: 'translateX(-50%)', width: 460, height: 680, background: 'radial-gradient(ellipse at 50% 85%, rgba(201,164,92,0.18) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, rgba(201,164,92,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 2 }} />
           <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(680px, 88%)', opacity: 0.052, pointerEvents: 'none', zIndex: 1 }}>
-            <img src="/luthify-logo.webp" alt="" style={{ width: '100%', height: 'auto', display: 'block', mixBlendMode: 'lighten', filter: 'sepia(1) saturate(2) hue-rotate(4deg) brightness(0.8)' }} />
+            <img src="/luthify_black_logo.webp" alt="" style={{ width: '100%', height: 'auto', display: 'block', mixBlendMode: 'lighten', filter: 'sepia(1) saturate(2) hue-rotate(4deg) brightness(0.8)' }} />
           </div>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 55%, rgba(201,164,92,0.09) 0%, transparent 58%), radial-gradient(ellipse at 20% 50%, rgba(9,9,11,0.6) 0%, transparent 45%)', pointerEvents: 'none', zIndex: 4 }} />
           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 140, background: 'linear-gradient(to right, #09090B, transparent)', pointerEvents: 'none', zIndex: 5 }} />

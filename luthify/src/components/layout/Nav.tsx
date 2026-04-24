@@ -17,7 +17,7 @@ export default function Nav() {
       }}>
         <div style={{ width: 'min(1280px, calc(100% - 48px))', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 76, gap: 24 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <span style={{ fontFamily: "'Bodoni Moda', serif", fontSize: '1.4rem', fontWeight: 700, background: 'linear-gradient(135deg, #F5F1E8, #C9A45C)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Luthify</span>
+            <img src="/luthify_black_logo.webp" alt="Luthify" style={{ display: 'block', width: 'auto', height: 36 }} />
           </Link>
 
           {/* Desktop links */}
