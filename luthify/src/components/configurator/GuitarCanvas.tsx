@@ -1,10 +1,10 @@
 'use client'
-import { useRef, useMemo, useEffect } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Environment, Float } from '@react-three/drei'
+import { useRef, useMemo } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { Environment, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
-import { FINISHES, FRETBOARDS } from '@/lib/configurator-options'
+import { FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, TOPS } from '@/lib/configurator-options'
 
 // ── Procedural guitar body (placeholder until GLTF model arrives) ─────────────
 function GuitarBody() {
@@ -15,6 +15,10 @@ function GuitarBody() {
 
   const finish  = FINISHES.find(f => f.id === store.finish)
   const fb      = FRETBOARDS.find(f => f.id === store.fretboard)
+  const top     = TOPS.find(t => t.id === store.top)
+  const neck    = NECK_WOODS.find(n => n.id === store.neck)
+  const hw      = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const hardwareColor = hw?.id === 'gold' ? '#C9A45C' : hw?.id === 'black' ? '#121216' : hw?.id === 'chrome' ? '#C9CED6' : '#A8A39A'
 
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: new THREE.Color(finish?.hex ?? '#D4B896'),
@@ -24,10 +28,24 @@ function GuitarBody() {
   }), [finish?.hex, finish?.roughness])
 
   const neckMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#2C1503'),
+    color: new THREE.Color(neck?.id === 'maple' ? '#C8A05A' : neck?.id === 'roasted' ? '#8B4A20' : neck?.id === 'walnut' ? '#4A2411' : '#5C2F17'),
     roughness: 0.5,
     metalness: 0,
-  }), [])
+  }), [neck?.id])
+
+  const topMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: new THREE.Color(top?.id === 'solid' ? (finish?.hex ?? '#D4B896') : top?.id === 'flame' ? '#C68B4A' : top?.id === 'burl' ? '#8B4D26' : '#D0A15F'),
+    roughness: 0.28,
+    metalness: 0.01,
+    transparent: true,
+    opacity: top?.id === 'solid' ? 0.18 : 0.42,
+  }), [finish?.hex, top?.id])
+
+  const hardwareMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: new THREE.Color(hardwareColor),
+    metalness: 0.82,
+    roughness: 0.26,
+  }), [hardwareColor])
 
   const fbMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: new THREE.Color(fb?.hex ?? '#1A0A00'),
@@ -62,9 +80,11 @@ function GuitarBody() {
   }, [])
 
   return (
-    <group rotation={[0.1, 0.2, 0.05]}>
+    <group rotation={[0.02, 0.12, 0.02]} position={[0, -0.65, 0]}>
       {/* Body */}
       <mesh ref={meshRef} geometry={bodyShape} material={bodyMat} castShadow receiveShadow position={[0, 0, 0]} />
+
+      <mesh geometry={bodyShape} material={topMat} position={[0, 0, 0.16]} scale={[0.93, 0.93, 0.08]} />
 
       {/* Neck */}
       <mesh ref={neckRef} material={neckMat} castShadow position={[0.08, 2.2, 0.05]}>
@@ -83,33 +103,30 @@ function GuitarBody() {
 
       {/* Pickups */}
       <mesh position={[0.05, 0.4, 0.2]}>
-        <boxGeometry args={[0.72, 0.18, 0.06]} />
+        <boxGeometry args={[store.pickups === 'singlecoil' ? 0.62 : 0.72, store.pickups === 'p90' ? 0.26 : 0.18, 0.06]} />
         <meshStandardMaterial color="#0a0500" roughness={0.8} />
       </mesh>
       <mesh position={[0.05, -0.3, 0.2]}>
-        <boxGeometry args={[0.72, 0.18, 0.06]} />
+        <boxGeometry args={[store.pickups === 'hss' ? 0.62 : 0.72, store.pickups === 'p90' ? 0.26 : 0.18, 0.06]} />
         <meshStandardMaterial color="#0a0500" roughness={0.8} />
       </mesh>
 
       {/* Bridge */}
-      <mesh position={[0.05, -0.7, 0.2]}>
-        <boxGeometry args={[0.55, 0.08, 0.05]} />
-        <meshStandardMaterial color="#888" metalness={0.8} roughness={0.3} />
+      <mesh position={[0.05, -0.7, 0.2]} material={hardwareMat}>
+        <boxGeometry args={[store.bridge === 'bigsby' ? 0.75 : 0.55, store.bridge === 'trem' ? 0.16 : 0.08, 0.05]} />
       </mesh>
 
       {/* Strings */}
       {[-0.12,-0.07,-0.02,0.02,0.07,0.12].map((x, i) => (
-        <mesh key={i} position={[x, 1.2, 0.22]}>
+        <mesh key={i} position={[x, 1.2, 0.22]} material={hardwareMat}>
           <cylinderGeometry args={[0.004, 0.004, 3.8, 4]} />
-          <meshStandardMaterial color="#E2C07A" metalness={0.9} roughness={0.1} />
         </mesh>
       ))}
 
       {/* Knobs */}
       {[[0.85, -0.9], [1.0, -1.1], [0.85, -1.3]].map(([x,y], i) => (
-        <mesh key={i} position={[x as number, y as number, 0.2]}>
+        <mesh key={i} position={[x as number, y as number, 0.2]} material={hardwareMat}>
           <cylinderGeometry args={[0.07, 0.07, 0.09, 12]} />
-          <meshStandardMaterial color="#C9A45C" metalness={0.7} roughness={0.3} />
         </mesh>
       ))}
     </group>
@@ -125,9 +142,7 @@ function Scene() {
       <pointLight position={[-3, 2, 2]} color="#C9A45C" intensity={0.8} />
       <pointLight position={[2, -2, 3]} color="#fff" intensity={0.3} />
       <Environment preset="studio" />
-      <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.4}>
-        <GuitarBody />
-      </Float>
+      <GuitarBody />
     </>
   )
 }
@@ -136,7 +151,7 @@ function Scene() {
 export default function GuitarCanvas() {
   return (
     <Canvas
-      camera={{ position: [0, 0.5, 5.5], fov: 42 }}
+      camera={{ position: [0, 0.15, 6], fov: 40 }}
       gl={{ antialias: true, alpha: false }}
       style={{ background: '#09090B', width: '100%', height: '100%' }}
       shadows
@@ -144,8 +159,9 @@ export default function GuitarCanvas() {
       <Scene />
       <OrbitControls
         enablePan={false}
-        minDistance={3}
-        maxDistance={9}
+        target={[0, 0, 0]}
+        minDistance={3.2}
+        maxDistance={7.5}
         enableDamping
         dampingFactor={0.06}
         autoRotate={false}

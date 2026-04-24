@@ -1,10 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import QuoteModal from '@/components/ui/QuoteModal'
 
 export default function MobileCTABar() {
   const [open, setOpen] = useState(false)
+  const pathname = usePathname()
+  if (pathname === '/configurator') return null
+
   return (
     <>
       <div className="md:hidden" style={{
