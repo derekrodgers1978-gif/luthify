@@ -88,7 +88,7 @@ export const useConfigStore = create<ConfigStore>()(
           price: state.livePrice,
           createdAt: new Date().toISOString(),
         }
-        set(s => ({ quoteSubmissions: [quote, ...s.quoteSubmissions] }))
+        set(s => ({ quoteSubmissions: [quote, ...s.quoteSubmissions].slice(0, 20) }))
         return id
       },
 

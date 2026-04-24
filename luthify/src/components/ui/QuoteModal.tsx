@@ -60,16 +60,21 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
   }
 
   const handleSubmit = async () => {
+    if (submitting) return
     setSubmitting(true)
     await new Promise(r => setTimeout(r, 1800))
-    store.saveQuoteSubmission({
-      name: form.name,
-      email: form.email,
-      budget: form.budget,
-      notes: form.notes,
-      mode,
-      builderIds: mode === 'specific' ? selectedBuilders : [],
-    })
+    try {
+      store.saveQuoteSubmission({
+        name: form.name,
+        email: form.email,
+        budget: form.budget,
+        notes: form.notes,
+        mode,
+        builderIds: mode === 'specific' ? selectedBuilders : [],
+      })
+    } catch (err) {
+      console.warn('[Quote Request] Unable to save locally', err)
+    }
     setSubmitting(false)
     setStep('success')
   }
