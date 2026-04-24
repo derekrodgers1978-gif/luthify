@@ -73,14 +73,28 @@ export const DEFAULT_CONFIG = {
   pickups:   'dual-hum',
 }
 
+export type ConfigKey = keyof typeof DEFAULT_CONFIG
+
+export const CONFIG_OPTION_GROUPS: [ConfigKey, string, ConfigOption[]][] = [
+  ['shape',     'Body Shape', BODY_SHAPES],
+  ['finish',    'Body Finish', FINISHES],
+  ['top',       'Top', TOPS],
+  ['neck',      'Neck Wood', NECK_WOODS],
+  ['fretboard', 'Fretboard', FRETBOARDS],
+  ['hardware',  'Hardware', HARDWARE_COLORS],
+  ['bridge',    'Bridge', BRIDGES],
+  ['pickups',   'Pickups', PICKUPS],
+]
+
+export function getOptionLabel(key: ConfigKey, id: string): string {
+  const group = CONFIG_OPTION_GROUPS.find(([groupKey]) => groupKey === key)
+  return group?.[2].find(o => o.id === id)?.label ?? id
+}
+
 export function calcPrice(config: Partial<typeof DEFAULT_CONFIG>): number {
-  const allOptions = [
-    ...BODY_SHAPES, ...FINISHES, ...TOPS, ...NECK_WOODS,
-    ...FRETBOARDS, ...HARDWARE_COLORS, ...BRIDGES, ...PICKUPS,
-  ]
-  const keys = Object.values(config)
-  return BASE_PRICE + keys.reduce((sum, id) => {
-    const opt = allOptions.find(o => o.id === id)
+  return BASE_PRICE + CONFIG_OPTION_GROUPS.reduce((sum, [key, , options]) => {
+    const id = config[key]
+    const opt = options.find(o => o.id === id)
     return sum + (opt?.priceAdj ?? 0)
   }, 0)
 }
@@ -89,16 +103,8 @@ export function getPriceBreakdown(config: Partial<typeof DEFAULT_CONFIG>) {
   const lines: { label: string; amount: number }[] = [
     { label: 'Base build', amount: BASE_PRICE },
   ]
-  const map: [string, ConfigOption[]][] = [
-    ['top',      TOPS],
-    ['hardware', HARDWARE_COLORS],
-    ['bridge',   BRIDGES],
-    ['pickups',  PICKUPS],
-    ['neck',     NECK_WOODS],
-    ['fretboard',FRETBOARDS],
-  ]
-  for (const [key, options] of map) {
-    const val = config[key as keyof typeof config]
+  for (const [key, , options] of CONFIG_OPTION_GROUPS) {
+    const val = config[key]
     const opt = options.find(o => o.id === val)
     if (opt && opt.priceAdj > 0) {
       lines.push({ label: opt.label, amount: opt.priceAdj })

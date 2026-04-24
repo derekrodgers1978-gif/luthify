@@ -1,10 +1,10 @@
 'use client'
 import dynamic from 'next/dynamic'
-import { useState } from 'react'
+import { useEffect } from 'react'
 import ConfigPanel from '@/components/configurator/ConfigPanel'
 import SpecSheet from '@/components/configurator/SpecSheet'
-import QuoteModal from '@/components/ui/QuoteModal'
 import { useConfigStore } from '@/store/configStore'
+import { DEFAULT_CONFIG, type ConfigKey } from '@/lib/configurator-options'
 
 // SSR-safe Three.js canvas
 const GuitarCanvas = dynamic(() => import('@/components/configurator/GuitarCanvas'), {
@@ -23,21 +23,98 @@ const GuitarCanvas = dynamic(() => import('@/components/configurator/GuitarCanva
 const TRUST_ITEMS = [
   { icon: '🛡', title: 'Escrow Protected', sub: 'Funds held until delivery' },
   { icon: '✦', title: 'Vetted Luthiers', sub: 'Hand-selected, insured builds' },
-  { icon: '✈', title: 'Global Shipping', sub: 'Insured white-glove freight' },
+  { icon: '✈', title: 'Global Shipping', sub: 'Insured global shipping' },
   { icon: '★', title: '4.9 / 5 Average', sub: 'From verified commissions' },
 ]
 
 export default function ConfiguratorClient() {
   const store = useConfigStore()
-  const [quoteOpen, setQuoteOpen] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(false) // mobile panel toggle
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    ;(Object.keys(DEFAULT_CONFIG) as ConfigKey[]).forEach(key => {
+      const value = params.get(key)
+      if (value) store.setOption(key, value)
+    })
+  }, [])
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 76px)', background: '#09090B', overflow: 'hidden', position: 'relative' }}>
+    <div className="designer-shell">
+      <style>{`
+        .designer-shell {
+          display: flex;
+          min-height: calc(100vh - 76px);
+          height: calc(100vh - 76px);
+          background: #09090B;
+          overflow: hidden;
+          position: relative;
+        }
+        .designer-preview {
+          flex: 1;
+          min-width: 0;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+        }
+        .designer-canvas {
+          flex: 1;
+          min-height: 360px;
+          position: relative;
+        }
+        .designer-panel {
+          width: 420px;
+          border-left: 1px solid rgba(255,255,255,0.07);
+          background: #111114;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        @media (max-width: 1023px) {
+          .designer-shell {
+            display: block;
+            height: auto;
+            min-height: calc(100vh - 76px);
+            overflow: visible;
+            padding-bottom: 82px;
+          }
+          .designer-preview {
+            min-height: 56vh;
+          }
+          .designer-canvas {
+            height: 56vh;
+            min-height: 420px;
+          }
+          .designer-panel {
+            width: 100%;
+            min-height: 720px;
+            border-left: 0;
+            border-top: 1px solid rgba(255,255,255,0.07);
+          }
+        }
+        @media (max-width: 640px) {
+          .designer-preview {
+            min-height: 48vh;
+          }
+          .designer-canvas {
+            height: 48vh;
+            min-height: 340px;
+          }
+          .designer-trust {
+            display: none !important;
+          }
+          .designer-estimate {
+            bottom: 16px !important;
+            right: 16px !important;
+          }
+          .designer-hint {
+            display: none !important;
+          }
+        }
+      `}</style>
 
       {/* ── LEFT: 3D Canvas ── */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
+      <div className="designer-preview">
+        <div className="designer-canvas">
           <GuitarCanvas />
 
           {/* Real-time badge */}
@@ -47,7 +124,7 @@ export default function ConfiguratorClient() {
           </div>
 
           {/* Controls hint */}
-          <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 10, display: 'flex', gap: 8 }}>
+          <div className="designer-hint" style={{ position: 'absolute', top: 20, right: 20, zIndex: 10, display: 'flex', gap: 8 }}>
             <div style={{ background: 'rgba(9,9,11,0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999, padding: '6px 12px', fontSize: '0.68rem', color: 'rgba(245,241,232,0.5)' }}>Drag · Pinch · Zoom</div>
           </div>
 
@@ -55,14 +132,14 @@ export default function ConfiguratorClient() {
           <SpecSheet />
 
           {/* Estimate chip */}
-          <div style={{ position: 'absolute', bottom: 80, right: 20, zIndex: 10, background: 'rgba(9,9,11,0.85)', backdropFilter: 'blur(10px)', border: '1px solid rgba(201,164,92,0.2)', borderRadius: 12, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="designer-estimate" style={{ position: 'absolute', bottom: 24, right: 20, zIndex: 10, background: 'rgba(9,9,11,0.85)', backdropFilter: 'blur(10px)', border: '1px solid rgba(201,164,92,0.2)', borderRadius: 12, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: '0.65rem', color: 'rgba(245,241,232,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Est.</span>
             <span style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.1rem', fontWeight: 700, color: '#C9A45C' }}>${store.livePrice.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Trust bar */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(9,9,11,0.9)' }}>
+        <div className="designer-trust" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(9,9,11,0.9)' }}>
           {TRUST_ITEMS.map((item, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(201,164,92,0.08)', border: '1px solid rgba(201,164,92,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>{item.icon}</div>
@@ -76,28 +153,10 @@ export default function ConfiguratorClient() {
       </div>
 
       {/* ── RIGHT: Config Panel (desktop) ── */}
-      <div className="hidden lg:flex" style={{ width: 420, borderLeft: '1px solid rgba(255,255,255,0.07)', background: '#111114', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="designer-panel">
         <ConfigPanel />
       </div>
 
-      {/* ── Mobile: slide-up panel toggle ── */}
-      <div className="lg:hidden" style={{ position: 'fixed', bottom: 80, right: 16, zIndex: 50 }}>
-        <button onClick={() => setPanelOpen(p => !p)} style={{ background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', color: '#09090B', border: 'none', borderRadius: 999, padding: '12px 20px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 8px 32px rgba(201,164,92,0.4)' }}>
-          {panelOpen ? '✕ Close' : '⚙ Configure'}
-        </button>
-      </div>
-
-      {/* ── Mobile config drawer ── */}
-      {panelOpen && (
-        <div className="lg:hidden" style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(0,0,0,0.6)' }} onClick={() => setPanelOpen(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '80vh', background: '#111114', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)', margin: '12px auto 0' }} />
-            <ConfigPanel />
-          </div>
-        </div>
-      )}
-
-      <QuoteModal open={quoteOpen} onClose={() => setQuoteOpen(false)} />
     </div>
   )
 }

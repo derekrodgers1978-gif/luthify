@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import { BUILDERS } from '@/lib/builders-data'
-import { FINISHES, TOPS, HARDWARE_COLORS, FRETBOARDS } from '@/lib/configurator-options'
+import { FINISHES, TOPS, HARDWARE_COLORS, FRETBOARDS, BODY_SHAPES, BRIDGES, PICKUPS } from '@/lib/configurator-options'
 
 interface Props { open: boolean; onClose: () => void; preselectedBuilderId?: string }
 
@@ -39,13 +39,18 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
   const top    = TOPS.find(t => t.id === store.top)
   const hw     = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const fb     = FRETBOARDS.find(f => f.id === store.fretboard)
+  const shape  = BODY_SHAPES.find(s => s.id === store.shape)
+  const bridge = BRIDGES.find(b => b.id === store.bridge)
+  const pickups = PICKUPS.find(p => p.id === store.pickups)
 
   const specTags = [
-    { label: store.shape.replace('-', ' '), key: 'shape' },
+    { label: shape?.label ?? store.shape, key: 'shape' },
     { label: finish?.label ?? store.finish, key: 'finish' },
     { label: top?.label ?? store.top, key: 'top' },
     { label: hw?.label + ' HW', key: 'hardware' },
     { label: fb?.label, key: 'fretboard' },
+    { label: bridge?.label ?? store.bridge, key: 'bridge' },
+    { label: pickups?.label ?? store.pickups, key: 'pickups' },
   ]
 
   const toggleBuilder = (id: string) => {
@@ -55,6 +60,14 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
   const handleSubmit = async () => {
     setSubmitting(true)
     await new Promise(r => setTimeout(r, 1800))
+    store.saveQuoteSubmission({
+      name: form.name,
+      email: form.email,
+      budget: form.budget,
+      notes: form.notes,
+      mode,
+      builderIds: mode === 'specific' ? selectedBuilders : [],
+    })
     setSubmitting(false)
     setStep('success')
   }

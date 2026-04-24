@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import {
   BODY_SHAPES, FINISHES, TOPS, NECK_WOODS,
-  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS
+  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS,
+  DEFAULT_CONFIG, type ConfigKey,
 } from '@/lib/configurator-options'
 import type { ConfigOption } from '@/types'
 
@@ -177,16 +178,47 @@ function PriceFooter() {
   const store = useConfigStore()
   const [showBreakdown, setShowBreakdown] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
-  const [saveName, setSaveName] = useState('')
-  const [saved, setSaved] = useState(false)
+  const [saveName, setSaveName] = useState('My custom build')
+  const [status, setStatus] = useState<string | null>(null)
   const [quoteOpen, setQuoteOpen] = useState(false)
   const breakdown = store.breakdown()
 
+  const currentParams = () => {
+    const params = new URLSearchParams()
+    ;(Object.keys(DEFAULT_CONFIG) as ConfigKey[]).forEach(key => {
+      params.set(key, store[key])
+    })
+    return params
+  }
+
   const handleSave = () => {
-    if (!saveName.trim()) return
-    store.saveBuild(saveName.trim())
-    setSaved(true)
-    setTimeout(() => { setSaved(false); setSaveOpen(false); setSaveName('') }, 1500)
+    const name = saveName.trim() || 'My custom build'
+    store.saveBuild(name)
+    setStatus('Build saved')
+    setSaveOpen(false)
+    setSaveName('My custom build')
+    setTimeout(() => setStatus(null), 1800)
+  }
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}${window.location.pathname}?${currentParams().toString()}`
+    const shareData = {
+      title: 'Luthify custom build',
+      text: `Configured build estimate: $${store.livePrice.toLocaleString()}`,
+      url,
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+        setStatus('Share sheet opened')
+      } else {
+        await navigator.clipboard.writeText(url)
+        setStatus('Share link copied')
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') setStatus('Share unavailable')
+    }
+    setTimeout(() => setStatus(null), 1800)
   }
 
   // Lazy-load QuoteModal to avoid circular import issues at module level
@@ -228,7 +260,13 @@ function PriceFooter() {
               <span style={{ fontWeight: 600 }}>Total</span>
               <span style={{ color: '#C9A45C', fontWeight: 700, fontFamily: "'Bodoni Moda',serif" }}>${store.livePrice.toLocaleString()}</span>
             </div>
-            <p style={{ fontSize: '0.68rem', color: 'rgba(245,241,232,0.35)', marginTop: 6 }}>Final price confirmed by your chosen builder. Deposit held in escrow.</p>
+            <p style={{ fontSize: '0.68rem', color: 'rgba(245,241,232,0.35)', marginTop: 6 }}>Final price confirmed by your chosen builder. No payment is collected in Phase 1.</p>
+          </div>
+        )}
+
+        {status && (
+          <div style={{ background: 'rgba(95,184,122,0.08)', border: '1px solid rgba(95,184,122,0.22)', color: '#5fb87a', borderRadius: 10, padding: '9px 12px', fontSize: '0.78rem', fontWeight: 600, marginBottom: 10 }}>
+            {status}
           </div>
         )}
 
@@ -244,20 +282,25 @@ function PriceFooter() {
               onKeyDown={e => e.key === 'Enter' && handleSave()}
               autoFocus
             />
-            <button onClick={handleSave} style={{ padding: '10px 16px', borderRadius: 10, background: saved ? '#5fb87a' : 'rgba(201,164,92,0.1)', border: '1px solid rgba(201,164,92,0.25)', color: saved ? '#fff' : '#C9A45C', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-              {saved ? '✓ Saved' : 'Save'}
+            <button onClick={handleSave} style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(201,164,92,0.1)', border: '1px solid rgba(201,164,92,0.25)', color: '#C9A45C', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+              Save
             </button>
             <button onClick={() => setSaveOpen(false)} style={{ padding: '10px', borderRadius: 10, background: 'none', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(245,241,232,0.4)', cursor: 'pointer' }}>✕</button>
           </div>
         ) : (
-          <button onClick={() => setSaveOpen(true)} style={{ width: '100%', padding: '10px', borderRadius: 12, background: 'none', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(245,241,232,0.5)', cursor: 'pointer', fontSize: '0.8rem', marginBottom: 10, transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,164,92,0.3)'; e.currentTarget.style.color = '#C9A45C' }} onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'rgba(245,241,232,0.5)' }}>
-            ☆ Save this build
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+            <button onClick={() => setSaveOpen(true)} style={{ width: '100%', padding: '10px', borderRadius: 12, background: 'none', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(245,241,232,0.5)', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,164,92,0.3)'; e.currentTarget.style.color = '#C9A45C' }} onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'rgba(245,241,232,0.5)' }}>
+              ☆ Save Build
+            </button>
+            <button onClick={handleShare} style={{ width: '100%', padding: '10px', borderRadius: 12, background: 'none', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(245,241,232,0.5)', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,164,92,0.3)'; e.currentTarget.style.color = '#C9A45C' }} onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'rgba(245,241,232,0.5)' }}>
+              ↗ Share Build
+            </button>
+          </div>
         )}
 
         {/* Primary CTA */}
         <button onClick={openQuote} style={{ width: '100%', padding: 15, borderRadius: 14, background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', color: '#09090B', fontWeight: 700, fontSize: '0.92rem', border: 'none', cursor: 'pointer', letterSpacing: '0.02em', boxShadow: '0 8px 32px rgba(201,164,92,0.3)', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 44px rgba(201,164,92,0.45)' }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 8px 32px rgba(201,164,92,0.3)' }}>
-          Request a Quote →
+          Request Quotes / Commission →
         </button>
 
         {QuoteModal && <QuoteModal open={quoteOpen} onClose={() => setQuoteOpen(false)} />}
