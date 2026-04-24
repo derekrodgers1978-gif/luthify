@@ -1,7 +1,7 @@
 'use client'
 import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Bounds, Center, Environment, OrbitControls } from '@react-three/drei'
+import { Environment, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, TOPS } from '@/lib/configurator-options'
@@ -142,11 +142,7 @@ function Scene() {
       <pointLight position={[-3, 2, 2]} color="#C9A45C" intensity={0.8} />
       <pointLight position={[2, -2, 3]} color="#fff" intensity={0.3} />
       <Environment preset="studio" />
-      <Bounds fit clip observe margin={1.25}>
-        <Center>
-          <GuitarBody />
-        </Center>
-      </Bounds>
+      <GuitarBody />
     </>
   )
 }
