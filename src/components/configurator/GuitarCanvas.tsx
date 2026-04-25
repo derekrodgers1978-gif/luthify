@@ -34,74 +34,45 @@ type FinishOption = { id: string; hex?: string; roughness?: number; finishGroup?
 const S_STYLE_MODEL_PATH = '/models/s-style-electric.glb'
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
-const auditedSStyleScenes = new Set<string>()
 
-function materialNames(material: THREE.Material | THREE.Material[]) {
-  return (Array.isArray(material) ? material : [material]).map(mat => mat.name || '(unnamed material)')
-}
-
-function objectPath(object: THREE.Object3D) {
-  const names: string[] = []
-  let cursor: THREE.Object3D | null = object
-  while (cursor) {
-    if (cursor.name) names.unshift(cursor.name)
-    cursor = cursor.parent
-  }
-  return names.join(' > ') || '(unnamed root)'
-}
-
-function auditSStyleModel(model: THREE.Object3D, modelPath: string) {
-  if (modelPath !== S_STYLE_MODEL_PATH) return
-  const auditKey = model.uuid
-  if (auditedSStyleScenes.has(auditKey)) return
-  auditedSStyleScenes.add(auditKey)
-
-  const meshes: {
-    mesh: string
-    path: string
-    materials: string
-    materialUuid: string
-    vertexCount: number
-  }[] = []
-  const materials = new Map<string, { material: string; uuid: string; meshes: string[] }>()
-
-  model.traverse(obj => {
-    if (!(obj as THREE.Mesh).isMesh) return
-    const mesh = obj as THREE.Mesh
-    const meshName = mesh.name || '(unnamed mesh)'
-    const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    const meshMaterialNames = materialNames(mesh.material)
-
-    meshes.push({
-      mesh: meshName,
-      path: objectPath(mesh),
-      materials: meshMaterialNames.join(', '),
-      materialUuid: meshMaterials.map(mat => mat.uuid).join(', '),
-      vertexCount: mesh.geometry?.attributes.position?.count ?? 0,
-    })
-
-    meshMaterials.forEach(mat => {
-      const name = mat.name || '(unnamed material)'
-      const key = `${name}:${mat.uuid}`
-      const entry = materials.get(key) ?? { material: name, uuid: mat.uuid, meshes: [] }
-      entry.meshes.push(meshName)
-      materials.set(key, entry)
-    })
-  })
-
-  console.groupCollapsed(`[S-Style GLB audit] ${modelPath}`)
-  console.info('Temporary audit only: S-Style materials are not modified by the configurator.')
-  console.table(meshes)
-  console.table(Array.from(materials.values()).map(entry => ({
-    material: entry.material,
-    uuid: entry.uuid,
-    meshes: entry.meshes.join(', '),
-  })))
-  console.groupEnd()
-}
-
-function shouldPreserveOriginalMaterials(shapeId: string, modelPath: string) {
+function isSStyleModel(shapeId: string, modelPath: string) {
   return shapeId === 'modern-s' && modelPath === S_STYLE_MODEL_PATH
+}
+
+function objectNumber(name?: string) {
+  const match = name?.match(/^Object_(\d+)$/)
+  return match ? Number(match[1]) : undefined
+}
+
+function applySStyleMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+  const mat = material as THREE.MeshStandardMaterial
+  if (!mat.isMeshStandardMaterial) return
+
+  const nodeNumber = objectNumber(mesh.name)
+  const meshNumber = objectNumber(mesh.geometry?.name)
+
+  mat.envMapIntensity = 1.55
+  if (material.name === 'BodyMaterial' && nodeNumber === 3 && meshNumber === 1) {
+    mat.color = new THREE.Color(colors.finish)
+    mat.metalness = 0.04
+    mat.roughness = Math.min(colors.finishRoughness, 0.24)
+  } else if (material.name === 'NeckMaterial' && nodeNumber === 32 && meshNumber === 30) {
+    mat.color = new THREE.Color(colors.board)
+    mat.metalness = 0
+    mat.roughness = 0.58
+  } else if (material.name === 'NeckMaterial' && (nodeNumber === 30 || nodeNumber === 31) && (meshNumber === 28 || meshNumber === 29)) {
+    mat.color = new THREE.Color(colors.neck)
+    mat.metalness = 0.02
+    mat.roughness = 0.42
+  } else if (material.name === 'MetalPartsMaterial' && nodeNumber !== undefined && nodeNumber >= 4 && nodeNumber <= 26 && meshNumber !== undefined && meshNumber >= 2 && meshNumber <= 24) {
+    mat.color = new THREE.Color(colors.hardware)
+    mat.metalness = 0.9
+    mat.roughness = 0.2
+  } else if (material.name === 'StringMaterial' && nodeNumber !== undefined && nodeNumber >= 27 && nodeNumber <= 29 && meshNumber !== undefined && meshNumber >= 25 && meshNumber <= 27) {
+    mat.metalness = 0.85
+    mat.roughness = 0.26
+  }
+  mat.needsUpdate = true
 }
 
 function materialRole(meshName: string, materialName: string): MaterialRole {
@@ -254,15 +225,12 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
-    const preserveOriginalMaterials = shouldPreserveOriginalMaterials(shape.id, modelPath)
-    if (preserveOriginalMaterials) auditSStyleModel(model, modelPath)
-
+    const sStyleModel = isSStyleModel(shape.id, modelPath)
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
       mesh.castShadow = true
       mesh.receiveShadow = true
-      if (preserveOriginalMaterials) return
 
       if (Array.isArray(mesh.material)) {
         mesh.material = mesh.material.map(mat => mat.clone())
@@ -270,7 +238,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         mesh.material = mesh.material.clone()
       }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish))
+      materials.forEach(mat => {
+        if (sStyleModel) {
+          applySStyleMaterial(mesh, mat, colors)
+        } else {
+          enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
+        }
+      })
     })
   }, [colors, finish, maxDimension, model, modelPath, shape.id])
 
