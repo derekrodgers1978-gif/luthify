@@ -133,7 +133,7 @@ export const DEFAULT_CONFIG = {
   fretboard: 'rosewood',
   hardware:  'nickel',
   bridge:    'tuneomatic',
-  pickups:   'dual-hum',
+  pickups:   'singlecoil',
   pickguard: 'parchment',
   tuners:    'nickel',
   knobs:     'aged-white',

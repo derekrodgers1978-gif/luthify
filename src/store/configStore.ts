@@ -73,6 +73,7 @@ export const useConfigStore = create<ConfigStore>()(
 
       setOption: (key, value) => {
         const config = { ...get().currentConfig(), [key]: value }
+        if (key === 'shape' && value === 'modern-s') config.pickups = 'singlecoil'
         set({ ...config, livePrice: calcPrice(config) })
       },
 
