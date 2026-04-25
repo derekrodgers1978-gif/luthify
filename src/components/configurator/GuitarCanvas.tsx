@@ -211,6 +211,219 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   )
 }
 
+function makeBodyShape(shapeId: string) {
+  const shape = new THREE.Shape()
+  if (shapeId === 'single-cut') {
+    shape.moveTo(-0.08, 1.2)
+    shape.bezierCurveTo(0.32, 1.26, 0.68, 1.08, 0.78, 0.72)
+    shape.bezierCurveTo(1.2, 0.72, 1.52, 0.34, 1.5, -0.16)
+    shape.bezierCurveTo(1.48, -0.88, 0.92, -1.36, 0.14, -1.42)
+    shape.bezierCurveTo(-0.62, -1.48, -1.34, -1.08, -1.42, -0.34)
+    shape.bezierCurveTo(-1.5, 0.46, -0.92, 1.08, -0.08, 1.2)
+  } else {
+    shape.moveTo(-0.12, 1.06)
+    shape.bezierCurveTo(0.22, 1.22, 0.58, 1.05, 0.7, 0.72)
+    shape.bezierCurveTo(1.22, 0.82, 1.5, 0.42, 1.36, -0.08)
+    shape.bezierCurveTo(1.25, -0.5, 0.92, -0.66, 0.58, -0.72)
+    shape.bezierCurveTo(0.52, -1.28, 0.05, -1.58, -0.5, -1.44)
+    shape.bezierCurveTo(-1.08, -1.28, -1.36, -0.78, -1.18, -0.22)
+    shape.bezierCurveTo(-1.56, 0.1, -1.48, 0.7, -0.98, 0.88)
+    shape.bezierCurveTo(-0.66, 1, -0.42, 0.92, -0.12, 1.06)
+  }
+  return shape
+}
+
+function PremiumBodyMaterial({ finish, colors }: { finish?: FinishOption; colors: ReturnType<typeof makeColors> }) {
+  const material = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      metalness: 0.05,
+      roughness: isNaturalFinish(finish?.id) ? Math.max(colors.finishRoughness, 0.26) : Math.min(colors.finishRoughness, 0.2),
+      envMapIntensity: 1.8,
+    })
+    const finishMode = isBurstFinish(finish?.id) ? 1 : isNaturalFinish(finish?.id) ? 2 : 0
+    mat.onBeforeCompile = shader => {
+      shader.uniforms.uFinishColor = { value: new THREE.Color(colors.finish) }
+      shader.uniforms.uFinishMode = { value: finishMode }
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vBodyPosition;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBodyPosition = position;')
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          '#include <common>',
+          '#include <common>\nuniform vec3 uFinishColor;\nuniform int uFinishMode;\nvarying vec3 vBodyPosition;'
+        )
+        .replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+vec2 bodyUv = vec2(vBodyPosition.x / 1.55, (vBodyPosition.y + 0.12) / 1.64);
+float bodyRadius = length(bodyUv);
+float grain = sin(vBodyPosition.x * 22.0 + sin(vBodyPosition.y * 13.0) * 0.8) * 0.5 + 0.5;
+float curl = sin((vBodyPosition.x + vBodyPosition.y) * 34.0) * 0.5 + 0.5;
+vec3 burst = mix(vec3(0.98, 0.58, 0.18), uFinishColor, smoothstep(0.16, 0.48, bodyRadius));
+burst = mix(burst, vec3(0.08, 0.025, 0.01), smoothstep(0.58, 0.94, bodyRadius));
+vec3 natural = mix(uFinishColor * 0.72, uFinishColor * 1.16, smoothstep(0.18, 0.95, grain));
+natural = mix(natural, natural * 1.18, curl * 0.18);
+vec3 solid = mix(uFinishColor * 0.76, uFinishColor * 1.16, smoothstep(-0.8, 0.78, vBodyPosition.y - vBodyPosition.x * 0.18));
+vec3 paint = uFinishMode == 1 ? burst : uFinishMode == 2 ? natural : solid;
+float rim = smoothstep(0.62, 0.92, bodyRadius);
+float highlight = smoothstep(0.24, 0.88, 1.0 - length((bodyUv - vec2(-0.2, 0.22)) * vec2(1.0, 1.8)));
+diffuseColor.rgb = mix(paint, vec3(0.96, 0.9, 0.76), rim * 0.2);
+diffuseColor.rgb += highlight * vec3(0.12, 0.1, 0.07);`
+        )
+    }
+    mat.customProgramCacheKey = () => `premium-body-${finish?.id ?? 'default'}-${colors.finish}`
+    return mat
+  }, [colors.finish, colors.finishRoughness, finish?.id])
+
+  return <primitive object={material} attach="material" />
+}
+
+function PremiumHardwareMaterial({ color, dark = false }: { color: string; dark?: boolean }) {
+  return <meshStandardMaterial color={dark ? '#08080A' : color} metalness={dark ? 0.45 : 0.92} roughness={dark ? 0.28 : 0.18} envMapIntensity={1.8} />
+}
+
+function PremiumInstrument({ view }: { view: 'standard' | 'detail' }) {
+  const store = useConfigStore()
+  const finish = FINISHES.find(f => f.id === store.finish)
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const colors = makeColors(finish, neck, board, hw)
+  const bodyShape = useMemo(() => makeBodyShape(store.shape), [store.shape])
+  const isSingleCut = store.shape === 'single-cut'
+  const pickupXs = isSingleCut ? [-0.18, 0.24] : [-0.34, 0.08, 0.5]
+  const knobPositions = isSingleCut ? [[0.9, -0.5], [1.03, -0.16], [0.66, -0.78]] : [[0.8, -0.58], [1.02, -0.34], [0.56, -0.9]]
+  const stringXs = [-0.11, -0.066, -0.022, 0.022, 0.066, 0.11]
+  const headstockPoints = isSingleCut
+    ? [[-0.27, 0], [0.2, 0.06], [0.34, 0.86], [-0.05, 1.08], [-0.36, 0.78]]
+    : [[-0.2, 0.02], [0.23, 0.12], [0.36, 0.74], [0.1, 1.12], [-0.22, 0.98], [-0.3, 0.44]]
+
+  return (
+    <Center>
+      <group rotation={[0.04, view === 'detail' ? -0.18 : 0.1, -0.08]} position={[0, -0.55, 0]} scale={1.05}>
+        <mesh position={[0, -0.12, -0.12]} scale={[1.04, 1.04, 1]}>
+          <shapeGeometry args={[bodyShape]} />
+          <meshBasicMaterial color="#050507" transparent opacity={0.82} />
+        </mesh>
+        <mesh position={[0, -0.12, 0]}>
+          <extrudeGeometry args={[bodyShape, { depth: 0.22, bevelEnabled: true, bevelSize: 0.045, bevelThickness: 0.04, bevelSegments: 8, curveSegments: 36 }]} />
+          <meshStandardMaterial color={colors.finish} metalness={0.04} roughness={0.32} envMapIntensity={1.4} />
+        </mesh>
+        <mesh position={[0, -0.12, 0.24]}>
+          <shapeGeometry args={[bodyShape]} />
+          <PremiumBodyMaterial finish={finish} colors={colors} />
+        </mesh>
+        <mesh position={[0, -0.12, 0.255]} scale={[0.93, 0.93, 1]}>
+          <shapeGeometry args={[bodyShape]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.08} />
+        </mesh>
+
+        <mesh position={[0, 1.36, 0.03]}>
+          <boxGeometry args={[0.42, 3.1, 0.18]} />
+          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.44} envMapIntensity={1.2} />
+        </mesh>
+        <mesh position={[0, 1.34, 0.17]}>
+          <boxGeometry args={[0.32, 3.02, 0.08]} />
+          <meshStandardMaterial color={colors.board} metalness={0.01} roughness={0.58} envMapIntensity={0.9} />
+        </mesh>
+        {[-0.02, 0.3, 0.62, 0.94, 1.26, 1.58, 1.9, 2.22, 2.54].map(y => (
+          <mesh key={y} position={[0, y, 0.225]}>
+            <boxGeometry args={[0.34, 0.012, 0.02]} />
+            <PremiumHardwareMaterial color="#D7DCE5" />
+          </mesh>
+        ))}
+        {[0.62, 1.26, 1.9].map(y => (
+          <mesh key={y} position={[0, y + 0.12, 0.24]}>
+            <circleGeometry args={[0.035, 24]} />
+            <meshStandardMaterial color="#D7DCE5" metalness={0.3} roughness={0.22} />
+          </mesh>
+        ))}
+
+        <mesh position={[0, 3.28, 0.05]}>
+          <shapeGeometry args={[new THREE.Shape(headstockPoints.map(([x, y]) => new THREE.Vector2(x, y)))]} />
+          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.42} envMapIntensity={1.2} />
+        </mesh>
+        <mesh position={[0, 3.28, 0.19]}>
+          <boxGeometry args={[0.35, 0.08, 0.08]} />
+          <meshStandardMaterial color="#F1E4C8" metalness={0.01} roughness={0.34} />
+        </mesh>
+
+        {pickupXs.map((x, i) => (
+          <group key={x} position={[x, isSingleCut ? 0.04 - i * 0.52 : -0.02 - i * 0.33, 0.32]} rotation={[0, 0, isSingleCut ? -0.08 : -0.1]}>
+            <mesh>
+              <boxGeometry args={[isSingleCut ? 0.58 : 0.5, isSingleCut ? 0.26 : 0.16, 0.08]} />
+              <PremiumHardwareMaterial color={i === 1 && isSingleCut ? colors.hardware : '#101014'} dark={!isSingleCut || i === 0} />
+            </mesh>
+            {isSingleCut && (
+              <mesh position={[0, 0, 0.045]}>
+                <boxGeometry args={[0.44, 0.04, 0.025]} />
+                <PremiumHardwareMaterial color={colors.hardware} />
+              </mesh>
+            )}
+          </group>
+        ))}
+
+        <group position={[0.08, -0.88, 0.36]} rotation={[0, 0, -0.08]}>
+          <mesh>
+            <boxGeometry args={[0.9, 0.12, 0.12]} />
+            <PremiumHardwareMaterial color={colors.hardware} />
+          </mesh>
+          {isSingleCut && (
+            <mesh position={[0.08, -0.34, -0.02]}>
+              <boxGeometry args={[0.72, 0.1, 0.1]} />
+              <PremiumHardwareMaterial color={colors.hardware} />
+            </mesh>
+          )}
+          {stringXs.map(x => (
+            <mesh key={x} position={[x, 0.04, 0.08]}>
+              <boxGeometry args={[0.025, 0.14, 0.04]} />
+              <PremiumHardwareMaterial color="#ECEFF5" />
+            </mesh>
+          ))}
+        </group>
+
+        {knobPositions.map(([x, y], i) => (
+          <group key={`${x}-${y}`} position={[x, y, 0.35]}>
+            <mesh>
+              <cylinderGeometry args={[0.085, 0.095, 0.06, 32]} />
+              <PremiumHardwareMaterial color={colors.hardware} />
+            </mesh>
+            <mesh position={[0, 0.01, 0.035]}>
+              <circleGeometry args={[0.05, 32]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.16 + i * 0.02} />
+            </mesh>
+          </group>
+        ))}
+
+        {[-0.28, 0.28].flatMap((side, sideIndex) =>
+          [3.72, 4.02, 4.3].map((y, i) => (
+            <group key={`${side}-${y}`} position={[side, y, 0.22]}>
+              <mesh>
+                <cylinderGeometry args={[0.045, 0.045, 0.16, 24]} />
+                <PremiumHardwareMaterial color={colors.hardware} />
+              </mesh>
+              <mesh position={[sideIndex === 0 ? -0.13 : 0.13, 0, 0]}>
+                <boxGeometry args={[0.16, 0.075, 0.045]} />
+                <PremiumHardwareMaterial color={colors.hardware} />
+              </mesh>
+            </group>
+          ))
+        )}
+
+        <group position={[0, 0, 0.48]}>
+          {stringXs.map((x, i) => (
+            <mesh key={x} position={[x * 0.52, 1.46, 0]} rotation={[0, 0, (i - 2.5) * 0.004]}>
+              <boxGeometry args={[0.006 + i * 0.001, 4.62, 0.004]} />
+              <meshStandardMaterial color="#E8EBF0" metalness={0.8} roughness={0.22} />
+            </mesh>
+          ))}
+        </group>
+      </group>
+    </Center>
+  )
+}
+
 function ModelLoading() {
   return (
     <group>
@@ -306,11 +519,17 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
       <Suspense fallback={<ModelLoading />}>
         <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
+          <ConfiguredInstrument view={view} />
         </Bounds>
       </Suspense>
     </>
   )
+}
+
+function ConfiguredInstrument({ view }: { view: 'standard' | 'detail' }) {
+  const shape = useConfigStore(s => s.shape)
+  if (shape === 'modern-s' || shape === 'single-cut') return <PremiumInstrument view={view} />
+  return <GlbInstrument view={view} />
 }
 
 function CameraControls({ view }: { view: 'standard' | 'detail' | 'reset' }) {
