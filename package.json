@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "build": "npm install --prefix luthify --no-package-lock && npm run build --prefix luthify && rm -rf dist && cp -R luthify/dist dist"
+    "build": "rm -rf dist luthify/dist luthify/out && npm install --prefix luthify --no-package-lock && npm run build --prefix luthify && rm -rf dist && cp -R luthify/dist dist"
   }
 }

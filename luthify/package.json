@@ -31,7 +31,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && rm -rf dist && mv out dist",
+    "build": "rm -rf out dist && next build && mv out dist",
     "start": "next start"
   },
   "keywords": [],
