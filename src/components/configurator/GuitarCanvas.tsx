@@ -28,13 +28,31 @@ const CAMERA_DISTANCE: Record<string, number> = {
   default: 6.4,
 }
 
-type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
+type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'strings' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number; finishGroup?: 'solid' | 'burst' | 'natural' }
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
-function materialRole(meshName: string, materialName: string): MaterialRole {
+const S_STYLE_BODY_OBJECTS = new Set(['Object_3'])
+const S_STYLE_STRING_OBJECTS = new Set(['Object_27', 'Object_28', 'Object_29'])
+const S_STYLE_NECK_OBJECTS = new Set(['Object_30', 'Object_31'])
+const S_STYLE_FRETBOARD_OBJECTS = new Set(['Object_32'])
+const S_STYLE_HARDWARE_OBJECTS = new Set(Array.from({ length: 23 }, (_, i) => `Object_${i + 4}`))
+
+function sStyleMaterialRole(meshName: string, materialName: string): MaterialRole {
+  if (S_STYLE_BODY_OBJECTS.has(meshName) && materialName === 'BodyMaterial') return 'body'
+  if (S_STYLE_STRING_OBJECTS.has(meshName) && materialName === 'StringMaterial') return 'strings'
+  if (S_STYLE_FRETBOARD_OBJECTS.has(meshName) && materialName === 'NeckMaterial') return 'fretboard'
+  if (S_STYLE_NECK_OBJECTS.has(meshName) && materialName === 'NeckMaterial') return 'neck'
+  if (S_STYLE_HARDWARE_OBJECTS.has(meshName) && materialName === 'MetalPartsMaterial') return 'hardware'
+  return 'other'
+}
+
+function materialRole(mesh: THREE.Mesh, materialName: string, shapeId: string): MaterialRole {
+  const meshName = mesh.name
+  if (shapeId === 'modern-s') return sStyleMaterialRole(meshName, materialName)
+
   const key = `${meshName} ${materialName}`.toLowerCase()
   if (/(pickguard|scratchplate|guard|binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
   if (/(fretboard|fingerboard|finger board|fret|board)/.test(key)) return 'fretboard'
@@ -139,6 +157,10 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.color = new THREE.Color(colors.hardware)
     mat.metalness = 0.9
     mat.roughness = 0.2
+  } else if (role === 'strings') {
+    mat.color = new THREE.Color('#DDE2EA')
+    mat.metalness = 0.7
+    mat.roughness = 0.24
   } else if (role === 'pickup') {
     mat.color = new THREE.Color('#08080A')
     mat.metalness = 0.35
@@ -155,12 +177,23 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.color = new THREE.Color('#F2EEE2')
     mat.metalness = 0.02
     mat.roughness = 0.34
-  } else if (role === 'body' || (role === 'other' && isLikelyPaintSurface(mesh, modelMaxDimension))) {
+  } else if (role === 'body' || (shapeId !== 'modern-s' && role === 'other' && isLikelyPaintSurface(mesh, modelMaxDimension))) {
+    if (shapeId === 'modern-s') mat.map = null
     mat.color = new THREE.Color(colors.finish)
     mat.metalness = 0.04
     mat.roughness = Math.min(colors.finishRoughness, 0.24)
   }
   mat.needsUpdate = true
+}
+
+function cloneModelMaterials(model: THREE.Object3D) {
+  model.traverse(obj => {
+    if (!(obj as THREE.Mesh).isMesh) return
+    const mesh = obj as THREE.Mesh
+    mesh.material = Array.isArray(mesh.material)
+      ? mesh.material.map(mat => mat.clone())
+      : mesh.material.clone()
+  })
 }
 
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
@@ -174,6 +207,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const { scene } = useGLTF(modelPath)
   const { model, center, scale, maxDimension } = useMemo(() => {
     const clone = scene.clone(true)
+    cloneModelMaterials(clone)
     const box = new THREE.Box3().setFromObject(clone)
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
@@ -189,13 +223,8 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       const mesh = obj as THREE.Mesh
       mesh.castShadow = true
       mesh.receiveShadow = true
-      if (Array.isArray(mesh.material)) {
-        mesh.material = mesh.material.map(mat => mat.clone())
-      } else {
-        mesh.material = mesh.material.clone()
-      }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish))
+      materials.forEach(mat => enhanceMaterial(materialRole(mesh, mat.name, shape.id), mat, colors, mesh, maxDimension, shape.id, finish))
     })
   }, [colors, finish, maxDimension, model, shape.id])
 
