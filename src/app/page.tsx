@@ -105,12 +105,12 @@ export default function HomePage() {
         {/* Hero right — watermark */}
         <div style={{ position: 'relative', height: '100vh', minHeight: 620, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', bottom: -40, left: '50%', transform: 'translateX(-50%)', width: 460, height: 680, background: 'radial-gradient(ellipse at 50% 85%, rgba(201,164,92,0.18) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, rgba(201,164,92,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 2 }} />
-          <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(680px, 88%)', opacity: 0.052, pointerEvents: 'none', zIndex: 1 }}>
+          <div style={{ position: 'absolute', left: '43%', top: '48%', transform: 'translate(-50%,-50%)', width: 'min(760px, 98%)', opacity: 0.07, pointerEvents: 'none', zIndex: 1 }}>
             <img src="/luthify-logo.webp" alt="" style={{ width: '100%', height: 'auto', display: 'block', mixBlendMode: 'lighten', filter: 'sepia(1) saturate(2) hue-rotate(4deg) brightness(0.8)' }} />
           </div>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 55%, rgba(201,164,92,0.09) 0%, transparent 58%), radial-gradient(ellipse at 20% 50%, rgba(9,9,11,0.6) 0%, transparent 45%)', pointerEvents: 'none', zIndex: 4 }} />
           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 140, background: 'linear-gradient(to right, #09090B, transparent)', pointerEvents: 'none', zIndex: 5 }} />
-          <div className="card" style={{ width: 'min(440px, 92%)', padding: 26, zIndex: 8, background: 'linear-gradient(180deg,rgba(17,17,20,0.92),rgba(9,9,11,0.88))', borderColor: 'rgba(201,164,92,0.18)', boxShadow: '0 28px 90px rgba(0,0,0,0.38)' }}>
+          <div className="card" style={{ width: 'min(440px, 92%)', padding: 26, zIndex: 8, background: 'linear-gradient(180deg,rgba(17,17,20,0.84),rgba(9,9,11,0.78))', borderColor: 'rgba(201,164,92,0.18)', boxShadow: '0 28px 90px rgba(0,0,0,0.38)', backdropFilter: 'blur(12px)' }}>
             <div style={{ fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A45C', marginBottom: 18 }}>Recent custom orders</div>
             {RECENT_ORDERS.map(([location, instrument, status]) => (
               <div key={location + instrument} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '14px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
