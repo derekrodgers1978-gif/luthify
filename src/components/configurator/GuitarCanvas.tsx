@@ -49,26 +49,29 @@ function applySStyleMaterial(mesh: THREE.Mesh, material: THREE.Material, colors:
   if (!mat.isMeshStandardMaterial) return
 
   const nodeNumber = objectNumber(mesh.name)
-  const meshNumber = objectNumber(mesh.geometry?.name)
 
   mat.envMapIntensity = 1.55
-  if (material.name === 'BodyMaterial' && nodeNumber === 3 && meshNumber === 1) {
+  if (material.name === 'BodyMaterial' && nodeNumber === 3) {
+    mat.map = null
     mat.color = new THREE.Color(colors.finish)
     mat.metalness = 0.04
     mat.roughness = Math.min(colors.finishRoughness, 0.24)
-  } else if (material.name === 'NeckMaterial' && nodeNumber === 32 && meshNumber === 30) {
+  } else if (material.name === 'NeckMaterial' && nodeNumber === 32) {
+    mat.map = null
     mat.color = new THREE.Color(colors.board)
     mat.metalness = 0
     mat.roughness = 0.58
-  } else if (material.name === 'NeckMaterial' && (nodeNumber === 30 || nodeNumber === 31) && (meshNumber === 28 || meshNumber === 29)) {
+  } else if (material.name === 'NeckMaterial' && (nodeNumber === 30 || nodeNumber === 31)) {
+    mat.map = null
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.02
     mat.roughness = 0.42
-  } else if (material.name === 'MetalPartsMaterial' && nodeNumber !== undefined && nodeNumber >= 4 && nodeNumber <= 26 && meshNumber !== undefined && meshNumber >= 2 && meshNumber <= 24) {
+  } else if (material.name === 'MetalPartsMaterial' && nodeNumber !== undefined && nodeNumber >= 4 && nodeNumber <= 26) {
+    mat.map = null
     mat.color = new THREE.Color(colors.hardware)
     mat.metalness = 0.9
     mat.roughness = 0.2
-  } else if (material.name === 'StringMaterial' && nodeNumber !== undefined && nodeNumber >= 27 && nodeNumber <= 29 && meshNumber !== undefined && meshNumber >= 25 && meshNumber <= 27) {
+  } else if (material.name === 'StringMaterial' && nodeNumber !== undefined && nodeNumber >= 27 && nodeNumber <= 29) {
     mat.metalness = 0.85
     mat.roughness = 0.26
   }
