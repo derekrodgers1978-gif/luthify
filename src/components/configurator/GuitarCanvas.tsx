@@ -1,7 +1,7 @@
 'use client'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
@@ -24,30 +24,65 @@ const CAMERA_DISTANCE: Record<string, number> = {
   banjo: 7.2,
   'jazz-hollow': 7.1,
   classical: 7.1,
+  resonator: 7.2,
   default: 6.4,
 }
 
-function enhanceMaterial(name: string, material: THREE.Material, colors: { finish: string; neck: string; board: string; hardware: string }) {
+type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'other'
+
+const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
+MODEL_PATHS.forEach(path => useGLTF.preload(path))
+
+function materialRole(meshName: string, materialName: string): MaterialRole {
+  const key = `${meshName} ${materialName}`.toLowerCase()
+  if (/(fretboard|fingerboard|finger board|fret|board)/.test(key)) return 'fretboard'
+  if (/(neck|headstock|head stock|headstock|peghead)/.test(key)) return 'neck'
+  if (/(pickup|pick up|humbucker|single coil|p90|p-90)/.test(key)) return 'pickup'
+  if (/(bridge|tailpiece|tail piece|tremolo|vibrato|saddle)/.test(key)) return 'bridge'
+  if (/(hardware|metal|chrome|tuner|tuning|knob|control|pot|string|ferrule|strap|jack)/.test(key)) return 'hardware'
+  if (/(body|top|paint|finish|guitar|soundboard|sound board|back|side|resonator|cover|plate)/.test(key)) return 'body'
+  return 'other'
+}
+
+function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: string }, board?: { hex?: string }, hw?: { id: string }) {
+  return {
+    finish: finish?.hex ?? '#D4B896',
+    finishRoughness: finish?.roughness ?? 0.18,
+    neck: neck?.id === 'maple' ? '#C8A05A' : neck?.id === 'roasted' ? '#8B4A20' : neck?.id === 'walnut' ? '#4A2411' : '#5C2F17',
+    board: board?.hex ?? '#1A0A00',
+    hardware: hw?.id === 'gold' || hw?.id === 'aged-brass' ? '#C9A45C' : hw?.id === 'black' ? '#111116' : '#C9CED6',
+  }
+}
+
+function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
-  const key = name.toLowerCase()
-  mat.envMapIntensity = 1.35
-  if (key.includes('metal') || key.includes('chrome') || key.includes('bridge') || key.includes('tuner') || key.includes('string') || key.includes('hardware')) {
+  mat.envMapIntensity = 1.55
+  if (role === 'hardware' || role === 'bridge') {
     mat.color = new THREE.Color(colors.hardware)
-    mat.metalness = 0.85
-    mat.roughness = 0.22
-  } else if (key.includes('neck') || key.includes('head')) {
+    mat.metalness = 0.9
+    mat.roughness = 0.2
+  } else if (role === 'pickup') {
+    mat.color = new THREE.Color('#08080A')
+    mat.metalness = 0.35
+    mat.roughness = 0.3
+  } else if (role === 'neck') {
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.02
-    mat.roughness = 0.44
-  } else if (key.includes('fret') || key.includes('finger') || key.includes('board')) {
+    mat.roughness = 0.42
+  } else if (role === 'fretboard') {
     mat.color = new THREE.Color(colors.board)
     mat.metalness = 0
     mat.roughness = 0.58
-  } else if (key.includes('body') || key.includes('paint') || key.includes('top') || key.includes('guitar')) {
+  } else if (role === 'body') {
     mat.color = new THREE.Color(colors.finish)
     mat.metalness = 0.04
-    mat.roughness = 0.16
+    mat.roughness = Math.min(colors.finishRoughness, 0.2)
+  } else if (role === 'other' && mat.color.getHSL({ h: 0, s: 0, l: 0 }).l > 0.72) {
+    // Some GLBs ship generic white materials with unhelpful mesh names.
+    mat.color = new THREE.Color(colors.finish)
+    mat.metalness = 0.03
+    mat.roughness = 0.22
   }
   mat.needsUpdate = true
 }
@@ -70,12 +105,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
     return { model: clone, center, scale: targetSize / maxDimension }
   }, [scene, shape.id])
-  const colors = useMemo(() => ({
-    finish: finish?.hex ?? '#D4B896',
-    neck: neck?.id === 'maple' ? '#C8A05A' : neck?.id === 'roasted' ? '#8B4A20' : neck?.id === 'walnut' ? '#4A2411' : '#5C2F17',
-    board: board?.hex ?? '#1A0A00',
-    hardware: hw?.id === 'gold' || hw?.id === 'aged-brass' ? '#C9A45C' : hw?.id === 'black' ? '#111116' : '#C9CED6',
-  }), [board?.hex, finish?.hex, hw?.id, neck?.id])
+  const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
     model.traverse(obj => {
@@ -84,7 +114,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       mesh.castShadow = true
       mesh.receiveShadow = true
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => enhanceMaterial(`${mesh.name} ${mat.name}`, mat, colors))
+      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors))
     })
   }, [colors, model])
 
