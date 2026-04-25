@@ -1,5 +1,40 @@
 {
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.0",
+    "@types/three": "^0.184.0",
+    "autoprefixer": "^10.5.0",
+    "framer-motion": "^12.38.0",
+    "next": "16.2.4",
+    "postcss": "^8.5.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.73.1",
+    "three": "^0.184.0",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^5"
+  },
+  "name": "luthify",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "build": "rm -rf dist luthify/dist luthify/out && npm install --prefix luthify --no-package-lock && npm run build --prefix luthify && rm -rf dist && cp -R luthify/dist dist"
-  }
+    "dev": "next dev",
+    "build": "rm -rf out dist && next build && mv out dist",
+    "start": "next start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
