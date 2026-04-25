@@ -597,16 +597,16 @@ function ModularSvgPreview() {
   const isSingleCut = shape === 'single-cut'
   const bodyPath = isSingleCut
     ? 'M232 411 C181 386 174 316 218 276 C241 256 280 249 318 270 C328 211 380 181 430 206 C486 235 506 301 464 348 C436 379 394 382 356 355 C341 403 282 435 232 411 Z'
-    : 'M236 398 C192 373 184 323 218 286 C166 258 180 196 236 198 C253 137 331 142 350 202 C390 157 458 184 456 246 C454 296 411 321 368 302 C386 362 329 421 280 386 C263 396 248 404 236 398 Z'
+    : 'M226 389 C191 362 193 315 232 292 C195 259 209 212 254 216 C274 166 335 169 352 222 C392 186 442 211 438 258 C434 303 395 322 359 302 C373 350 328 400 280 376 C259 394 239 398 226 389 Z'
   const pickguardPath = isSingleCut
     ? 'M316 273 C346 255 389 270 397 304 C371 298 348 309 333 336 C310 322 298 291 316 273 Z'
-    : 'M266 236 C314 203 381 225 384 282 C374 316 348 343 313 348 C280 333 262 305 262 274 C262 256 263 244 266 236 Z'
-  const pickupYs = store.pickups === 'singlecoil' && !isSingleCut ? [269, 307, 345] : [288, 337]
+    : 'M273 245 C313 219 367 237 370 283 C361 310 341 331 313 334 C287 324 269 300 268 274 C268 260 269 251 273 245 Z'
+  const pickupYs = store.pickups === 'singlecoil' && !isSingleCut ? [270, 305, 340] : [288, 337]
   const pickupWidth = store.pickups === 'p90' ? 72 : store.pickups === 'singlecoil' ? 58 : 84
   const pickupHeight = store.pickups === 'singlecoil' ? 17 : 25
-  const bridgeY = isSingleCut ? 389 : 374
-  const tailpieceY = isSingleCut ? 418 : 402
-  const stringEndY = store.bridge === 'bigsby' ? (isSingleCut ? 448 : 430) : tailpieceY + 4
+  const bridgeY = isSingleCut ? 389 : 368
+  const tailpieceY = isSingleCut ? 418 : 394
+  const stringEndY = store.bridge === 'bigsby' ? (isSingleCut ? 448 : 421) : tailpieceY + 4
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', display: 'grid', placeItems: 'center', background: 'radial-gradient(circle at 50% 45%, rgba(28,24,28,0.4), rgba(9,9,11,0.96) 68%)' }}>
