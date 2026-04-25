@@ -577,6 +577,90 @@ function SingleCutFinishFallback() {
   )
 }
 
+function ModularSvgPreview() {
+  const store = useConfigStore()
+  const shape = store.shape
+  if (!isModularShape(shape)) return null
+
+  const finish = FINISHES.find(f => f.id === store.finish)
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const pickguard = PICKGUARDS.find(p => p.id === store.pickguard)
+  const knobs = KNOBS.find(k => k.id === store.knobs)
+  const binding = BINDINGS.find(b => b.id === store.binding)
+  const colors = makeColors(finish, neck, board, hw)
+  const bodyFill = isBurstFinish(finish?.id) ? 'url(#modularBurst)' : isNaturalFinish(finish?.id) ? 'url(#modularNatural)' : colors.finish
+  const hardware = colors.hardware
+  const knobColor = optionColor(knobs, '#E8D5A8')
+  const pickupFill = pickupColor(store.pickups)
+  const isSingleCut = shape === 'single-cut'
+  const bodyPath = isSingleCut
+    ? 'M268 337 C213 325 174 284 180 230 C186 174 238 148 292 166 C322 116 396 121 421 176 C472 184 502 223 492 270 C482 319 436 349 382 342 C358 383 309 393 268 337 Z'
+    : 'M250 337 C200 318 185 276 214 239 C164 210 182 154 238 158 C252 105 329 112 347 168 C391 130 457 158 451 216 C445 263 404 284 362 270 C374 322 323 366 280 334 C270 331 260 335 250 337 Z'
+  const pickguardPath = isSingleCut
+    ? 'M294 220 C331 194 393 205 405 253 C371 247 337 261 319 302 C287 292 278 245 294 220 Z'
+    : 'M258 206 C317 164 390 195 382 264 L348 326 C310 327 268 300 260 256 C252 236 246 220 258 206 Z'
+  const pickupYs = store.pickups === 'singlecoil' && !isSingleCut ? [238, 276, 314] : [252, 302]
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', display: 'grid', placeItems: 'center' }}>
+      <svg viewBox="0 0 760 560" role="img" aria-label={`${isSingleCut ? 'Single Cut' : 'S-Style'} modular instrument preview`} style={{ width: 'min(86%, 860px)', height: 'min(86%, 620px)', filter: 'drop-shadow(0 28px 58px rgba(0,0,0,0.48))' }}>
+        <defs>
+          <radialGradient id="modularBurst" cx="48%" cy="52%" r="66%">
+            <stop offset="0%" stopColor="#F0A23A" />
+            <stop offset="42%" stopColor={colors.finish} />
+            <stop offset="88%" stopColor="#160604" />
+          </radialGradient>
+          <linearGradient id="modularNatural" x1="0" x2="1" y1="0.2" y2="0.9">
+            <stop offset="0%" stopColor={colors.finish} />
+            <stop offset="34%" stopColor="#F1D09A" />
+            <stop offset="70%" stopColor={colors.finish} />
+            <stop offset="100%" stopColor="#8C5A2B" />
+          </linearGradient>
+          <linearGradient id="bodyGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.34)" />
+            <stop offset="45%" stopColor="rgba(255,255,255,0.08)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
+          </linearGradient>
+        </defs>
+        <g transform="translate(78 10) rotate(-13 330 280)">
+          <rect x="327" y="75" width="66" height="315" rx="20" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" />
+          <rect x="342" y="86" width="36" height="294" rx="12" fill={colors.board} />
+          <path d="M318 46 L404 46 L422 12 Q362 -20 300 12 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="6" />
+          {[118, 154, 190, 226, 262, 298, 334, 370].map(y => (
+            <line key={y} x1="344" x2="376" y1={y} y2={y} stroke="#C9CED6" strokeWidth="2.4" opacity="0.9" />
+          ))}
+          {[-1, 1].map(side => [0, 1, 2].map(i => (
+            <rect key={`${side}-${i}`} x={side > 0 ? 406 : 281} y={66 + i * 34} width="28" height="14" rx="4" fill={hardware} stroke="#1E2025" strokeWidth="2" />
+          )))}
+
+          {isSingleCut && binding?.id !== 'none' && <path d={bodyPath} fill={optionColor(binding, '#F2EEE2')} stroke="#1E2025" strokeWidth="5" transform="translate(-5 -4) scale(1.03)" />}
+          <path d={bodyPath} fill={bodyFill} stroke="#1E2025" strokeWidth="6" strokeLinejoin="round" />
+          <path d={bodyPath} fill="url(#bodyGloss)" opacity="0.42" transform="translate(34 26) scale(0.9)" />
+          {isSingleCut && <path d="M415 176 C460 186 484 220 474 255 C456 231 426 224 392 236 C410 215 418 196 415 176 Z" fill="#09090B" opacity="0.78" />}
+
+          <path d={pickguardPath} fill={optionColor(pickguard)} stroke="#1E2025" strokeWidth="4" opacity={isSingleCut ? 0.76 : 1} />
+          {pickupYs.map(y => (
+            <rect key={y} x="307" y={y} width={store.pickups === 'p90' ? 82 : 92} height={store.pickups === 'singlecoil' ? 20 : 28} rx="7" fill={pickupFill} stroke="#DDE2EA" strokeWidth="2" />
+          ))}
+          <g fill={hardware} stroke="#1E2025" strokeWidth="3">
+            <rect x="282" y="358" width="142" height="18" rx="9" />
+            {(isSingleCut || store.bridge === 'bigsby' || store.bridge === 'tuneomatic') && <rect x="266" y="393" width="172" height="18" rx="9" />}
+            {store.bridge === 'bigsby' && <ellipse cx="352" cy="429" rx="48" ry="18" fill="none" stroke={hardware} strokeWidth="9" />}
+          </g>
+          {(isSingleCut ? [[443, 318], [472, 284], [407, 378], [477, 371]] : [[452, 319], [470, 371], [418, 391]]).map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="16" fill={knobColor} stroke="#1E2025" strokeWidth="4" />
+          ))}
+          {[0, 1, 2, 3, 4, 5].map(i => (
+            <line key={i} x1={344 + i * 6} x2={282 + i * 25} y1="48" y2="401" stroke="#DDE2EA" strokeWidth="1.4" opacity="0.72" />
+          ))}
+        </g>
+      </svg>
+    </div>
+  )
+}
+
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
   return (
@@ -652,6 +736,7 @@ export default function GuitarCanvas() {
           />
         </Canvas>
       )}
+      <ModularSvgPreview />
       <div style={{ position: 'absolute', left: 20, top: 64, zIndex: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {[
           ['standard', 'Reset'],
