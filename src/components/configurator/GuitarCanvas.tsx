@@ -1,7 +1,7 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, isBurstFinish, isNaturalFinish } from '@/lib/configurator-options'
@@ -27,6 +27,9 @@ const CAMERA_DISTANCE: Record<string, number> = {
   resonator: 7.2,
   default: 6.4,
 }
+
+const S_STYLE_SHAPE_ID = 'modern-s'
+const S_STYLE_MODEL_PATH = '/models/s-style-electric.glb'
 
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number; finishGroup?: 'solid' | 'burst' | 'natural' }
@@ -170,7 +173,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
+  const modelPath = shape.id === S_STYLE_SHAPE_ID ? S_STYLE_MODEL_PATH : shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
   const { model, center, scale, maxDimension } = useMemo(() => {
     const clone = scene.clone(true)
@@ -295,7 +298,7 @@ function SingleCutFinishFallback() {
 }
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
-function Scene({ view }: { view: 'standard' | 'detail' }) {
+function Scene({ view, fallback }: { view: 'standard' | 'detail'; fallback: React.ReactNode }) {
   return (
     <>
       <ambientLight intensity={0.42} />
@@ -304,7 +307,7 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
-      <Suspense fallback={<ModelLoading />}>
+      <Suspense fallback={fallback}>
         <Bounds fit clip observe margin={1.28}>
           <GlbInstrument view={view} />
         </Bounds>
@@ -334,7 +337,9 @@ export default function GuitarCanvas() {
   const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
   const [webglLost, setWebglLost] = useState(false)
   const shape = useConfigStore(s => s.shape)
+  const isSStyle = shape === S_STYLE_SHAPE_ID
   const showSingleCutFallback = webglLost && shape === 'single-cut'
+  const modelFallback = isSStyle ? null : <ModelLoading />
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -355,7 +360,7 @@ export default function GuitarCanvas() {
           }}
         >
           <CameraControls view={view} />
-          <Scene view={view === 'reset' ? 'standard' : view} />
+          <Scene view={view === 'reset' ? 'standard' : view} fallback={modelFallback} />
           <OrbitControls
             enablePan={false}
             target={[0, 0, 0]}
