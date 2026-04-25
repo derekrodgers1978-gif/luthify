@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
-import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
+import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, isBurstFinish, isNaturalFinish } from '@/lib/configurator-options'
 
 const MODEL_TARGET_SIZE: Record<string, number> = {
   cello: 4.8,
@@ -29,7 +29,7 @@ const CAMERA_DISTANCE: Record<string, number> = {
 }
 
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
-type FinishOption = { id: string; hex?: string; roughness?: number }
+type FinishOption = { id: string; hex?: string; roughness?: number; finishGroup?: 'solid' | 'burst' | 'natural' }
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -92,38 +92,41 @@ function applySingleCutBodyFinish(mat: THREE.MeshStandardMaterial, finish: Finis
   const center = box?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3()
   const size = box?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(1, 1, 1)
   const halfSize = new THREE.Vector2(Math.max(size.x * 0.5, 0.001), Math.max(size.y * 0.5, 0.001))
+  const finishMode = isBurstFinish(finish?.id) ? 1 : isNaturalFinish(finish?.id) ? 2 : 0
 
   mat.color = new THREE.Color('#ffffff')
   mat.map = null
   mat.metalness = 0.04
-  mat.roughness = Math.min(colors.finishRoughness, 0.24)
+  mat.roughness = isNaturalFinish(finish?.id) ? Math.max(colors.finishRoughness, 0.28) : Math.min(colors.finishRoughness, 0.24)
   mat.onBeforeCompile = shader => {
     shader.uniforms.uFinishColor = { value: new THREE.Color(colors.finish) }
     shader.uniforms.uBindingColor = { value: new THREE.Color('#F2EEE2') }
     shader.uniforms.uBodyCenter = { value: new THREE.Vector2(center.x, center.y) }
     shader.uniforms.uBodyHalfSize = { value: halfSize }
-    shader.uniforms.uIsBurst = { value: finish?.id === 'sunburst' ? 1 : 0 }
+    shader.uniforms.uFinishMode = { value: finishMode }
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vFinishPosition;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFinishPosition = position;')
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
-        '#include <common>\nuniform vec3 uFinishColor;\nuniform vec3 uBindingColor;\nuniform vec2 uBodyCenter;\nuniform vec2 uBodyHalfSize;\nuniform int uIsBurst;\nvarying vec3 vFinishPosition;'
+        '#include <common>\nuniform vec3 uFinishColor;\nuniform vec3 uBindingColor;\nuniform vec2 uBodyCenter;\nuniform vec2 uBodyHalfSize;\nuniform int uFinishMode;\nvarying vec3 vFinishPosition;'
       )
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
 vec2 finishUv = (vFinishPosition.xy - uBodyCenter) / uBodyHalfSize;
 float finishRadius = length(finishUv);
+float woodGrain = sin((vFinishPosition.x * 18.0) + sin(vFinishPosition.y * 14.0) * 0.7) * 0.5 + 0.5;
 vec3 burstColor = mix(vec3(0.95, 0.58, 0.16), uFinishColor, smoothstep(0.18, 0.56, finishRadius));
 burstColor = mix(burstColor, vec3(0.07, 0.025, 0.008), smoothstep(0.62, 0.92, finishRadius));
-vec3 paintColor = uIsBurst == 1 ? burstColor : uFinishColor;
+vec3 naturalColor = mix(uFinishColor * 0.72, uFinishColor * 1.18, smoothstep(0.2, 0.92, woodGrain));
+vec3 paintColor = uFinishMode == 1 ? burstColor : uFinishMode == 2 ? naturalColor : uFinishColor;
 float binding = smoothstep(0.82, 0.91, finishRadius);
 diffuseColor.rgb = mix(paintColor, uBindingColor, binding * 0.92);`
       )
   }
-  mat.customProgramCacheKey = () => `single-cut-finish-${finish?.id ?? 'default'}-${colors.finish}`
+  mat.customProgramCacheKey = () => `single-cut-finish-${finish?.id ?? 'default'}-${finishMode}-${colors.finish}`
 }
 
 function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number, shapeId: string, finish?: FinishOption) {
@@ -226,7 +229,7 @@ function SingleCutFinishFallback() {
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const colors = makeColors(finish, neck, board, hw)
-  const bodyFill = finish?.id === 'sunburst' ? 'url(#singleCutBurst)' : colors.finish
+  const bodyFill = isBurstFinish(finish?.id) ? 'url(#singleCutBurst)' : isNaturalFinish(finish?.id) ? 'url(#singleCutNatural)' : colors.finish
 
   return (
     <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
@@ -237,6 +240,12 @@ function SingleCutFinishFallback() {
             <stop offset="45%" stopColor={colors.finish} />
             <stop offset="86%" stopColor="#140703" />
           </radialGradient>
+          <linearGradient id="singleCutNatural" x1="0" x2="1" y1="0.2" y2="0.8">
+            <stop offset="0%" stopColor={colors.finish} />
+            <stop offset="34%" stopColor="#F1D09A" />
+            <stop offset="58%" stopColor={colors.finish} />
+            <stop offset="100%" stopColor="#8C5A2B" />
+          </linearGradient>
           <linearGradient id="singleCutTopGloss" x1="0" x2="1" y1="0" y2="1">
             <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
             <stop offset="42%" stopColor="rgba(255,255,255,0.06)" />
