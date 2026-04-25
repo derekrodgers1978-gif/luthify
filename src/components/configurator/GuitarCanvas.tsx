@@ -596,16 +596,18 @@ function ModularSvgPreview() {
   const pickupFill = pickupColor(store.pickups)
   const isSingleCut = shape === 'single-cut'
   const bodyPath = isSingleCut
-    ? 'M250 344 C198 325 171 282 183 229 C194 178 240 151 291 165 C319 109 399 119 420 179 C390 184 365 204 354 236 C386 219 445 232 473 270 C507 316 465 365 398 348 C368 397 298 390 250 344 Z'
-    : 'M250 337 C200 318 185 276 214 239 C164 210 182 154 238 158 C252 105 329 112 347 168 C391 130 457 158 451 216 C445 263 404 284 362 270 C374 322 323 366 280 334 C270 331 260 335 250 337 Z'
+    ? 'M261 407 C222 385 207 341 224 301 C240 263 278 245 315 260 C324 213 371 186 416 207 C462 228 475 281 445 318 C488 323 511 363 488 402 C462 446 393 445 360 407 C333 431 292 425 261 407 Z'
+    : 'M251 385 C210 361 199 316 226 278 C181 255 184 198 237 197 C251 146 321 147 345 199 C382 159 445 181 447 239 C449 292 405 318 363 303 C383 354 337 410 286 384 C274 379 262 380 251 385 Z'
   const pickguardPath = isSingleCut
-    ? 'M294 220 C331 194 393 205 405 253 C371 247 337 261 319 302 C287 292 278 245 294 220 Z'
-    : 'M258 206 C317 164 390 195 382 264 L348 326 C310 327 268 300 260 256 C252 236 246 220 258 206 Z'
-  const pickupYs = store.pickups === 'singlecoil' && !isSingleCut ? [238, 276, 314] : [252, 302]
+    ? 'M299 269 C323 248 365 254 390 281 C367 282 342 297 329 325 C308 317 291 291 299 269 Z'
+    : 'M270 241 C314 203 381 223 385 281 C374 315 350 346 314 352 C281 340 261 307 260 274 C259 259 262 249 270 241 Z'
+  const pickupYs = store.pickups === 'singlecoil' && !isSingleCut ? [273, 311, 349] : [293, 344]
+  const pickupWidth = store.pickups === 'p90' ? 76 : store.pickups === 'singlecoil' ? 62 : 88
+  const pickupHeight = store.pickups === 'singlecoil' ? 18 : 27
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', display: 'grid', placeItems: 'center' }}>
-      <svg viewBox="0 0 760 560" role="img" aria-label={`${isSingleCut ? 'Single Cut' : 'S-Style'} modular instrument preview`} style={{ width: 'min(86%, 860px)', height: 'min(86%, 620px)', filter: 'drop-shadow(0 28px 58px rgba(0,0,0,0.48))' }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', display: 'grid', placeItems: 'center', background: 'radial-gradient(circle at 50% 45%, rgba(28,24,28,0.4), rgba(9,9,11,0.96) 68%)' }}>
+      <svg viewBox="0 0 760 560" role="img" aria-label={`${isSingleCut ? 'Single Cut' : 'S-Style'} modular instrument preview`} style={{ width: 'min(90%, 900px)', height: 'min(90%, 650px)', filter: 'drop-shadow(0 34px 64px rgba(0,0,0,0.56))' }}>
         <defs>
           <radialGradient id="modularBurst" cx="48%" cy="52%" r="66%">
             <stop offset="0%" stopColor="#F0A23A" />
@@ -623,35 +625,56 @@ function ModularSvgPreview() {
             <stop offset="45%" stopColor="rgba(255,255,255,0.08)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
           </linearGradient>
+          <linearGradient id="neckGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#F0D08B" stopOpacity="0.34" />
+            <stop offset="46%" stopColor={colors.neck} />
+            <stop offset="100%" stopColor="#2B1308" stopOpacity="0.42" />
+          </linearGradient>
+          <linearGradient id="hardwareGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45" />
+            <stop offset="45%" stopColor={hardware} />
+            <stop offset="100%" stopColor="#111216" stopOpacity="0.42" />
+          </linearGradient>
+          <filter id="softPartShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="8" stdDeviation="7" floodColor="#000000" floodOpacity="0.34" />
+          </filter>
         </defs>
-        <g transform="translate(78 10) rotate(-13 330 280)">
-          <rect x="327" y="75" width="66" height="315" rx="20" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" />
-          <rect x="342" y="86" width="36" height="294" rx="12" fill={colors.board} />
-          <path d="M318 46 L404 46 L422 12 Q362 -20 300 12 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="6" />
-          {[118, 154, 190, 226, 262, 298, 334, 370].map(y => (
-            <line key={y} x1="344" x2="376" y1={y} y2={y} stroke="#C9CED6" strokeWidth="2.4" opacity="0.9" />
+        <g transform="translate(72 0) rotate(-12 350 292)" filter="url(#softPartShadow)">
+          <ellipse cx="360" cy="414" rx="142" ry="20" fill="#000000" opacity="0.28" />
+          <path d="M326 72 L394 72 L379 410 L342 410 Z" fill="url(#neckGloss)" stroke="#1A0D07" strokeWidth="5" strokeLinejoin="round" />
+          <path d="M342 84 L378 84 L371 397 L350 397 Z" fill={colors.board} stroke="#080402" strokeWidth="3" strokeLinejoin="round" />
+          <path d={isSingleCut ? 'M315 42 C328 8 374 -6 413 18 L398 75 L319 75 Z' : 'M316 42 C345 5 403 9 428 41 L399 78 L319 76 Z'} fill="url(#neckGloss)" stroke="#1A0D07" strokeWidth="6" strokeLinejoin="round" />
+          {[126, 162, 198, 234, 270, 306, 342, 378].map((y, i) => (
+            <line key={y} x1={343 + i * 0.5} x2={377 - i * 0.5} y1={y} y2={y} stroke="#D8DEE8" strokeWidth="2.1" opacity="0.92" />
           ))}
           {[-1, 1].map(side => [0, 1, 2].map(i => (
-            <rect key={`${side}-${i}`} x={side > 0 ? 406 : 281} y={66 + i * 34} width="28" height="14" rx="4" fill={hardware} stroke="#1E2025" strokeWidth="2" />
+            <g key={`${side}-${i}`}>
+              <circle cx={side > 0 ? 407 : 310} cy={58 + i * 24} r="5" fill="url(#hardwareGloss)" stroke="#1E2025" strokeWidth="2" />
+              <rect x={side > 0 ? 414 : 278} y={51 + i * 24} width="28" height="14" rx="4" fill="url(#hardwareGloss)" stroke="#1E2025" strokeWidth="2" />
+            </g>
           )))}
 
           {isSingleCut && binding?.id !== 'none' && <path d={bodyPath} fill={optionColor(binding, '#F2EEE2')} stroke="#1E2025" strokeWidth="5" transform="translate(-5 -4) scale(1.03)" />}
-          <path d={bodyPath} fill={bodyFill} stroke="#1E2025" strokeWidth="6" strokeLinejoin="round" />
-          <path d={bodyPath} fill="url(#bodyGloss)" opacity="0.42" transform="translate(34 26) scale(0.9)" />
-          <path d={pickguardPath} fill={optionColor(pickguard)} stroke="#1E2025" strokeWidth="4" opacity={isSingleCut ? 0.76 : 1} />
+          <path d={bodyPath} fill={bodyFill} stroke="#17181C" strokeWidth="8" strokeLinejoin="round" />
+          <path d={bodyPath} fill="url(#bodyGloss)" opacity="0.4" transform="translate(34 28) scale(0.9)" />
+          <path d={bodyPath} fill="none" stroke="rgba(255,255,255,0.26)" strokeWidth="2" strokeLinejoin="round" transform="translate(4 5) scale(0.985)" />
+          <path d={pickguardPath} fill={optionColor(pickguard)} stroke="#17181C" strokeWidth="4" opacity={isSingleCut ? 0.82 : 1} />
           {pickupYs.map(y => (
-            <rect key={y} x="307" y={y} width={store.pickups === 'p90' ? 82 : 92} height={store.pickups === 'singlecoil' ? 20 : 28} rx="7" fill={pickupFill} stroke="#DDE2EA" strokeWidth="2" />
+            <g key={y}>
+              <rect x={344 - pickupWidth / 2} y={y} width={pickupWidth} height={pickupHeight} rx="7" fill={pickupFill} stroke="#DDE2EA" strokeWidth="2" />
+              <line x1={356 - pickupWidth / 2} x2={332 + pickupWidth / 2} y1={y + pickupHeight / 2} y2={y + pickupHeight / 2} stroke="rgba(255,255,255,0.28)" strokeWidth="1" />
+            </g>
           ))}
           <g fill={hardware} stroke="#1E2025" strokeWidth="3">
-            <rect x="282" y="358" width="142" height="18" rx="9" />
-            {(isSingleCut || store.bridge === 'bigsby' || store.bridge === 'tuneomatic') && <rect x="266" y="393" width="172" height="18" rx="9" />}
-            {store.bridge === 'bigsby' && <ellipse cx="352" cy="429" rx="48" ry="18" fill="none" stroke={hardware} strokeWidth="9" />}
+            <rect x="288" y="388" width="134" height="17" rx="8" fill="url(#hardwareGloss)" />
+            {(isSingleCut || store.bridge === 'bigsby' || store.bridge === 'tuneomatic') && <rect x="273" y="420" width="166" height="17" rx="8" fill="url(#hardwareGloss)" />}
+            {store.bridge === 'bigsby' && <ellipse cx="356" cy="456" rx="49" ry="17" fill="none" stroke={hardware} strokeWidth="9" />}
           </g>
-          {(isSingleCut ? [[443, 318], [472, 284], [407, 378], [477, 371]] : [[452, 319], [470, 371], [418, 391]]).map(([x, y]) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r="16" fill={knobColor} stroke="#1E2025" strokeWidth="4" />
+          {(isSingleCut ? [[444, 330], [475, 301], [413, 386], [478, 383]] : [[447, 329], [466, 379], [418, 402]]).map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="14" fill={knobColor} stroke="#1E2025" strokeWidth="4" />
           ))}
           {[0, 1, 2, 3, 4, 5].map(i => (
-            <line key={i} x1={344 + i * 6} x2={282 + i * 25} y1="48" y2="401" stroke="#DDE2EA" strokeWidth="1.4" opacity="0.72" />
+            <line key={i} x1={344 + i * 6} x2={292 + i * 22} y1="50" y2="430" stroke="#DDE2EA" strokeWidth="1.3" opacity="0.76" />
           ))}
         </g>
       </svg>
