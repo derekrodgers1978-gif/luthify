@@ -29,6 +29,7 @@ const CAMERA_DISTANCE: Record<string, number> = {
 }
 
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
+type FinishOption = { id: string; hex?: string; roughness?: number }
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -68,11 +69,70 @@ function isLikelyPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
   return largest > modelMaxDimension * 0.3 && middle > modelMaxDimension * 0.16 && ratio < 2.4
 }
 
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number) {
+function isSingleCutPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
+  if (!mesh.geometry) return false
+  mesh.geometry.computeBoundingBox()
+  const box = mesh.geometry.boundingBox
+  if (!box) return false
+  const size = box.getSize(new THREE.Vector3()).multiply(mesh.scale)
+  const center = box.getCenter(new THREE.Vector3())
+  const dims = [Math.abs(size.x), Math.abs(size.y), Math.abs(size.z)].sort((a, b) => b - a)
+  return (
+    dims[0] > modelMaxDimension * 0.4 &&
+    dims[1] > modelMaxDimension * 0.28 &&
+    dims[2] < modelMaxDimension * 0.08 &&
+    center.y > 0.15 &&
+    center.y < 1.9
+  )
+}
+
+function applySingleCutBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh) {
+  mesh.geometry.computeBoundingBox()
+  const box = mesh.geometry.boundingBox
+  const center = box?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3()
+  const size = box?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(1, 1, 1)
+  const halfSize = new THREE.Vector2(Math.max(size.x * 0.5, 0.001), Math.max(size.y * 0.5, 0.001))
+
+  mat.color = new THREE.Color('#ffffff')
+  mat.map = null
+  mat.metalness = 0.04
+  mat.roughness = Math.min(colors.finishRoughness, 0.24)
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uFinishColor = { value: new THREE.Color(colors.finish) }
+    shader.uniforms.uBindingColor = { value: new THREE.Color('#F2EEE2') }
+    shader.uniforms.uBodyCenter = { value: new THREE.Vector2(center.x, center.y) }
+    shader.uniforms.uBodyHalfSize = { value: halfSize }
+    shader.uniforms.uIsBurst = { value: finish?.id === 'sunburst' ? 1 : 0 }
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vFinishPosition;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFinishPosition = position;')
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nuniform vec3 uFinishColor;\nuniform vec3 uBindingColor;\nuniform vec2 uBodyCenter;\nuniform vec2 uBodyHalfSize;\nuniform int uIsBurst;\nvarying vec3 vFinishPosition;'
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+vec2 finishUv = (vFinishPosition.xy - uBodyCenter) / uBodyHalfSize;
+float finishRadius = length(finishUv);
+vec3 burstColor = mix(vec3(0.95, 0.58, 0.16), uFinishColor, smoothstep(0.18, 0.56, finishRadius));
+burstColor = mix(burstColor, vec3(0.07, 0.025, 0.008), smoothstep(0.62, 0.92, finishRadius));
+vec3 paintColor = uIsBurst == 1 ? burstColor : uFinishColor;
+float binding = smoothstep(0.82, 0.91, finishRadius);
+diffuseColor.rgb = mix(paintColor, uBindingColor, binding * 0.92);`
+      )
+  }
+  mat.customProgramCacheKey = () => `single-cut-finish-${finish?.id ?? 'default'}-${colors.finish}`
+}
+
+function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number, shapeId: string, finish?: FinishOption) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
-  if (role === 'hardware' || role === 'bridge') {
+  if (shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
+    applySingleCutBodyFinish(mat, finish, colors, mesh)
+  } else if (role === 'hardware' || role === 'bridge') {
     mat.color = new THREE.Color(colors.hardware)
     mat.metalness = 0.9
     mat.roughness = 0.2
@@ -132,9 +192,9 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         mesh.material = mesh.material.clone()
       }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension))
+      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish))
     })
-  }, [colors, maxDimension, model])
+  }, [colors, finish, maxDimension, model, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
