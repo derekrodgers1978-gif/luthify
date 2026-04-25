@@ -302,6 +302,9 @@ function PriceFooter() {
         <button onClick={openQuote} style={{ width: '100%', padding: 15, borderRadius: 14, background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', color: '#09090B', fontWeight: 700, fontSize: '0.92rem', border: 'none', cursor: 'pointer', letterSpacing: '0.02em', boxShadow: '0 8px 32px rgba(201,164,92,0.3)', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 44px rgba(201,164,92,0.45)' }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 8px 32px rgba(201,164,92,0.3)' }}>
           Request Quotes / Commission →
         </button>
+        <a href="/builders" style={{ display: 'block', width: '100%', marginTop: 10, padding: 12, borderRadius: 12, textAlign: 'center', background: 'none', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(245,241,232,0.58)', textDecoration: 'none', cursor: 'pointer', fontSize: '0.82rem', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,164,92,0.3)'; e.currentTarget.style.color = '#C9A45C' }} onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'rgba(245,241,232,0.58)' }}>
+          Choose Builder →
+        </a>
 
         {QuoteModal && <QuoteModal open={quoteOpen} onClose={() => setQuoteOpen(false)} />}
       </div>

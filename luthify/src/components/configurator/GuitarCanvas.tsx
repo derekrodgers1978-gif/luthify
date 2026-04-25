@@ -19,6 +19,13 @@ function GuitarBody() {
   const neck    = NECK_WOODS.find(n => n.id === store.neck)
   const hw      = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const hardwareColor = hw?.id === 'gold' ? '#C9A45C' : hw?.id === 'black' ? '#121216' : hw?.id === 'chrome' ? '#C9CED6' : '#A8A39A'
+  const shapeScale = store.shape === 'semi-hollow'
+    ? [1.08, 1, 1] as const
+    : store.shape === 'offset'
+      ? [0.96, 1.08, 1] as const
+      : store.shape === 'single-cut'
+        ? [1.03, 0.98, 1] as const
+        : [1, 1, 1] as const
 
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: new THREE.Color(finish?.hex ?? '#D4B896'),
@@ -62,29 +69,74 @@ function GuitarBody() {
     }
   })
 
-  // Body — LP-inspired single cutaway silhouette using lathe geometry
+  // Body — procedural silhouettes keep the preview responsive without a GLTF asset.
   const bodyShape = useMemo(() => {
     const shape = new THREE.Shape()
-    shape.moveTo(0, -1.4)
-    shape.bezierCurveTo(0.9, -1.4,  1.5, -0.8,  1.5,  0)
-    shape.bezierCurveTo(1.5,  0.7,  1.1,  1.2,  0.6,  1.4)
-    shape.bezierCurveTo(0.3,  1.5,  0.1,  1.3,  0.1,  1.0)
-    shape.bezierCurveTo(0.1,  0.6,  0.4,  0.4,  0.4,  0.1)
-    shape.bezierCurveTo(0.4, -0.2,  0.2, -0.4,  0,   -0.4)
-    shape.bezierCurveTo(-0.2,-0.4, -0.4,-0.2,  -0.4,  0.1)
-    shape.bezierCurveTo(-0.4, 0.4, -0.1,  0.6, -0.1,  1.0)
-    shape.bezierCurveTo(-0.1, 1.3, -0.3,  1.5, -0.6,  1.4)
-    shape.bezierCurveTo(-1.1, 1.2, -1.5,  0.7, -1.5,  0)
-    shape.bezierCurveTo(-1.5,-0.8, -0.9, -1.4,  0,   -1.4)
+    if (store.shape === 'single-cut') {
+      shape.moveTo(0, -1.45)
+      shape.bezierCurveTo(0.9, -1.45, 1.45, -0.95, 1.48, -0.15)
+      shape.bezierCurveTo(1.5, 0.75, 1.0, 1.35, 0.35, 1.42)
+      shape.bezierCurveTo(0.05, 1.45, 0.02, 1.05, 0.32, 0.82)
+      shape.bezierCurveTo(0.62, 0.58, 0.42, 0.18, 0.06, 0.0)
+      shape.bezierCurveTo(-0.22, -0.14, -0.42, 0.28, -0.36, 0.72)
+      shape.bezierCurveTo(-0.28, 1.25, -0.56, 1.45, -0.9, 1.25)
+      shape.bezierCurveTo(-1.42, 0.92, -1.55, 0.24, -1.4, -0.42)
+      shape.bezierCurveTo(-1.22, -1.08, -0.78, -1.45, 0, -1.45)
+    } else if (store.shape === 'offset') {
+      shape.moveTo(-0.1, -1.45)
+      shape.bezierCurveTo(0.92, -1.58, 1.55, -0.86, 1.34, -0.12)
+      shape.bezierCurveTo(1.15, 0.58, 1.55, 1.15, 0.75, 1.42)
+      shape.bezierCurveTo(0.18, 1.62, -0.06, 1.18, 0.1, 0.78)
+      shape.bezierCurveTo(0.28, 0.32, -0.04, -0.08, -0.38, 0.12)
+      shape.bezierCurveTo(-0.78, 0.34, -0.42, 1.0, -0.8, 1.28)
+      shape.bezierCurveTo(-1.42, 1.72, -1.72, 0.66, -1.48, -0.18)
+      shape.bezierCurveTo(-1.25, -0.96, -0.92, -1.36, -0.1, -1.45)
+    } else if (store.shape === 'semi-hollow') {
+      shape.moveTo(0, -1.42)
+      shape.bezierCurveTo(1.0, -1.42, 1.55, -0.78, 1.5, 0.04)
+      shape.bezierCurveTo(1.45, 0.85, 0.95, 1.36, 0.34, 1.4)
+      shape.bezierCurveTo(0.02, 1.42, -0.1, 1.05, 0.1, 0.74)
+      shape.bezierCurveTo(0.32, 0.38, 0.18, -0.06, -0.12, -0.18)
+      shape.bezierCurveTo(-0.48, -0.34, -0.7, 0.2, -0.58, 0.74)
+      shape.bezierCurveTo(-0.46, 1.28, -0.78, 1.44, -1.12, 1.12)
+      shape.bezierCurveTo(-1.58, 0.68, -1.64, -0.22, -1.32, -0.86)
+      shape.bezierCurveTo(-1.08, -1.28, -0.6, -1.42, 0, -1.42)
+    } else {
+      shape.moveTo(0, -1.4)
+      shape.bezierCurveTo(0.9, -1.4,  1.5, -0.8,  1.5,  0)
+      shape.bezierCurveTo(1.5,  0.7,  1.1,  1.2,  0.6,  1.4)
+      shape.bezierCurveTo(0.3,  1.5,  0.1,  1.3,  0.1,  1.0)
+      shape.bezierCurveTo(0.1,  0.6,  0.4,  0.4,  0.4,  0.1)
+      shape.bezierCurveTo(0.4, -0.2,  0.2, -0.4,  0,   -0.4)
+      shape.bezierCurveTo(-0.2,-0.4, -0.4,-0.2,  -0.4,  0.1)
+      shape.bezierCurveTo(-0.4, 0.4, -0.1,  0.6, -0.1,  1.0)
+      shape.bezierCurveTo(-0.1, 1.3, -0.3,  1.5, -0.6,  1.4)
+      shape.bezierCurveTo(-1.1, 1.2, -1.5,  0.7, -1.5,  0)
+      shape.bezierCurveTo(-1.5,-0.8, -0.9, -1.4,  0,   -1.4)
+    }
     return new THREE.ExtrudeGeometry(shape, { depth: 0.28, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 4 })
-  }, [])
+  }, [store.shape])
 
   return (
     <group rotation={[0.02, 0.12, 0.02]} position={[0, -0.65, 0]}>
       {/* Body */}
-      <mesh ref={meshRef} geometry={bodyShape} material={bodyMat} castShadow receiveShadow position={[0, 0, 0]} />
+      <mesh ref={meshRef} geometry={bodyShape} material={bodyMat} castShadow receiveShadow position={[0, 0, 0]} scale={shapeScale} />
 
-      <mesh geometry={bodyShape} material={topMat} position={[0, 0, 0.16]} scale={[0.93, 0.93, 0.08]} />
+      <mesh geometry={bodyShape} material={topMat} position={[0, 0, 0.16]} scale={[shapeScale[0] * 0.93, shapeScale[1] * 0.93, 0.08]} />
+
+      {store.shape === 'semi-hollow' && (
+        <mesh position={[0.44, 0.1, 0.24]} rotation={[0, 0, 0.2]}>
+          <torusGeometry args={[0.18, 0.018, 8, 24]} />
+          <meshStandardMaterial color="#08080A" roughness={0.8} />
+        </mesh>
+      )}
+
+      {store.shape === 'semi-hollow' && (
+        <mesh position={[-0.72, 0.32, 0.22]} rotation={[0, 0, -0.16]}>
+          <torusGeometry args={[0.22, 0.028, 10, 32]} />
+          <meshStandardMaterial color="#080809" roughness={0.9} />
+        </mesh>
+      )}
 
       {/* Neck */}
       <mesh ref={neckRef} material={neckMat} castShadow position={[0.08, 2.2, 0.05]}>
