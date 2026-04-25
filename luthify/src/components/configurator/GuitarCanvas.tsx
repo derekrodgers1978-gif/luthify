@@ -1,7 +1,7 @@
 'use client'
 import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Environment, OrbitControls } from '@react-three/drei'
+import { Environment, OrbitControls, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, TOPS } from '@/lib/configurator-options'
@@ -118,7 +118,7 @@ function GuitarBody() {
   }, [store.shape])
 
   return (
-    <group rotation={[0.02, 0.12, 0.02]} position={[0, -0.65, 0]}>
+    <group rotation={[-0.08, 0.24, -0.03]} position={[0, -0.72, 0]}>
       {/* Body */}
       <mesh ref={meshRef} geometry={bodyShape} material={bodyMat} castShadow receiveShadow position={[0, 0, 0]} scale={shapeScale} />
 
@@ -189,11 +189,12 @@ function GuitarBody() {
 function Scene() {
   return (
     <>
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[5, 8, 3]} intensity={1.1} castShadow shadow-mapSize={[1024, 1024]} />
-      <pointLight position={[-3, 2, 2]} color="#C9A45C" intensity={0.8} />
-      <pointLight position={[2, -2, 3]} color="#fff" intensity={0.3} />
+      <ambientLight intensity={0.42} />
+      <directionalLight position={[4.5, 7, 4]} intensity={1.35} castShadow shadow-mapSize={[2048, 2048]} />
+      <spotLight position={[-4, 4, 4]} angle={0.45} penumbra={0.7} intensity={0.8} color="#E2C07A" castShadow />
+      <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
       <Environment preset="studio" />
+      <ContactShadows position={[0, -2.2, -0.06]} opacity={0.34} scale={6.5} blur={2.8} far={4} color="#000000" />
       <GuitarBody />
     </>
   )
@@ -203,19 +204,19 @@ function Scene() {
 export default function GuitarCanvas() {
   return (
     <Canvas
-      camera={{ position: [0, 0.15, 6], fov: 40 }}
+      camera={{ position: [0.35, 0.25, 5.35], fov: 37 }}
       gl={{ antialias: true, alpha: false }}
-      style={{ background: '#09090B', width: '100%', height: '100%' }}
+      style={{ background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', width: '100%', height: '100%' }}
       shadows
     >
       <Scene />
       <OrbitControls
         enablePan={false}
         target={[0, 0, 0]}
-        minDistance={3.2}
-        maxDistance={7.5}
+        minDistance={3.4}
+        maxDistance={6.8}
         enableDamping
-        dampingFactor={0.06}
+        dampingFactor={0.08}
         autoRotate={false}
         maxPolarAngle={Math.PI * 0.75}
         minPolarAngle={Math.PI * 0.2}

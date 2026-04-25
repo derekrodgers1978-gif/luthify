@@ -96,8 +96,8 @@ export default function ConfiguratorClient() {
             min-height: 48vh;
           }
           .designer-canvas {
-            height: 48vh;
-            min-height: 340px;
+            height: 52vh;
+            min-height: 360px;
           }
           .designer-trust {
             display: none !important;

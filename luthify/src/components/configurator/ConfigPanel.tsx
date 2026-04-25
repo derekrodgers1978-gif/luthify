@@ -11,12 +11,12 @@ import type { ConfigOption } from '@/types'
 type Tab = 'body' | 'neck' | 'hardware'
 
 const S = {
-  label:    { fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: '#C9A45C', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  group:    { background: '#18181C', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '20px 20px 18px', transition: 'border-color 0.2s' },
-  tab:      (active: boolean) => ({ flex: 1, padding: '10px 4px', textAlign: 'center' as const, fontSize: '0.82rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${active ? '#C9A45C' : 'transparent'}`, color: active ? '#C9A45C' : 'rgba(245,241,232,0.55)', transition: 'all 0.18s' }),
-  swatch:   (active: boolean, hex: string) => ({ width: 32, height: 32, borderRadius: 8, background: hex, border: `2px solid ${active ? '#C9A45C' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s', outline: active ? '1px solid rgba(201,164,92,0.3)' : 'none', transform: active ? 'scale(1.1)' : 'scale(1)', boxShadow: active ? '0 0 0 3px rgba(201,164,92,0.15)' : 'none' }),
-  pill:     (active: boolean) => ({ padding: '8px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 500, cursor: 'pointer', background: active ? 'rgba(201,164,92,0.08)' : '#18181C', border: `1px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.07)'}`, color: active ? '#C9A45C' : 'rgba(245,241,232,0.55)', transition: 'all 0.15s' }),
-  topCard:  (active: boolean) => ({ padding: '14px 16px', borderRadius: 14, background: active ? 'rgba(201,164,92,0.07)' : '#09090B', border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.07)'}`, cursor: 'pointer', transition: 'all 0.18s' }),
+  label:    { fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: '#C9A45C', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  group:    { background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), #18181C', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '21px 20px 19px', transition: 'border-color 0.2s, box-shadow 0.2s' },
+  tab:      (active: boolean) => ({ flex: 1, padding: '12px 8px', textAlign: 'center' as const, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', background: active ? 'rgba(201,164,92,0.08)' : 'transparent', border: 'none', borderBottom: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.05)'}`, color: active ? '#C9A45C' : 'rgba(245,241,232,0.52)', transition: 'all 0.18s', letterSpacing: '0.02em' }),
+  swatch:   (active: boolean, hex: string) => ({ width: 36, height: 36, borderRadius: 10, background: hex, border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.15s', outline: active ? '1px solid rgba(201,164,92,0.4)' : 'none', transform: active ? 'scale(1.08)' : 'scale(1)', boxShadow: active ? '0 0 0 4px rgba(201,164,92,0.14)' : 'inset 0 0 0 1px rgba(0,0,0,0.35)' }),
+  pill:     (active: boolean) => ({ padding: '9px 15px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 650, cursor: 'pointer', background: active ? 'linear-gradient(135deg,rgba(226,192,122,0.14),rgba(201,164,92,0.08))' : '#111114', border: `1px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, color: active ? '#E2C07A' : 'rgba(245,241,232,0.58)', transition: 'all 0.15s', boxShadow: active ? '0 8px 24px rgba(201,164,92,0.08)' : 'none' }),
+  topCard:  (active: boolean) => ({ padding: '15px 16px', borderRadius: 16, background: active ? 'linear-gradient(180deg,rgba(201,164,92,0.09),rgba(201,164,92,0.04))' : '#09090B', border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.18s', boxShadow: active ? '0 10px 30px rgba(201,164,92,0.08)' : 'none' }),
 }
 
 function GroupLabel({ children, value }: { children: React.ReactNode; value?: string }) {
@@ -37,14 +37,14 @@ export default function ConfigPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ padding: '28px 28px 0' }}>
-        <div style={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C9A45C', marginBottom: 8 }}>Specification</div>
-        <h2 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.6rem', fontWeight: 700, lineHeight: 1.1, marginBottom: 4 }}>Configure every detail</h2>
-        <p style={{ fontSize: '0.8rem', color: 'rgba(245,241,232,0.55)', fontWeight: 300 }}>Every selection goes to your builder</p>
+      <div style={{ padding: '30px 30px 0' }}>
+        <div style={{ fontSize: '0.64rem', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A45C', marginBottom: 10 }}>Specification</div>
+        <h2 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.72rem', fontWeight: 700, lineHeight: 1.05, marginBottom: 7 }}>Configure every detail</h2>
+        <p style={{ fontSize: '0.82rem', color: 'rgba(245,241,232,0.56)', fontWeight: 300, lineHeight: 1.55 }}>Every selection updates the preview, price, and builder spec.</p>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)', margin: '20px 0 0' }}>
+      <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.08)', margin: '22px 0 0', background: 'rgba(9,9,11,0.36)' }}>
         {(['body','neck','hardware'] as Tab[]).map(t => (
           <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -53,7 +53,7 @@ export default function ConfigPanel() {
       </div>
 
       {/* Options — scrollable */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '22px 30px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {tab === 'body' && (
           <>
@@ -72,7 +72,7 @@ export default function ConfigPanel() {
             {/* Finish */}
             <div style={S.group}>
               <GroupLabel value={getLabel(FINISHES, store.finish)}>Finish</GroupLabel>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
                 {FINISHES.map(o => (
                   <div key={o.id} title={o.label} style={S.swatch(store.finish === o.id, o.hex!)} onClick={() => store.setOption('finish', o.id)} />
                 ))}
@@ -114,7 +114,7 @@ export default function ConfigPanel() {
 
             <div style={S.group}>
               <GroupLabel value={getLabel(FRETBOARDS, store.fretboard)}>Fretboard</GroupLabel>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
                 {FRETBOARDS.map(o => (
                   <div key={o.id} title={o.label} style={{ width: 36, height: 36, borderRadius: 9, background: o.hex, border: `2px solid ${store.fretboard === o.id ? '#C9A45C' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s', transform: store.fretboard === o.id ? 'scale(1.12)' : 'scale(1)' }} onClick={() => store.setOption('fretboard', o.id)} />
                 ))}
