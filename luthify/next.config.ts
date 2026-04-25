@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  output: 'export',
+  output: "export",
   turbopack: {},
   experimental: {
     optimizePackageImports: ['three', '@react-three/fiber', '@react-three/drei'],
