@@ -83,6 +83,38 @@ function pickupColor(id: string) {
   return '#08080A'
 }
 
+function makeBodyShape(shapeId: ModularShape) {
+  const shape = new THREE.Shape()
+  if (shapeId === 'single-cut') {
+    shape.moveTo(-0.72, -0.82)
+    shape.bezierCurveTo(-1.15, -0.7, -1.18, -0.05, -0.75, 0.12)
+    shape.bezierCurveTo(-1.0, 0.62, -0.44, 1.02, 0.04, 0.76)
+    shape.bezierCurveTo(0.36, 0.92, 0.78, 0.7, 0.78, 0.28)
+    shape.bezierCurveTo(0.78, 0.02, 0.6, -0.08, 0.38, -0.04)
+    shape.bezierCurveTo(0.9, -0.38, 0.72, -1.0, 0.18, -1.02)
+    shape.bezierCurveTo(-0.08, -1.12, -0.44, -1.06, -0.72, -0.82)
+    return shape
+  }
+  shape.moveTo(-0.82, -0.84)
+  shape.bezierCurveTo(-1.22, -0.55, -0.95, -0.12, -0.52, -0.16)
+  shape.bezierCurveTo(-1.05, 0.22, -0.8, 0.84, -0.18, 0.74)
+  shape.bezierCurveTo(0.06, 1.12, 0.62, 0.88, 0.5, 0.42)
+  shape.bezierCurveTo(1.02, 0.28, 1.0, -0.4, 0.48, -0.44)
+  shape.bezierCurveTo(0.62, -0.9, 0.1, -1.1, -0.2, -0.82)
+  shape.bezierCurveTo(-0.42, -1.12, -0.72, -1.02, -0.82, -0.84)
+  return shape
+}
+
+function makePickguardShape() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.44, 0.44)
+  shape.bezierCurveTo(-0.18, 0.66, 0.34, 0.48, 0.3, 0.08)
+  shape.lineTo(0.18, -0.56)
+  shape.bezierCurveTo(-0.14, -0.78, -0.56, -0.58, -0.48, -0.22)
+  shape.bezierCurveTo(-0.34, -0.04, -0.48, 0.2, -0.44, 0.44)
+  return shape
+}
+
 function shouldHideBakedPart(role: MaterialRole, shapeId: string) {
   return isModularShape(shapeId) && ['hardware', 'pickup', 'bridge', 'protected'].includes(role)
 }
@@ -213,26 +245,27 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
 }
 
 function BodyFinishMesh({ shapeId, colors, finish, binding }: { shapeId: ModularShape; colors: ReturnType<typeof makeColors>; finish?: FinishOption; binding?: ColorOption }) {
-  const bodyScale: [number, number, number] = shapeId === 'single-cut' ? [1.58, 1.22, 0.16] : [1.5, 1.02, 0.15]
+  const bodyShape = useMemo(() => makeBodyShape(shapeId), [shapeId])
+  const bodyScale: [number, number, number] = shapeId === 'single-cut' ? [1.24, 1.16, 1] : [1.28, 1.08, 1]
   const bodyPosition: [number, number, number] = shapeId === 'single-cut' ? [-0.1, -0.48, 0.12] : [-0.08, -0.5, 0.12]
   const bodyColor = isNaturalFinish(finish?.id) ? colors.finish : isBurstFinish(finish?.id) ? '#7A2C0A' : colors.finish
   const bindingColor = optionColor(binding, '#F2EEE2')
   return (
     <group position={bodyPosition} rotation={[0, 0, shapeId === 'single-cut' ? -0.08 : 0.05]} scale={bodyScale}>
       {shapeId === 'single-cut' && binding?.id !== 'none' && (
-        <mesh position={[0, 0, -0.018]} castShadow receiveShadow>
-          <sphereGeometry args={[1.06, 48, 24]} />
-          <meshStandardMaterial color={bindingColor} roughness={0.38} metalness={0.02} />
+        <mesh position={[0, 0, -0.012]} scale={[1.07, 1.07, 1]} castShadow receiveShadow>
+          <shapeGeometry args={[bodyShape]} />
+          <meshStandardMaterial color={bindingColor} roughness={0.38} metalness={0.02} side={THREE.DoubleSide} />
         </mesh>
       )}
       <mesh castShadow receiveShadow>
-        <sphereGeometry args={[1, 48, 24]} />
-        <meshStandardMaterial color={bodyColor} roughness={colors.finishRoughness} metalness={0.03} />
+        <shapeGeometry args={[bodyShape]} />
+        <meshStandardMaterial color={bodyColor} roughness={colors.finishRoughness} metalness={0.03} side={THREE.DoubleSide} />
       </mesh>
       {isBurstFinish(finish?.id) && (
-        <mesh position={[0, 0, 0.018]} scale={[0.72, 0.72, 0.8]}>
-          <sphereGeometry args={[1, 48, 24]} />
-          <meshStandardMaterial color="#F0A23A" roughness={0.2} metalness={0.02} transparent opacity={0.58} />
+        <mesh position={[0, 0, 0.018]} scale={[0.58, 0.58, 1]}>
+          <shapeGeometry args={[bodyShape]} />
+          <meshStandardMaterial color="#F0A23A" roughness={0.2} metalness={0.02} transparent opacity={0.58} side={THREE.DoubleSide} />
         </mesh>
       )}
       {isNaturalFinish(finish?.id) && (
@@ -271,11 +304,12 @@ function NeckAssembly({ colors }: { colors: ReturnType<typeof makeColors> }) {
 }
 
 function PickguardMesh({ shapeId, color }: { shapeId: ModularShape; color: string }) {
+  const pickguardShape = useMemo(() => makePickguardShape(), [])
   if (shapeId === 'single-cut') return null
   return (
-    <mesh position={[-0.33, -0.4, 0.34]} rotation={[0, 0, -0.26]} castShadow receiveShadow>
-      <boxGeometry args={[0.82, 1.05, 0.035]} />
-      <meshStandardMaterial color={color} roughness={0.34} metalness={0.02} />
+    <mesh position={[-0.25, -0.38, 0.34]} rotation={[0, 0, -0.2]} scale={[0.84, 0.9, 1]} castShadow receiveShadow>
+      <shapeGeometry args={[pickguardShape]} />
+      <meshStandardMaterial color={color} roughness={0.34} metalness={0.02} side={THREE.DoubleSide} />
     </mesh>
   )
 }
