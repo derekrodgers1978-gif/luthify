@@ -31,8 +31,78 @@ const CAMERA_DISTANCE: Record<string, number> = {
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number; finishGroup?: 'solid' | 'burst' | 'natural' }
 
+const S_STYLE_MODEL_PATH = '/models/s-style-electric.glb'
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
+const auditedSStyleScenes = new Set<string>()
+
+function materialNames(material: THREE.Material | THREE.Material[]) {
+  return (Array.isArray(material) ? material : [material]).map(mat => mat.name || '(unnamed material)')
+}
+
+function objectPath(object: THREE.Object3D) {
+  const names: string[] = []
+  let cursor: THREE.Object3D | null = object
+  while (cursor) {
+    if (cursor.name) names.unshift(cursor.name)
+    cursor = cursor.parent
+  }
+  return names.join(' > ') || '(unnamed root)'
+}
+
+function auditSStyleModel(model: THREE.Object3D, modelPath: string) {
+  if (modelPath !== S_STYLE_MODEL_PATH) return
+  const auditKey = model.uuid
+  if (auditedSStyleScenes.has(auditKey)) return
+  auditedSStyleScenes.add(auditKey)
+
+  const meshes: {
+    mesh: string
+    path: string
+    materials: string
+    materialUuid: string
+    vertexCount: number
+  }[] = []
+  const materials = new Map<string, { material: string; uuid: string; meshes: string[] }>()
+
+  model.traverse(obj => {
+    if (!(obj as THREE.Mesh).isMesh) return
+    const mesh = obj as THREE.Mesh
+    const meshName = mesh.name || '(unnamed mesh)'
+    const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    const meshMaterialNames = materialNames(mesh.material)
+
+    meshes.push({
+      mesh: meshName,
+      path: objectPath(mesh),
+      materials: meshMaterialNames.join(', '),
+      materialUuid: meshMaterials.map(mat => mat.uuid).join(', '),
+      vertexCount: mesh.geometry?.attributes.position?.count ?? 0,
+    })
+
+    meshMaterials.forEach(mat => {
+      const name = mat.name || '(unnamed material)'
+      const key = `${name}:${mat.uuid}`
+      const entry = materials.get(key) ?? { material: name, uuid: mat.uuid, meshes: [] }
+      entry.meshes.push(meshName)
+      materials.set(key, entry)
+    })
+  })
+
+  console.groupCollapsed(`[S-Style GLB audit] ${modelPath}`)
+  console.info('Temporary audit only: S-Style materials are not modified by the configurator.')
+  console.table(meshes)
+  console.table(Array.from(materials.values()).map(entry => ({
+    material: entry.material,
+    uuid: entry.uuid,
+    meshes: entry.meshes.join(', '),
+  })))
+  console.groupEnd()
+}
+
+function shouldPreserveOriginalMaterials(shapeId: string, modelPath: string) {
+  return shapeId === 'modern-s' && modelPath === S_STYLE_MODEL_PATH
+}
 
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const key = `${meshName} ${materialName}`.toLowerCase()
@@ -184,11 +254,16 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
+    const preserveOriginalMaterials = shouldPreserveOriginalMaterials(shape.id, modelPath)
+    if (preserveOriginalMaterials) auditSStyleModel(model, modelPath)
+
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
       mesh.castShadow = true
       mesh.receiveShadow = true
+      if (preserveOriginalMaterials) return
+
       if (Array.isArray(mesh.material)) {
         mesh.material = mesh.material.map(mat => mat.clone())
       } else {
@@ -197,7 +272,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish))
     })
-  }, [colors, finish, maxDimension, model, shape.id])
+  }, [colors, finish, maxDimension, model, modelPath, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
