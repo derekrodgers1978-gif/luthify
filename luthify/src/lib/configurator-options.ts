@@ -3,14 +3,18 @@ import type { ConfigOption } from '@/types'
 export const BASE_PRICE = 2800
 
 export const BODY_SHAPES: ConfigOption[] = [
-  { id: 'modern-s',   label: 'Modern S',   priceAdj: 0 },
-  { id: 'single-cut', label: 'Single Cut', priceAdj: 0 },
-  { id: 'offset',     label: 'Offset',     priceAdj: 0 },
-  { id: 'semi-hollow',label: 'Semi-Hollow',priceAdj: 400 },
-  { id: 't-style',    label: 'T-Style',    priceAdj: 0 },
-  { id: 'double-cut', label: 'Double Cut', priceAdj: 180 },
-  { id: 'jazz-hollow',label: 'Jazz Hollow',priceAdj: 520 },
-  { id: 'baritone',   label: 'Baritone',   priceAdj: 260 },
+  { id: 'modern-s',   label: 'S-Style Electric',      modelPath: '/models/s-style-electric.glb',      priceAdj: 0 },
+  { id: 'single-cut', label: 'Single Cut Electric',   modelPath: '/models/single-cut-electric.glb',   priceAdj: 0 },
+  { id: 'double-cut', label: 'Double Cut Electric',   modelPath: '/models/double-cut-electric.glb',   priceAdj: 180 },
+  { id: 'semi-hollow',label: 'Semi-Hollow Electric',  modelPath: '/models/semi-hollow-electric.glb',  priceAdj: 400 },
+  { id: 'offset',     label: 'Offset Electric',       modelPath: '/models/offset-electric.glb',       priceAdj: 0 },
+  { id: 't-style',    label: 'V-Style Electric',      modelPath: '/models/v-style-electric.glb',      priceAdj: 0 },
+  { id: 'jazz-hollow',label: 'Dreadnought Acoustic',  modelPath: '/models/dreadnought-acoustic.glb',  priceAdj: 520 },
+  { id: 'baritone',   label: 'Electric Bass',         modelPath: '/models/electric-bass.glb',         priceAdj: 260 },
+  { id: 'banjo',      label: 'Banjo',                 modelPath: '/models/banjo.glb',                 priceAdj: 120 },
+  { id: 'cello',      label: 'Cello',                 modelPath: '/models/cello.glb',                 priceAdj: 680 },
+  { id: 'resonator',  label: 'Resonator',             modelPath: '/models/resonator.glb',             priceAdj: 320 },
+  { id: 'classical',  label: 'Classical Guitar',      modelPath: '/models/classical-guitar.glb',      priceAdj: 160 },
 ]
 
 export const FINISHES: ConfigOption[] = [
@@ -55,10 +59,10 @@ export const HARDWARE_COLORS: ConfigOption[] = [
 ]
 
 export const BRIDGES: ConfigOption[] = [
-  { id: 'tuneomatic', label: 'Tune-o-matic', sub: 'Classic stop bar',  priceAdj: 0   },
-  { id: 'bigsby',     label: 'Bigsby B7',    sub: 'Vintage vibrato',   priceAdj: 280 },
+  { id: 'tuneomatic', label: 'Fixed Stop Tail', sub: 'Classic stop bar',  priceAdj: 0   },
+  { id: 'bigsby',     label: 'Vintage Vibrato', sub: 'Expressive vibrato', priceAdj: 280 },
   { id: 'hardtail',   label: 'Hardtail',     sub: 'Fixed string-thru', priceAdj: 0   },
-  { id: 'trem',       label: 'Floyd Rose',   sub: 'Locking tremolo',   priceAdj: 380 },
+  { id: 'trem',       label: 'Locking Tremolo', sub: 'High-stability tremolo', priceAdj: 380 },
 ]
 
 export const PICKUPS: ConfigOption[] = [

@@ -23,6 +23,7 @@ export interface ConfigOption {
   hex?:     string
   roughness?: number
   texture?: string
+  modelPath?: string
 }
 
 export interface ConfigState {
