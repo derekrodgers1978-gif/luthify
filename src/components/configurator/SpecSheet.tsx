@@ -4,10 +4,12 @@ import { CONFIG_OPTION_GROUPS } from '@/lib/configurator-options'
 
 export default function SpecSheet() {
   const s = useConfigStore()
-  const rows = CONFIG_OPTION_GROUPS.map(([key, label, options]) => [
-    label,
-    options.find(o => o.id === s[key])?.label ?? s[key],
-  ])
+  const rows = CONFIG_OPTION_GROUPS
+    .filter(([key]) => key !== 'binding' || s.shape === 'single-cut')
+    .map(([key, label, options]) => [
+      label,
+      options.find(o => o.id === s[key])?.label ?? s[key],
+    ])
 
   return (
     <div className="hidden sm:block" style={{

@@ -30,12 +30,15 @@ export interface ConfigOption {
 export interface ConfigState {
   shape:     string
   finish:    string
-  top:       string
+  pickguard: string
   neck:      string
   fretboard: string
   hardware:  string
   bridge:    string
   pickups:   string
+  knobs:     string
+  tuners:    string
+  binding:   string
   livePrice: number
 }
 

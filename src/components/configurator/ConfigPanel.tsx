@@ -2,13 +2,13 @@
 import { useState } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import {
-  BODY_SHAPES, FINISHES, FINISH_GROUPS, TOPS, NECK_WOODS,
-  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS,
+  BODY_SHAPES, FINISHES, FINISH_GROUPS, PICKGUARDS, NECK_WOODS,
+  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS, KNOBS, TUNERS, BINDINGS,
   DEFAULT_CONFIG, type ConfigKey,
 } from '@/lib/configurator-options'
 import type { ConfigOption } from '@/types'
 
-type Tab = 'body' | 'neck' | 'hardware'
+type Tab = 'base' | 'parts' | 'hardware' | 'neck'
 
 const S = {
   label:    { fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: '#C9A45C', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
@@ -18,6 +18,7 @@ const S = {
   finishGroupLabel: { fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase' as const, color: 'rgba(226,192,122,0.72)', margin: '2px 0 8px' },
   pill:     (active: boolean) => ({ padding: '9px 15px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 650, cursor: 'pointer', background: active ? 'linear-gradient(135deg,rgba(226,192,122,0.14),rgba(201,164,92,0.08))' : '#111114', border: `1px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, color: active ? '#E2C07A' : 'rgba(245,241,232,0.58)', transition: 'all 0.15s', boxShadow: active ? '0 8px 24px rgba(201,164,92,0.08)' : 'none' }),
   topCard:  (active: boolean) => ({ padding: '15px 16px', borderRadius: 16, background: active ? 'linear-gradient(180deg,rgba(201,164,92,0.09),rgba(201,164,92,0.04))' : '#09090B', border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.18s', boxShadow: active ? '0 10px 30px rgba(201,164,92,0.08)' : 'none' }),
+  colorOption: (active: boolean, hex?: string) => ({ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 999, fontSize: '0.76rem', fontWeight: 650, cursor: 'pointer', background: active ? 'linear-gradient(135deg,rgba(226,192,122,0.14),rgba(201,164,92,0.08))' : '#111114', border: `1px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, color: active ? '#E2C07A' : 'rgba(245,241,232,0.58)', transition: 'all 0.15s', boxShadow: active ? '0 8px 24px rgba(201,164,92,0.08)' : 'none', ['--chip-color' as string]: hex ?? '#C9CED6' }),
 }
 
 function GroupLabel({ children, value }: { children: React.ReactNode; value?: string }) {
@@ -31,24 +32,43 @@ function GroupLabel({ children, value }: { children: React.ReactNode; value?: st
 
 export default function ConfigPanel() {
   const store = useConfigStore()
-  const [tab, setTab] = useState<Tab>('body')
+  const [tab, setTab] = useState<Tab>('base')
 
   const getLabel = (opts: ConfigOption[], id: string) => opts.find(o => o.id === id)?.label ?? id
+  const renderPills = (key: ConfigKey, options: ConfigOption[]) => (
+    <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+      {options.map(o => (
+        <button key={o.id} style={S.pill(store[key] === o.id)} onClick={() => store.setOption(key, o.id)}>
+          {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
+        </button>
+      ))}
+    </div>
+  )
+  const renderColorButtons = (key: ConfigKey, options: ConfigOption[]) => (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {options.map(o => (
+        <button key={o.id} style={S.colorOption(store[key] === o.id, o.hex)} onClick={() => store.setOption(key, o.id)}>
+          {o.hex && <span style={{ width: 18, height: 18, borderRadius: 6, background: o.hex, border: '1px solid rgba(255,255,255,0.18)', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.22)' }} />}
+          {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 2 }}>+${o.priceAdj}</span>}
+        </button>
+      ))}
+    </div>
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '30px 30px 0' }}>
         <div style={{ fontSize: '0.64rem', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A45C', marginBottom: 10 }}>Specification</div>
-        <h2 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.72rem', fontWeight: 700, lineHeight: 1.05, marginBottom: 7 }}>Configure every detail</h2>
-        <p style={{ fontSize: '0.82rem', color: 'rgba(245,241,232,0.56)', fontWeight: 300, lineHeight: 1.55 }}>Every selection updates the preview, price, and builder spec.</p>
+        <h2 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.72rem', fontWeight: 700, lineHeight: 1.05, marginBottom: 7 }}>Modular instrument builder</h2>
+        <p style={{ fontSize: '0.82rem', color: 'rgba(245,241,232,0.56)', fontWeight: 300, lineHeight: 1.55 }}>Choose a body/base model, then configure each visible part separately.</p>
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.08)', margin: '22px 0 0', background: 'rgba(9,9,11,0.36)' }}>
-        {(['body','neck','hardware'] as Tab[]).map(t => (
+        {(['base','parts','hardware','neck'] as Tab[]).map(t => (
           <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'base' ? 'Base' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
@@ -56,11 +76,11 @@ export default function ConfigPanel() {
       {/* Options — scrollable */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '22px 30px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {tab === 'body' && (
+        {tab === 'base' && (
           <>
             {/* Body shape */}
             <div style={S.group}>
-              <GroupLabel value={getLabel(BODY_SHAPES, store.shape)}>Body Shape</GroupLabel>
+              <GroupLabel value={getLabel(BODY_SHAPES, store.shape)}>Body / Base Model</GroupLabel>
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
                 {BODY_SHAPES.map(o => (
                   <button key={o.id} style={S.pill(store.shape === o.id)} onClick={() => store.setOption('shape', o.id)}>
@@ -72,7 +92,7 @@ export default function ConfigPanel() {
 
             {/* Finish */}
             <div style={S.group}>
-              <GroupLabel value={getLabel(FINISHES, store.finish)}>Finish</GroupLabel>
+              <GroupLabel value={getLabel(FINISHES, store.finish)}>Body Finish</GroupLabel>
               {FINISH_GROUPS.map(group => {
                 const options = FINISHES.filter(o => o.finishGroup === group.id)
                 return (
@@ -87,23 +107,35 @@ export default function ConfigPanel() {
                 )
               })}
               <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)', marginTop: 4 }}>
-                {FINISHES.find(f => f.id === store.finish)?.label} finish
+                Applied to modular body surfaces only; base GLB hardware stays base-preview only.
               </p>
             </div>
 
-            {/* Top wood */}
             <div style={S.group}>
-              <GroupLabel value={getLabel(TOPS, store.top)}>Top</GroupLabel>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {TOPS.map(o => (
-                  <div key={o.id} style={S.topCard(store.top === o.id)} onClick={() => store.setOption('top', o.id)}>
-                    <div style={{ fontWeight: 600, fontSize: '0.82rem', marginBottom: 2 }}>{o.label}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.45)', marginBottom: 4 }}>{o.sub}</div>
-                    {o.priceAdj > 0 && <div style={{ fontSize: '0.72rem', color: '#C9A45C', fontWeight: 600 }}>+${o.priceAdj}</div>}
-                    {o.priceAdj === 0 && <div style={{ fontSize: '0.72rem', color: '#5fb87a' }}>Included</div>}
-                  </div>
-                ))}
-              </div>
+              <GroupLabel value={getLabel(BINDINGS, store.binding)}>Binding</GroupLabel>
+              {renderColorButtons('binding', BINDINGS)}
+              <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)', marginTop: 12 }}>
+                Binding is shown on Single Cut bodies where the base model supports a separate visual outline.
+              </p>
+            </div>
+          </>
+        )}
+
+        {tab === 'parts' && (
+          <>
+            <div style={S.group}>
+              <GroupLabel value={getLabel(PICKGUARDS, store.pickguard)}>Pickguard</GroupLabel>
+              {renderColorButtons('pickguard', PICKGUARDS)}
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(PICKUPS, store.pickups)}>Pickups</GroupLabel>
+              {renderPills('pickups', PICKUPS)}
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(KNOBS, store.knobs)}>Knobs</GroupLabel>
+              {renderColorButtons('knobs', KNOBS)}
             </div>
           </>
         )}
@@ -136,18 +168,12 @@ export default function ConfigPanel() {
         {tab === 'hardware' && (
           <>
             <div style={S.group}>
-              <GroupLabel value={getLabel(HARDWARE_COLORS, store.hardware)}>Hardware</GroupLabel>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                {HARDWARE_COLORS.map(o => (
-                  <button key={o.id} style={S.pill(store.hardware === o.id)} onClick={() => store.setOption('hardware', o.id)}>
-                    {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
-                  </button>
-                ))}
-              </div>
+              <GroupLabel value={getLabel(HARDWARE_COLORS, store.hardware)}>Hardware Color</GroupLabel>
+              {renderPills('hardware', HARDWARE_COLORS)}
             </div>
 
             <div style={S.group}>
-              <GroupLabel value={getLabel(BRIDGES, store.bridge)}>Bridge</GroupLabel>
+              <GroupLabel value={getLabel(BRIDGES, store.bridge)}>Bridge / Tailpiece</GroupLabel>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {BRIDGES.map(o => (
                   <div key={o.id} style={S.topCard(store.bridge === o.id)} onClick={() => store.setOption('bridge', o.id)}>
@@ -164,14 +190,8 @@ export default function ConfigPanel() {
             </div>
 
             <div style={S.group}>
-              <GroupLabel value={getLabel(PICKUPS, store.pickups)}>Pickups</GroupLabel>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                {PICKUPS.map(o => (
-                  <button key={o.id} style={S.pill(store.pickups === o.id)} onClick={() => store.setOption('pickups', o.id)}>
-                    {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
-                  </button>
-                ))}
-              </div>
+              <GroupLabel value={getLabel(TUNERS, store.tuners)}>Tuners</GroupLabel>
+              {renderPills('tuners', TUNERS)}
             </div>
           </>
         )}
