@@ -39,7 +39,7 @@ function materialRole(meshName: string, materialName: string): MaterialRole {
   if (/(neck|headstock|head stock|headstock|peghead)/.test(key)) return 'neck'
   if (/(pickup|pick up|humbucker|single coil|p90|p-90)/.test(key)) return 'pickup'
   if (/(bridge|tailpiece|tail piece|tremolo|vibrato|saddle)/.test(key)) return 'bridge'
-  if (/(hardware|metal|chrome|tuner|tuning|knob|control|pot|string|ferrule|strap|jack)/.test(key)) return 'hardware'
+  if (/(hardware|metal|chrome|tuner|tuning|knob|control|pot|string|ferrule|strap|jack|pickguard|scratchplate|guard)/.test(key)) return 'hardware'
   if (/(body|top|paint|finish|guitar|soundboard|sound board|back|side|resonator|cover|plate)/.test(key)) return 'body'
   return 'other'
 }
@@ -54,7 +54,19 @@ function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: 
   }
 }
 
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function isLikelyPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
+  if (!mesh.geometry) return false
+  mesh.geometry.computeBoundingBox()
+  const box = mesh.geometry.boundingBox
+  if (!box) return false
+  const size = box.getSize(new THREE.Vector3()).multiply(mesh.scale)
+  const dims = [Math.abs(size.x), Math.abs(size.y), Math.abs(size.z)].sort((a, b) => b - a)
+  const largest = dims[0] || 0
+  const middle = dims[1] || 0
+  return largest > modelMaxDimension * 0.18 && middle > modelMaxDimension * 0.08
+}
+
+function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
@@ -74,15 +86,10 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.color = new THREE.Color(colors.board)
     mat.metalness = 0
     mat.roughness = 0.58
-  } else if (role === 'body') {
+  } else if (role === 'body' || (role === 'other' && isLikelyPaintSurface(mesh, modelMaxDimension))) {
     mat.color = new THREE.Color(colors.finish)
     mat.metalness = 0.04
-    mat.roughness = Math.min(colors.finishRoughness, 0.2)
-  } else if (role === 'other' && mat.color.getHSL({ h: 0, s: 0, l: 0 }).l > 0.72) {
-    // Some GLBs ship generic white materials with unhelpful mesh names.
-    mat.color = new THREE.Color(colors.finish)
-    mat.metalness = 0.03
-    mat.roughness = 0.22
+    mat.roughness = Math.min(colors.finishRoughness, 0.24)
   }
   mat.needsUpdate = true
 }
@@ -96,14 +103,14 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
-  const { model, center, scale } = useMemo(() => {
+  const { model, center, scale, maxDimension } = useMemo(() => {
     const clone = scene.clone(true)
     const box = new THREE.Box3().setFromObject(clone)
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
     const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
-    return { model: clone, center, scale: targetSize / maxDimension }
+    return { model: clone, center, scale: targetSize / maxDimension, maxDimension }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
@@ -114,9 +121,9 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       mesh.castShadow = true
       mesh.receiveShadow = true
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors))
+      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension))
     })
-  }, [colors, model])
+  }, [colors, maxDimension, model])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
