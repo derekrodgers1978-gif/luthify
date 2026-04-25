@@ -596,14 +596,17 @@ function ModularSvgPreview() {
   const pickupFill = pickupColor(store.pickups)
   const isSingleCut = shape === 'single-cut'
   const bodyPath = isSingleCut
-    ? 'M261 407 C222 385 207 341 224 301 C240 263 278 245 315 260 C324 213 371 186 416 207 C462 228 475 281 445 318 C488 323 511 363 488 402 C462 446 393 445 360 407 C333 431 292 425 261 407 Z'
-    : 'M251 385 C210 361 199 316 226 278 C181 255 184 198 237 197 C251 146 321 147 345 199 C382 159 445 181 447 239 C449 292 405 318 363 303 C383 354 337 410 286 384 C274 379 262 380 251 385 Z'
+    ? 'M244 404 C196 378 185 314 220 278 C196 230 222 180 274 185 C301 128 379 130 414 183 C462 189 496 229 493 277 C489 342 421 378 368 347 C348 403 290 429 244 404 Z'
+    : 'M242 390 C197 368 186 316 218 281 C174 250 188 192 242 191 C258 132 328 135 350 196 C390 154 456 179 455 240 C454 296 410 324 363 306 C383 364 330 421 281 389 C267 381 255 383 242 390 Z'
   const pickguardPath = isSingleCut
-    ? 'M299 269 C323 248 365 254 390 281 C367 282 342 297 329 325 C308 317 291 291 299 269 Z'
-    : 'M270 241 C314 203 381 223 385 281 C374 315 350 346 314 352 C281 340 261 307 260 274 C259 259 262 249 270 241 Z'
-  const pickupYs = store.pickups === 'singlecoil' && !isSingleCut ? [273, 311, 349] : [293, 344]
-  const pickupWidth = store.pickups === 'p90' ? 76 : store.pickups === 'singlecoil' ? 62 : 88
-  const pickupHeight = store.pickups === 'singlecoil' ? 18 : 27
+    ? 'M306 259 C334 239 384 251 399 286 C375 282 346 296 330 329 C307 317 291 282 306 259 Z'
+    : 'M269 235 C313 205 376 223 382 280 C374 316 348 342 314 348 C283 336 263 306 262 273 C261 256 263 244 269 235 Z'
+  const pickupYs = store.pickups === 'singlecoil' && !isSingleCut ? [269, 307, 345] : [288, 337]
+  const pickupWidth = store.pickups === 'p90' ? 72 : store.pickups === 'singlecoil' ? 58 : 84
+  const pickupHeight = store.pickups === 'singlecoil' ? 17 : 25
+  const bridgeY = isSingleCut ? 390 : 384
+  const tailpieceY = isSingleCut ? 421 : 414
+  const stringEndY = store.bridge === 'bigsby' ? 451 : tailpieceY + 4
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', display: 'grid', placeItems: 'center', background: 'radial-gradient(circle at 50% 45%, rgba(28,24,28,0.4), rgba(9,9,11,0.96) 68%)' }}>
@@ -639,18 +642,18 @@ function ModularSvgPreview() {
             <feDropShadow dx="0" dy="8" stdDeviation="7" floodColor="#000000" floodOpacity="0.34" />
           </filter>
         </defs>
-        <g transform="translate(72 0) rotate(-12 350 292)" filter="url(#softPartShadow)">
-          <ellipse cx="360" cy="414" rx="142" ry="20" fill="#000000" opacity="0.28" />
-          <path d="M326 72 L394 72 L379 410 L342 410 Z" fill="url(#neckGloss)" stroke="#1A0D07" strokeWidth="5" strokeLinejoin="round" />
-          <path d="M342 84 L378 84 L371 397 L350 397 Z" fill={colors.board} stroke="#080402" strokeWidth="3" strokeLinejoin="round" />
-          <path d={isSingleCut ? 'M315 42 C328 8 374 -6 413 18 L398 75 L319 75 Z' : 'M316 42 C345 5 403 9 428 41 L399 78 L319 76 Z'} fill="url(#neckGloss)" stroke="#1A0D07" strokeWidth="6" strokeLinejoin="round" />
+        <g transform="translate(66 0) rotate(-10 350 292)" filter="url(#softPartShadow)">
+          <ellipse cx="360" cy="429" rx="132" ry="18" fill="#000000" opacity="0.3" />
+          <path d="M326 72 L392 72 L376 410 L344 410 Z" fill="url(#neckGloss)" stroke="#1A0D07" strokeWidth="4.5" strokeLinejoin="round" />
+          <path d="M343 85 L376 85 L370 398 L351 398 Z" fill={colors.board} stroke="#080402" strokeWidth="2.6" strokeLinejoin="round" />
+          <path d={isSingleCut ? 'M316 42 C328 10 374 0 410 22 L395 77 L319 76 Z' : 'M315 43 C342 7 398 8 424 40 L397 78 L319 76 Z'} fill="url(#neckGloss)" stroke="#1A0D07" strokeWidth="5.5" strokeLinejoin="round" />
           {[126, 162, 198, 234, 270, 306, 342, 378].map((y, i) => (
-            <line key={y} x1={343 + i * 0.5} x2={377 - i * 0.5} y1={y} y2={y} stroke="#D8DEE8" strokeWidth="2.1" opacity="0.92" />
+            <line key={y} x1={344 + i * 0.5} x2={376 - i * 0.5} y1={y} y2={y} stroke="#D8DEE8" strokeWidth="1.8" opacity="0.9" />
           ))}
           {[-1, 1].map(side => [0, 1, 2].map(i => (
             <g key={`${side}-${i}`}>
-              <circle cx={side > 0 ? 407 : 310} cy={58 + i * 24} r="5" fill="url(#hardwareGloss)" stroke="#1E2025" strokeWidth="2" />
-              <rect x={side > 0 ? 414 : 278} y={51 + i * 24} width="28" height="14" rx="4" fill="url(#hardwareGloss)" stroke="#1E2025" strokeWidth="2" />
+              <circle cx={side > 0 ? 405 : 313} cy={58 + i * 24} r="4.5" fill="url(#hardwareGloss)" stroke="#1E2025" strokeWidth="1.8" />
+              <rect x={side > 0 ? 412 : 283} y={52 + i * 24} width="25" height="12" rx="4" fill="url(#hardwareGloss)" stroke="#1E2025" strokeWidth="1.8" />
             </g>
           )))}
 
@@ -665,16 +668,16 @@ function ModularSvgPreview() {
               <line x1={356 - pickupWidth / 2} x2={332 + pickupWidth / 2} y1={y + pickupHeight / 2} y2={y + pickupHeight / 2} stroke="rgba(255,255,255,0.28)" strokeWidth="1" />
             </g>
           ))}
-          <g fill={hardware} stroke="#1E2025" strokeWidth="3">
-            <rect x="288" y="388" width="134" height="17" rx="8" fill="url(#hardwareGloss)" />
-            {(isSingleCut || store.bridge === 'bigsby' || store.bridge === 'tuneomatic') && <rect x="273" y="420" width="166" height="17" rx="8" fill="url(#hardwareGloss)" />}
-            {store.bridge === 'bigsby' && <ellipse cx="356" cy="456" rx="49" ry="17" fill="none" stroke={hardware} strokeWidth="9" />}
+          <g fill={hardware} stroke="#1E2025" strokeWidth="2.6">
+            <rect x="292" y={bridgeY} width="124" height="15" rx="7" fill="url(#hardwareGloss)" />
+            {(isSingleCut || store.bridge === 'bigsby' || store.bridge === 'tuneomatic') && <rect x="278" y={tailpieceY} width="154" height="15" rx="7" fill="url(#hardwareGloss)" />}
+            {store.bridge === 'bigsby' && <ellipse cx="356" cy="452" rx="44" ry="15" fill="none" stroke={hardware} strokeWidth="7.5" />}
           </g>
-          {(isSingleCut ? [[444, 330], [475, 301], [413, 386], [478, 383]] : [[447, 329], [466, 379], [418, 402]]).map(([x, y]) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r="14" fill={knobColor} stroke="#1E2025" strokeWidth="4" />
+          {(isSingleCut ? [[446, 326], [470, 302], [414, 380], [470, 376]] : [[444, 325], [461, 372], [417, 393]]).map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="12.5" fill={knobColor} stroke="#1E2025" strokeWidth="3.4" />
           ))}
           {[0, 1, 2, 3, 4, 5].map(i => (
-            <line key={i} x1={344 + i * 6} x2={292 + i * 22} y1="50" y2="430" stroke="#DDE2EA" strokeWidth="1.3" opacity="0.76" />
+            <line key={i} x1={345 + i * 5.2} x2={294 + i * 20.8} y1="50" y2={stringEndY} stroke="#DDE2EA" strokeWidth="1.05" opacity="0.72" />
           ))}
         </g>
       </svg>
