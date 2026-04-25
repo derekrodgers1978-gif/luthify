@@ -110,14 +110,21 @@ export default function HomePage() {
           </div>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 55%, rgba(201,164,92,0.09) 0%, transparent 58%), radial-gradient(ellipse at 20% 50%, rgba(9,9,11,0.6) 0%, transparent 45%)', pointerEvents: 'none', zIndex: 4 }} />
           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 140, background: 'linear-gradient(to right, #09090B, transparent)', pointerEvents: 'none', zIndex: 5 }} />
-          <div className="card" style={{ width: 'min(440px, 92%)', padding: 26, zIndex: 8, background: 'linear-gradient(180deg,rgba(17,17,20,0.84),rgba(9,9,11,0.78))', borderColor: 'rgba(201,164,92,0.18)', boxShadow: '0 28px 90px rgba(0,0,0,0.38)', backdropFilter: 'blur(12px)' }}>
-            <div style={{ fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A45C', marginBottom: 18 }}>Recent custom orders</div>
+        </div>
+      </section>
+
+      {/* ── RECENT ORDERS ── */}
+      <section style={{ width: 'min(1280px, calc(100% - 48px))', margin: '-28px auto 54px', position: 'relative', zIndex: 8 }}>
+        <div className="card" style={{ padding: '24px 28px', background: 'linear-gradient(180deg,rgba(17,17,20,0.9),rgba(9,9,11,0.84))', borderColor: 'rgba(201,164,92,0.18)', boxShadow: '0 24px 70px rgba(0,0,0,0.32)', backdropFilter: 'blur(12px)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, marginBottom: 6, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A45C' }}>Recent custom orders</div>
+            <span style={{ color: 'rgba(245,241,232,0.42)', fontSize: '0.76rem' }}>Live commission activity</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
             {RECENT_ORDERS.map(([location, instrument, status]) => (
-              <div key={location + instrument} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '14px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{instrument}</div>
-                  <div style={{ color: 'rgba(245,241,232,0.46)', fontSize: '0.74rem', marginTop: 3 }}>{location}</div>
-                </div>
+              <div key={location + instrument} style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem', marginBottom: 4 }}>{instrument}</div>
+                <div style={{ color: 'rgba(245,241,232,0.46)', fontSize: '0.74rem', marginBottom: 10 }}>{location}</div>
                 <span style={{ color: '#C9A45C', fontSize: '0.74rem', fontWeight: 700 }}>{status}</span>
               </div>
             ))}
