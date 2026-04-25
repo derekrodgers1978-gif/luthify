@@ -596,7 +596,7 @@ function ModularSvgPreview() {
   const pickupFill = pickupColor(store.pickups)
   const isSingleCut = shape === 'single-cut'
   const bodyPath = isSingleCut
-    ? 'M268 337 C213 325 174 284 180 230 C186 174 238 148 292 166 C322 116 396 121 421 176 C472 184 502 223 492 270 C482 319 436 349 382 342 C358 383 309 393 268 337 Z'
+    ? 'M250 344 C198 325 171 282 183 229 C194 178 240 151 291 165 C319 109 399 119 420 179 C390 184 365 204 354 236 C386 219 445 232 473 270 C507 316 465 365 398 348 C368 397 298 390 250 344 Z'
     : 'M250 337 C200 318 185 276 214 239 C164 210 182 154 238 158 C252 105 329 112 347 168 C391 130 457 158 451 216 C445 263 404 284 362 270 C374 322 323 366 280 334 C270 331 260 335 250 337 Z'
   const pickguardPath = isSingleCut
     ? 'M294 220 C331 194 393 205 405 253 C371 247 337 261 319 302 C287 292 278 245 294 220 Z'
@@ -638,7 +638,7 @@ function ModularSvgPreview() {
           {isSingleCut && binding?.id !== 'none' && <path d={bodyPath} fill={optionColor(binding, '#F2EEE2')} stroke="#1E2025" strokeWidth="5" transform="translate(-5 -4) scale(1.03)" />}
           <path d={bodyPath} fill={bodyFill} stroke="#1E2025" strokeWidth="6" strokeLinejoin="round" />
           <path d={bodyPath} fill="url(#bodyGloss)" opacity="0.42" transform="translate(34 26) scale(0.9)" />
-          {isSingleCut && <path d="M415 176 C460 186 484 220 474 255 C456 231 426 224 392 236 C410 215 418 196 415 176 Z" fill="#09090B" opacity="0.78" />}
+          {isSingleCut && <path d="M410 178 C389 186 370 207 360 235 C383 222 407 214 434 219 C430 199 422 186 410 178 Z" fill="#09090B" opacity="0.5" />}
 
           <path d={pickguardPath} fill={optionColor(pickguard)} stroke="#1E2025" strokeWidth="4" opacity={isSingleCut ? 0.76 : 1} />
           {pickupYs.map(y => (
