@@ -83,6 +83,28 @@ function pickupColor(id: string) {
   return '#08080A'
 }
 
+function makeBodyShape(shapeId: ModularShape) {
+  const shape = new THREE.Shape()
+  if (shapeId === 'single-cut') {
+    shape.moveTo(-0.92, -1.02)
+    shape.bezierCurveTo(-1.36, -0.82, -1.26, -0.22, -0.74, -0.06)
+    shape.bezierCurveTo(-1.02, 0.44, -0.58, 0.88, -0.08, 0.78)
+    shape.bezierCurveTo(0.18, 0.98, 0.62, 0.86, 0.78, 0.48)
+    shape.bezierCurveTo(0.88, 0.2, 0.66, 0.08, 0.34, 0.14)
+    shape.bezierCurveTo(0.96, -0.22, 0.84, -0.96, 0.12, -1.06)
+    shape.bezierCurveTo(-0.26, -1.16, -0.62, -1.16, -0.92, -1.02)
+    return shape
+  }
+  shape.moveTo(-0.9, -1.0)
+  shape.bezierCurveTo(-1.34, -0.7, -1.06, -0.16, -0.52, -0.22)
+  shape.bezierCurveTo(-1.12, 0.2, -0.82, 0.88, -0.16, 0.74)
+  shape.bezierCurveTo(0.06, 1.08, 0.6, 0.92, 0.54, 0.46)
+  shape.bezierCurveTo(1.06, 0.28, 1.02, -0.38, 0.46, -0.42)
+  shape.bezierCurveTo(0.68, -0.94, 0.12, -1.18, -0.18, -0.82)
+  shape.bezierCurveTo(-0.42, -1.18, -0.76, -1.18, -0.9, -1.0)
+  return shape
+}
+
 function makePickguardShape() {
   const shape = new THREE.Shape()
   shape.moveTo(-0.44, 0.44)
@@ -222,50 +244,45 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   mat.needsUpdate = true
 }
 
-function BodyPart({ position, scale, color, roughness, opacity = 1 }: { position: [number, number, number]; scale: [number, number, number]; color: string; roughness: number; opacity?: number }) {
-  return (
-    <mesh position={position} scale={scale} castShadow receiveShadow>
-      <sphereGeometry args={[1, 36, 18]} />
-      <meshStandardMaterial color={color} roughness={roughness} metalness={0.03} transparent={opacity < 1} opacity={opacity} />
-    </mesh>
-  )
-}
-
 function BodyFinishMesh({ shapeId, colors, finish, binding }: { shapeId: ModularShape; colors: ReturnType<typeof makeColors>; finish?: FinishOption; binding?: ColorOption }) {
+  const bodyShape = useMemo(() => makeBodyShape(shapeId), [shapeId])
+  const extrude = useMemo(() => ({ depth: 0.12, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: 2 }), [])
   const bodyColor = isNaturalFinish(finish?.id) ? colors.finish : isBurstFinish(finish?.id) ? '#7A2C0A' : colors.finish
   const bindingColor = optionColor(binding, '#F2EEE2')
   const showBinding = shapeId === 'single-cut' && binding?.id !== 'none'
-  const parts = shapeId === 'single-cut'
-    ? [
-        { position: [-0.34, -0.83, 0.15] as [number, number, number], scale: [0.84, 0.58, 0.12] as [number, number, number] },
-        { position: [-0.48, -0.2, 0.15] as [number, number, number], scale: [0.58, 0.55, 0.12] as [number, number, number] },
-        { position: [0.22, -0.65, 0.15] as [number, number, number], scale: [0.5, 0.48, 0.12] as [number, number, number] },
-      ]
-    : [
-        { position: [-0.48, -0.85, 0.15] as [number, number, number], scale: [0.62, 0.48, 0.12] as [number, number, number] },
-        { position: [-0.54, -0.17, 0.15] as [number, number, number], scale: [0.52, 0.42, 0.12] as [number, number, number] },
-        { position: [0.26, -0.32, 0.15] as [number, number, number], scale: [0.5, 0.42, 0.12] as [number, number, number] },
-      ]
 
   return (
-    <group rotation={[0, 0, shapeId === 'single-cut' ? -0.08 : 0.05]}>
-      {showBinding && parts.map((part, index) => (
-        <BodyPart key={`binding-${index}`} position={[part.position[0], part.position[1], part.position[2] - 0.018]} scale={[part.scale[0] * 1.09, part.scale[1] * 1.09, part.scale[2]]} color={bindingColor} roughness={0.38} />
-      ))}
-      {parts.map((part, index) => (
-        <BodyPart key={`body-${index}`} position={part.position} scale={part.scale} color={bodyColor} roughness={colors.finishRoughness} />
-      ))}
+    <group position={[-0.08, -0.48, 0.17]} rotation={[0, 0, shapeId === 'single-cut' ? -0.08 : 0.05]} scale={shapeId === 'single-cut' ? [1.2, 1.08, 1] : [1.16, 1.02, 1]}>
+      {showBinding && (
+        <mesh position={[0, 0, -0.035]} scale={[1.08, 1.08, 1]} castShadow receiveShadow>
+          <extrudeGeometry args={[bodyShape, extrude]} />
+          <meshStandardMaterial color={bindingColor} roughness={0.38} metalness={0.02} />
+        </mesh>
+      )}
+      <mesh castShadow receiveShadow>
+        <extrudeGeometry args={[bodyShape, extrude]} />
+        <meshStandardMaterial color={bodyColor} roughness={colors.finishRoughness} metalness={0.03} />
+      </mesh>
       {shapeId === 'single-cut' && (
-        <BodyPart position={[0.5, -0.06, 0.205]} scale={[0.34, 0.32, 0.045]} color="#09090B" roughness={0.7} />
+        <mesh position={[0.6, 0.26, 0.16]} scale={[0.52, 0.42, 0.08]} castShadow receiveShadow>
+          <sphereGeometry args={[1, 28, 14]} />
+          <meshStandardMaterial color="#09090B" roughness={0.72} metalness={0.02} />
+        </mesh>
       )}
       {shapeId === 'modern-s' && (
-        <BodyPart position={[0.12, 0.05, 0.205]} scale={[0.28, 0.24, 0.045]} color="#09090B" roughness={0.7} opacity={0.96} />
+        <mesh position={[0.46, 0.38, 0.16]} scale={[0.35, 0.28, 0.08]} castShadow receiveShadow>
+          <sphereGeometry args={[1, 28, 14]} />
+          <meshStandardMaterial color="#09090B" roughness={0.72} metalness={0.02} />
+        </mesh>
       )}
-      {isBurstFinish(finish?.id) && parts.map((part, index) => (
-        <BodyPart key={`burst-${index}`} position={[part.position[0], part.position[1], part.position[2] + 0.04]} scale={[part.scale[0] * 0.55, part.scale[1] * 0.55, part.scale[2] * 0.45]} color="#F0A23A" roughness={0.2} opacity={0.58} />
-      ))}
+      {isBurstFinish(finish?.id) && (
+        <mesh position={[-0.06, -0.08, 0.145]} scale={[0.62, 0.62, 1]} castShadow receiveShadow>
+          <extrudeGeometry args={[bodyShape, { ...extrude, depth: 0.035 }]} />
+          <meshStandardMaterial color="#F0A23A" roughness={0.2} metalness={0.02} transparent opacity={0.58} />
+        </mesh>
+      )}
       {isNaturalFinish(finish?.id) && (
-        <mesh position={[-0.24, -0.52, 0.27]} rotation={[0, 0, -0.18]}>
+        <mesh position={[-0.12, -0.1, 0.16]} rotation={[0, 0, -0.18]}>
           <boxGeometry args={[1.55, 0.035, 0.012]} />
           <meshStandardMaterial color="#F1D09A" roughness={0.48} metalness={0} transparent opacity={0.36} />
         </mesh>
