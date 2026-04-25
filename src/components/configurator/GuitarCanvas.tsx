@@ -596,17 +596,17 @@ function ModularSvgPreview() {
   const pickupFill = pickupColor(store.pickups)
   const isSingleCut = shape === 'single-cut'
   const bodyPath = isSingleCut
-    ? 'M244 404 C196 378 185 314 220 278 C196 230 222 180 274 185 C301 128 379 130 414 183 C462 189 496 229 493 277 C489 342 421 378 368 347 C348 403 290 429 244 404 Z'
+    ? 'M238 407 C192 383 184 319 222 281 C203 233 235 188 287 195 C311 137 393 141 422 197 C470 205 498 244 488 291 C475 351 409 374 362 337 C348 390 288 431 238 407 Z'
     : 'M242 390 C197 368 186 316 218 281 C174 250 188 192 242 191 C258 132 328 135 350 196 C390 154 456 179 455 240 C454 296 410 324 363 306 C383 364 330 421 281 389 C267 381 255 383 242 390 Z'
   const pickguardPath = isSingleCut
-    ? 'M306 259 C334 239 384 251 399 286 C375 282 346 296 330 329 C307 317 291 282 306 259 Z'
+    ? 'M308 263 C337 244 383 257 398 292 C374 287 346 301 331 329 C308 318 292 285 308 263 Z'
     : 'M269 235 C313 205 376 223 382 280 C374 316 348 342 314 348 C283 336 263 306 262 273 C261 256 263 244 269 235 Z'
   const pickupYs = store.pickups === 'singlecoil' && !isSingleCut ? [269, 307, 345] : [288, 337]
   const pickupWidth = store.pickups === 'p90' ? 72 : store.pickups === 'singlecoil' ? 58 : 84
   const pickupHeight = store.pickups === 'singlecoil' ? 17 : 25
-  const bridgeY = isSingleCut ? 390 : 384
-  const tailpieceY = isSingleCut ? 421 : 414
-  const stringEndY = store.bridge === 'bigsby' ? 451 : tailpieceY + 4
+  const bridgeY = isSingleCut ? 389 : 374
+  const tailpieceY = isSingleCut ? 418 : 402
+  const stringEndY = store.bridge === 'bigsby' ? (isSingleCut ? 448 : 430) : tailpieceY + 4
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', display: 'grid', placeItems: 'center', background: 'radial-gradient(circle at 50% 45%, rgba(28,24,28,0.4), rgba(9,9,11,0.96) 68%)' }}>
@@ -671,7 +671,7 @@ function ModularSvgPreview() {
           <g fill={hardware} stroke="#1E2025" strokeWidth="2.6">
             <rect x="292" y={bridgeY} width="124" height="15" rx="7" fill="url(#hardwareGloss)" />
             {(isSingleCut || store.bridge === 'bigsby' || store.bridge === 'tuneomatic') && <rect x="278" y={tailpieceY} width="154" height="15" rx="7" fill="url(#hardwareGloss)" />}
-            {store.bridge === 'bigsby' && <ellipse cx="356" cy="452" rx="44" ry="15" fill="none" stroke={hardware} strokeWidth="7.5" />}
+            {store.bridge === 'bigsby' && <ellipse cx="356" cy={isSingleCut ? 448 : 430} rx="44" ry="15" fill="none" stroke={hardware} strokeWidth="7.5" />}
           </g>
           {(isSingleCut ? [[446, 326], [470, 302], [414, 380], [470, 376]] : [[444, 325], [461, 372], [417, 393]]).map(([x, y]) => (
             <circle key={`${x}-${y}`} cx={x} cy={y} r="12.5" fill={knobColor} stroke="#1E2025" strokeWidth="3.4" />
