@@ -36,6 +36,11 @@ interface ConfigStore {
   hardware:  string
   bridge:    string
   pickups:   string
+  pickguard: string
+  tuners: string
+  knobs: string
+  switchTip: string
+  pickupCovers: string
   livePrice: number
 
   // Saved builds
@@ -68,6 +73,7 @@ export const useConfigStore = create<ConfigStore>()(
 
       setOption: (key, value) => {
         const config = { ...get().currentConfig(), [key]: value }
+        if (key === 'shape' && value === 'modern-s') config.pickups = 'singlecoil'
         set({ ...config, livePrice: calcPrice(config) })
       },
 
@@ -77,6 +83,8 @@ export const useConfigStore = create<ConfigStore>()(
           shape: state.shape, finish: state.finish, top: state.top,
           neck: state.neck, fretboard: state.fretboard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+          pickguard: state.pickguard, tuners: state.tuners, knobs: state.knobs,
+          switchTip: state.switchTip, pickupCovers: state.pickupCovers,
           livePrice: state.livePrice,
         }
       },
@@ -104,6 +112,8 @@ export const useConfigStore = create<ConfigStore>()(
             shape: state.shape, finish: state.finish, top: state.top,
             neck: state.neck, fretboard: state.fretboard,
             hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+            pickguard: state.pickguard, tuners: state.tuners, knobs: state.knobs,
+            switchTip: state.switchTip, pickupCovers: state.pickupCovers,
           },
           price: state.livePrice,
           createdAt: new Date().toISOString(),
@@ -121,6 +131,8 @@ export const useConfigStore = create<ConfigStore>()(
             shape: state.shape, finish: state.finish, top: state.top,
             neck: state.neck, fretboard: state.fretboard,
             hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+            pickguard: state.pickguard, tuners: state.tuners, knobs: state.knobs,
+            switchTip: state.switchTip, pickupCovers: state.pickupCovers,
           },
           price: state.livePrice,
           createdAt: new Date().toISOString(),
@@ -133,7 +145,8 @@ export const useConfigStore = create<ConfigStore>()(
         const state = get()
         const build = [...state.savedBuilds, ...state.accountBuilds].find(b => b.id === id)
         if (!build) return
-        set({ ...build.config, livePrice: calcPrice(build.config) })
+        const config = { ...DEFAULT_CONFIG, ...build.config }
+        set({ ...config, livePrice: calcPrice(config) })
       },
 
       deleteBuild: (id) => {
@@ -150,6 +163,8 @@ export const useConfigStore = create<ConfigStore>()(
           shape: state.shape, finish: state.finish, top: state.top,
           neck: state.neck, fretboard: state.fretboard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+          pickguard: state.pickguard, tuners: state.tuners, knobs: state.knobs,
+          switchTip: state.switchTip, pickupCovers: state.pickupCovers,
         })
       },
     }),
@@ -159,6 +174,8 @@ export const useConfigStore = create<ConfigStore>()(
         shape: state.shape, finish: state.finish, top: state.top,
         neck: state.neck, fretboard: state.fretboard,
         hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+        pickguard: state.pickguard, tuners: state.tuners, knobs: state.knobs,
+        switchTip: state.switchTip, pickupCovers: state.pickupCovers,
         savedBuilds: state.savedBuilds,
         accountBuilds: state.accountBuilds,
         quoteSubmissions: state.quoteSubmissions,

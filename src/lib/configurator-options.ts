@@ -18,14 +18,16 @@ export const BODY_SHAPES: ConfigOption[] = [
 ]
 
 export const FINISHES: ConfigOption[] = [
-  { id: 'mint',      label: 'Surf Mint',   hex: '#7EC8B4', roughness: 0.12, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'ocean',     label: 'Ocean Blue',  hex: '#2E6EA6', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
-  { id: 'black',     label: 'Onyx Black',  hex: '#1a1a1a', roughness: 0.08, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'red',       label: 'Cherry Red',  hex: '#A51C30', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
-  { id: 'forest',    label: 'Forest',      hex: '#2D5A3D', roughness: 0.15, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'sunburst',  label: 'Sunburst',    hex: '#6B2200', roughness: 0.1,  priceAdj: 0, finishGroup: 'burst' },
-  { id: 'natural',   label: 'Natural Ash', hex: '#D4B896', roughness: 0.22, priceAdj: 0, finishGroup: 'natural' },
-  { id: 'aged',      label: 'Aged Honey',  hex: '#C8954A', roughness: 0.3,  priceAdj: 0, finishGroup: 'natural' },
+  { id: 'mint',             label: 'Surf Mint',       hex: '#7EC8B4', roughness: 0.12, priceAdj: 0, finishGroup: 'solid' },
+  { id: 'ocean',            label: 'Ocean Blue',      hex: '#2E6EA6', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
+  { id: 'olympic-white',    label: 'Olympic White',   hex: '#F2EFE3', roughness: 0.11, priceAdj: 0, finishGroup: 'solid' },
+  { id: 'black',            label: 'Black',           hex: '#111111', roughness: 0.08, priceAdj: 0, finishGroup: 'solid' },
+  { id: 'candy-apple-red',  label: 'Candy Apple Red', hex: '#B5121B', roughness: 0.09, priceAdj: 0, finishGroup: 'solid' },
+  { id: 'sunburst',         label: 'Sunburst',        hex: '#8A360D', roughness: 0.1,  priceAdj: 0, finishGroup: 'burst', burstColors: ['#F3B23C', '#A84613', '#160704'] },
+  { id: 'two-tone-burst',   label: '2-Tone Burst',    hex: '#6B2A0A', roughness: 0.1,  priceAdj: 0, finishGroup: 'burst', burstColors: ['#E6A43C', '#E6A43C', '#120604'] },
+  { id: 'tobacco-burst',    label: 'Tobacco Burst',   hex: '#5F2C10', roughness: 0.12, priceAdj: 0, finishGroup: 'burst', burstColors: ['#C98B3D', '#5A2A12', '#0B0503'] },
+  { id: 'cherry-burst',     label: 'Cherry Burst',    hex: '#A51C30', roughness: 0.1,  priceAdj: 0, finishGroup: 'burst', burstColors: ['#F0B34D', '#C02A2A', '#300006'] },
+  { id: 'natural',          label: 'Natural Ash',     hex: '#D4B896', roughness: 0.22, priceAdj: 0, finishGroup: 'natural' },
 ]
 
 export const FINISH_GROUPS = [
@@ -72,11 +74,47 @@ export const HARDWARE_COLORS: ConfigOption[] = [
   { id: 'aged-brass', label: 'Aged Brass', priceAdj: 160 },
 ]
 
+export const PICKGUARDS: ConfigOption[] = [
+  { id: 'parchment', label: 'Parchment', hex: '#E7E0CC', priceAdj: 0 },
+  { id: 'white',     label: 'White',     hex: '#F5F2E8', priceAdj: 0 },
+  { id: 'black',     label: 'Black',     hex: '#111114', priceAdj: 0 },
+  { id: 'mint',      label: 'Mint',      hex: '#C9D8C8', priceAdj: 30 },
+  { id: 'tortoise',  label: 'Tortoise',  hex: '#5B2618', priceAdj: 70 },
+]
+
+export const TUNERS: ConfigOption[] = [
+  { id: 'nickel',  label: 'Nickel',  hex: '#C9CED6', priceAdj: 0 },
+  { id: 'chrome',  label: 'Chrome',  hex: '#DDE2EA', priceAdj: 0 },
+  { id: 'gold',    label: 'Gold',    hex: '#C9A45C', priceAdj: 90 },
+  { id: 'black',   label: 'Black',   hex: '#111116', priceAdj: 70 },
+]
+
+export const KNOBS: ConfigOption[] = [
+  { id: 'aged-white', label: 'Aged White', hex: '#E9DEC4', priceAdj: 0 },
+  { id: 'white',      label: 'White',      hex: '#F5F2E8', priceAdj: 0 },
+  { id: 'black',      label: 'Black',      hex: '#111114', priceAdj: 0 },
+  { id: 'parchment',  label: 'Parchment',  hex: '#D8C9A9', priceAdj: 20 },
+]
+
+export const SWITCH_TIPS: ConfigOption[] = [
+  { id: 'aged-white', label: 'Aged White', hex: '#E9DEC4', priceAdj: 0 },
+  { id: 'white',      label: 'White',      hex: '#F5F2E8', priceAdj: 0 },
+  { id: 'black',      label: 'Black',      hex: '#111114', priceAdj: 0 },
+  { id: 'cream',      label: 'Cream',      hex: '#F0E1B9', priceAdj: 20 },
+]
+
 export const BRIDGES: ConfigOption[] = [
   { id: 'tuneomatic', label: 'Fixed Stop Tail', sub: 'Classic stop bar',  priceAdj: 0   },
   { id: 'bigsby',     label: 'Vintage Vibrato', sub: 'Expressive vibrato', priceAdj: 280 },
   { id: 'hardtail',   label: 'Hardtail',     sub: 'Fixed string-thru', priceAdj: 0   },
   { id: 'trem',       label: 'Locking Tremolo', sub: 'High-stability tremolo', priceAdj: 380 },
+]
+
+export const PICKUP_COVERS: ConfigOption[] = [
+  { id: 'aged-white', label: 'Aged White', hex: '#E9DEC4', priceAdj: 0 },
+  { id: 'white',      label: 'White',      hex: '#F5F2E8', priceAdj: 0 },
+  { id: 'black',      label: 'Black',      hex: '#111114', priceAdj: 0 },
+  { id: 'cream',      label: 'Cream',      hex: '#F0E1B9', priceAdj: 20 },
 ]
 
 export const PICKUPS: ConfigOption[] = [
@@ -95,7 +133,12 @@ export const DEFAULT_CONFIG = {
   fretboard: 'rosewood',
   hardware:  'nickel',
   bridge:    'tuneomatic',
-  pickups:   'dual-hum',
+  pickups:   'singlecoil',
+  pickguard: 'parchment',
+  tuners:    'nickel',
+  knobs:     'aged-white',
+  switchTip: 'aged-white',
+  pickupCovers: 'aged-white',
 }
 
 export type ConfigKey = keyof typeof DEFAULT_CONFIG
@@ -109,6 +152,11 @@ export const CONFIG_OPTION_GROUPS: [ConfigKey, string, ConfigOption[]][] = [
   ['hardware',  'Hardware', HARDWARE_COLORS],
   ['bridge',    'Bridge', BRIDGES],
   ['pickups',   'Pickups', PICKUPS],
+  ['pickguard', 'Pickguard', PICKGUARDS],
+  ['tuners',    'Tuners', TUNERS],
+  ['knobs',     'Knobs', KNOBS],
+  ['switchTip', 'Switch Tip', SWITCH_TIPS],
+  ['pickupCovers', 'Pickup Covers', PICKUP_COVERS],
 ]
 
 export function getOptionLabel(key: ConfigKey, id: string): string {

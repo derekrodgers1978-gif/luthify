@@ -23,6 +23,7 @@ export interface ConfigOption {
   hex?:     string
   roughness?: number
   finishGroup?: 'solid' | 'burst' | 'natural'
+  burstColors?: [string, string, string]
   texture?: string
   modelPath?: string
 }
@@ -36,6 +37,11 @@ export interface ConfigState {
   hardware:  string
   bridge:    string
   pickups:   string
+  pickguard: string
+  tuners: string
+  knobs: string
+  switchTip: string
+  pickupCovers: string
   livePrice: number
 }
 
