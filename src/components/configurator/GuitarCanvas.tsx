@@ -701,11 +701,14 @@ export default function GuitarCanvas() {
   const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
   const [webglLost, setWebglLost] = useState(false)
   const shape = useConfigStore(s => s.shape)
+  const useModularPreview = isModularShape(shape)
   const showSingleCutFallback = webglLost && shape === 'single-cut'
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
+      {useModularPreview ? (
+        <ModularSvgPreview />
+      ) : showSingleCutFallback ? (
         <SingleCutFinishFallback />
       ) : (
         <Canvas
@@ -736,7 +739,6 @@ export default function GuitarCanvas() {
           />
         </Canvas>
       )}
-      <ModularSvgPreview />
       <div style={{ position: 'absolute', left: 20, top: 64, zIndex: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {[
           ['standard', 'Reset'],
