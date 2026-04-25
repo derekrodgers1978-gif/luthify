@@ -638,8 +638,6 @@ function ModularSvgPreview() {
           {isSingleCut && binding?.id !== 'none' && <path d={bodyPath} fill={optionColor(binding, '#F2EEE2')} stroke="#1E2025" strokeWidth="5" transform="translate(-5 -4) scale(1.03)" />}
           <path d={bodyPath} fill={bodyFill} stroke="#1E2025" strokeWidth="6" strokeLinejoin="round" />
           <path d={bodyPath} fill="url(#bodyGloss)" opacity="0.42" transform="translate(34 26) scale(0.9)" />
-          {isSingleCut && <path d="M410 178 C389 186 370 207 360 235 C383 222 407 214 434 219 C430 199 422 186 410 178 Z" fill="#09090B" opacity="0.5" />}
-
           <path d={pickguardPath} fill={optionColor(pickguard)} stroke="#1E2025" strokeWidth="4" opacity={isSingleCut ? 0.76 : 1} />
           {pickupYs.map(y => (
             <rect key={y} x="307" y={y} width={store.pickups === 'p90' ? 82 : 92} height={store.pickups === 'singlecoil' ? 20 : 28} rx="7" fill={pickupFill} stroke="#DDE2EA" strokeWidth="2" />
