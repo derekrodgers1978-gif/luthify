@@ -50,6 +50,14 @@ export const TOPS: ConfigOption[] = [
   { id: 'spalted', label: 'Spalted Maple',sub: 'High-contrast grain',    texture: '/textures/spalted.jpg',  priceAdj: 740 },
 ]
 
+export const PICKGUARDS: ConfigOption[] = [
+  { id: 'parchment', label: 'Parchment', hex: '#F2EEE2', priceAdj: 0 },
+  { id: 'mint',      label: 'Mint Green', hex: '#C9D8C4', priceAdj: 0 },
+  { id: 'black',     label: 'Black',      hex: '#111114', priceAdj: 0 },
+  { id: 'tortoise',  label: 'Tortoise',   hex: '#6A2B19', priceAdj: 90 },
+  { id: 'cream',     label: 'Cream',      hex: '#E8D5A8', priceAdj: 0 },
+]
+
 export const NECK_WOODS: ConfigOption[] = [
   { id: 'maple',    label: 'Hard Maple',    priceAdj: 0   },
   { id: 'mahogany', label: 'Mahogany',       priceAdj: 0   },
@@ -87,15 +95,38 @@ export const PICKUPS: ConfigOption[] = [
   { id: 'active-hum', label: 'Active Humbuckers', priceAdj: 220 },
 ]
 
+export const KNOBS: ConfigOption[] = [
+  { id: 'cream-top-hat', label: 'Cream Top Hat', hex: '#E8D5A8', priceAdj: 0 },
+  { id: 'black-speed',   label: 'Black Speed',   hex: '#111114', priceAdj: 0 },
+  { id: 'amber-bell',    label: 'Amber Bell',    hex: '#C5832E', priceAdj: 40 },
+  { id: 'chrome-dome',   label: 'Metal Dome',    hex: '#C9CED6', priceAdj: 65 },
+]
+
+export const TUNERS: ConfigOption[] = [
+  { id: 'vintage', label: 'Vintage Kluson', sub: 'Classic press-fit keys', priceAdj: 0 },
+  { id: 'locking', label: 'Locking Tuners', sub: 'Fast string changes', priceAdj: 140 },
+  { id: 'staggered', label: 'Staggered Locking', sub: 'Cleaner break angle', priceAdj: 180 },
+]
+
+export const BINDINGS: ConfigOption[] = [
+  { id: 'none', label: 'None', hex: '#000000', priceAdj: 0 },
+  { id: 'cream', label: 'Cream', hex: '#F2EEE2', priceAdj: 120 },
+  { id: 'ivoroid', label: 'Ivoroid', hex: '#E7D9B7', priceAdj: 180 },
+  { id: 'black', label: 'Black', hex: '#111114', priceAdj: 120 },
+]
+
 export const DEFAULT_CONFIG = {
   shape:     'modern-s',
   finish:    'natural',
-  top:       'quilted',
+  pickguard: 'parchment',
   neck:      'maple',
   fretboard: 'rosewood',
   hardware:  'nickel',
   bridge:    'tuneomatic',
   pickups:   'dual-hum',
+  knobs:     'cream-top-hat',
+  tuners:    'vintage',
+  binding:   'cream',
 }
 
 export type ConfigKey = keyof typeof DEFAULT_CONFIG
@@ -103,12 +134,15 @@ export type ConfigKey = keyof typeof DEFAULT_CONFIG
 export const CONFIG_OPTION_GROUPS: [ConfigKey, string, ConfigOption[]][] = [
   ['shape',     'Body Shape', BODY_SHAPES],
   ['finish',    'Body Finish', FINISHES],
-  ['top',       'Top', TOPS],
+  ['pickguard', 'Pickguard', PICKGUARDS],
+  ['pickups',   'Pickups', PICKUPS],
+  ['bridge',    'Bridge / Tailpiece', BRIDGES],
+  ['knobs',     'Knobs', KNOBS],
+  ['tuners',    'Tuners', TUNERS],
+  ['hardware',  'Hardware Color', HARDWARE_COLORS],
   ['neck',      'Neck Wood', NECK_WOODS],
   ['fretboard', 'Fretboard', FRETBOARDS],
-  ['hardware',  'Hardware', HARDWARE_COLORS],
-  ['bridge',    'Bridge', BRIDGES],
-  ['pickups',   'Pickups', PICKUPS],
+  ['binding',   'Binding', BINDINGS],
 ]
 
 export function getOptionLabel(key: ConfigKey, id: string): string {

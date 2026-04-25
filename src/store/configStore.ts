@@ -30,12 +30,15 @@ interface ConfigStore {
   // Current config
   shape:     string
   finish:    string
-  top:       string
+  pickguard: string
   neck:      string
   fretboard: string
   hardware:  string
   bridge:    string
   pickups:   string
+  knobs:     string
+  tuners:    string
+  binding:   string
   livePrice: number
 
   // Saved builds
@@ -74,9 +77,10 @@ export const useConfigStore = create<ConfigStore>()(
       currentConfig: () => {
         const state = get()
         return {
-          shape: state.shape, finish: state.finish, top: state.top,
+          shape: state.shape, finish: state.finish, pickguard: state.pickguard,
           neck: state.neck, fretboard: state.fretboard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+          knobs: state.knobs, tuners: state.tuners, binding: state.binding,
           livePrice: state.livePrice,
         }
       },
@@ -101,9 +105,10 @@ export const useConfigStore = create<ConfigStore>()(
         const build: SavedBuild = {
           id, name,
           config: {
-            shape: state.shape, finish: state.finish, top: state.top,
+            shape: state.shape, finish: state.finish, pickguard: state.pickguard,
             neck: state.neck, fretboard: state.fretboard,
             hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+            knobs: state.knobs, tuners: state.tuners, binding: state.binding,
           },
           price: state.livePrice,
           createdAt: new Date().toISOString(),
@@ -118,9 +123,10 @@ export const useConfigStore = create<ConfigStore>()(
         const build: SavedBuild = {
           id, name,
           config: {
-            shape: state.shape, finish: state.finish, top: state.top,
+            shape: state.shape, finish: state.finish, pickguard: state.pickguard,
             neck: state.neck, fretboard: state.fretboard,
             hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+            knobs: state.knobs, tuners: state.tuners, binding: state.binding,
           },
           price: state.livePrice,
           createdAt: new Date().toISOString(),
@@ -147,18 +153,20 @@ export const useConfigStore = create<ConfigStore>()(
       breakdown: () => {
         const state = get()
         return getPriceBreakdown({
-          shape: state.shape, finish: state.finish, top: state.top,
+          shape: state.shape, finish: state.finish, pickguard: state.pickguard,
           neck: state.neck, fretboard: state.fretboard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+          knobs: state.knobs, tuners: state.tuners, binding: state.binding,
         })
       },
     }),
     {
       name:    'luthify-config',
       partialize: (state) => ({
-        shape: state.shape, finish: state.finish, top: state.top,
+        shape: state.shape, finish: state.finish, pickguard: state.pickguard,
         neck: state.neck, fretboard: state.fretboard,
         hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+        knobs: state.knobs, tuners: state.tuners, binding: state.binding,
         savedBuilds: state.savedBuilds,
         accountBuilds: state.accountBuilds,
         quoteSubmissions: state.quoteSubmissions,
