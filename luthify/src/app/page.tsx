@@ -23,22 +23,22 @@ export default function HomePage() {
   return (
     <>
       {/* ── HERO ── */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 'calc(100vh - 76px)', width: 'min(1280px, calc(100% - 48px))', margin: '0 auto', alignItems: 'center', gap: 0 }}>
-        <div ref={addReveal} className="reveal" style={{ paddingRight: 60, paddingTop: 80, paddingBottom: 80 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderRadius: 999, background: 'rgba(201,164,92,0.08)', border: '1px solid rgba(201,164,92,0.18)', color: '#C9A45C', fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 36 }}>
+      <section className="home-hero" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.02fr) minmax(360px, 0.98fr)', minHeight: 'calc(100vh - 76px)', width: 'min(1280px, calc(100% - 48px))', margin: '0 auto', alignItems: 'center', gap: 48 }}>
+        <div ref={addReveal} className="reveal home-hero-copy" style={{ paddingTop: 76, paddingBottom: 72 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderRadius: 999, background: 'rgba(201,164,92,0.08)', border: '1px solid rgba(201,164,92,0.18)', color: '#C9A45C', fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 32 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#C9A45C', boxShadow: '0 0 8px #C9A45C', animation: 'pulse2 2s infinite' }} />
             Free to join · Pay only when you sell
           </div>
 
-          <h1 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: 'clamp(3.2rem,4.8vw,5.2rem)', lineHeight: 0.95, letterSpacing: '-0.02em', marginBottom: 28 }}>
+          <h1 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: 'clamp(3.1rem,4.8vw,5.25rem)', lineHeight: 0.94, letterSpacing: '-0.025em', marginBottom: 30 }}>
             Custom<br />instruments,<br /><em style={{ color: '#C9A45C', fontStyle: 'normal' }}>built your way.</em>
           </h1>
 
-          <p style={{ fontSize: '1.05rem', lineHeight: 1.75, color: 'rgba(245,241,232,0.55)', marginBottom: 44, maxWidth: '30rem', fontWeight: 300 }}>
+          <p style={{ fontSize: '1.05rem', lineHeight: 1.75, color: 'rgba(245,241,232,0.58)', marginBottom: 38, maxWidth: '32rem', fontWeight: 300 }}>
             Design your dream instrument. Then request quotes from verified luthiers worldwide. Founded by real instrument sellers — including the team behind <strong style={{ color: '#C9A45C', fontWeight: 500 }}>Tsunami Guitars</strong>.
           </p>
 
-          <div style={{ display: 'flex', gap: 14, marginBottom: 44, flexWrap: 'wrap' }}>
+          <div className="home-hero-actions" style={{ display: 'flex', gap: 14, marginBottom: 26, flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => setQuoteOpen(true)} style={{ fontSize: '0.95rem', padding: '14px 28px' }}>
               Request a Quote — Free
             </button>
@@ -47,8 +47,21 @@ export default function HomePage() {
             </Link>
           </div>
 
+          <div className="hero-trust-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: 34, maxWidth: 560 }}>
+            {[
+              ['Verified builders', 'Hand-reviewed shops'],
+              ['No upfront payment', 'Free quote requests'],
+              ['Global shipping', 'Insured delivery'],
+            ].map(([title, sub]) => (
+              <div key={title} style={{ border: '1px solid rgba(201,164,92,0.16)', background: 'rgba(201,164,92,0.045)', borderRadius: 14, padding: '12px 14px' }}>
+                <div style={{ color: '#F5F1E8', fontSize: '0.78rem', fontWeight: 600, marginBottom: 3 }}>{title}</div>
+                <div style={{ color: 'rgba(245,241,232,0.42)', fontSize: '0.68rem', lineHeight: 1.35 }}>{sub}</div>
+              </div>
+            ))}
+          </div>
+
           {/* Social proof */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex' }}>
               {['TG','JM','AR','TN','MC'].map((av, i) => (
                 <div key={av} style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', border: '2px solid #09090B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 700, color: '#09090B', marginLeft: i === 0 ? 0 : -8 }}>{av}</div>
@@ -57,7 +70,7 @@ export default function HomePage() {
             <span style={{ fontSize: '0.8rem', color: 'rgba(245,241,232,0.55)' }}>47 builders already selling · Join them free</span>
           </div>
 
-          <div style={{ paddingTop: 32, borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+          <div style={{ paddingTop: 28, borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             {['Free builder listings','Secure checkout','Custom commissions','No monthly fees'].map(note => (
               <span key={note} style={{ color: 'rgba(245,241,232,0.55)', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#C9A45C', flexShrink: 0 }} />{note}
@@ -67,7 +80,7 @@ export default function HomePage() {
         </div>
 
         {/* Hero right — watermark */}
-        <div style={{ position: 'relative', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <div className="home-hero-art" style={{ position: 'relative', minHeight: 'calc(100vh - 76px)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', bottom: -40, left: '50%', transform: 'translateX(-50%)', width: 460, height: 680, background: 'radial-gradient(ellipse at 50% 85%, rgba(201,164,92,0.18) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, rgba(201,164,92,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 2 }} />
           <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(680px, 88%)', opacity: 0.052, pointerEvents: 'none', zIndex: 1 }}>
             <img src="/luthify-logo.webp" alt="" style={{ width: '100%', height: 'auto', display: 'block', mixBlendMode: 'lighten', filter: 'sepia(1) saturate(2) hue-rotate(4deg) brightness(0.8)' }} />
@@ -210,9 +223,36 @@ export default function HomePage() {
 
       <style>{`
         @media (max-width: 1024px) {
-          section > div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+          .home-hero {
+            grid-template-columns: 1fr !important;
+            min-height: auto !important;
+            gap: 8px !important;
+          }
+          .home-hero-copy {
+            padding-top: 56px !important;
+            padding-bottom: 28px !important;
+          }
+          .home-hero-art {
+            min-height: 360px !important;
+            height: 360px !important;
+          }
         }
         @media (max-width: 768px) {
+          .home-hero {
+            width: min(100% - 32px, 1280px) !important;
+          }
+          .home-hero-copy {
+            padding-top: 42px !important;
+          }
+          .home-hero-actions {
+            flex-direction: column !important;
+          }
+          .home-hero-actions > * {
+            width: 100% !important;
+          }
+          .hero-trust-strip {
+            grid-template-columns: 1fr !important;
+          }
           section > div[style*="grid-template-columns: repeat(3,1fr)"] { grid-template-columns: 1fr !important; }
           section > div[style*="grid-template-columns: repeat(5,1fr)"] { grid-template-columns: repeat(3,1fr) !important; }
           footer div[style*="grid-template-columns"] { grid-template-columns: 1fr 1fr !important; }
