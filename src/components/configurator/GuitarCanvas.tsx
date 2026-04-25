@@ -1,7 +1,7 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, isBurstFinish, isNaturalFinish } from '@/lib/configurator-options'
@@ -211,216 +211,155 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   )
 }
 
-function makeBodyShape(shapeId: string) {
-  const shape = new THREE.Shape()
-  if (shapeId === 'single-cut') {
-    shape.moveTo(-0.08, 1.2)
-    shape.bezierCurveTo(0.32, 1.26, 0.68, 1.08, 0.78, 0.72)
-    shape.bezierCurveTo(1.2, 0.72, 1.52, 0.34, 1.5, -0.16)
-    shape.bezierCurveTo(1.48, -0.88, 0.92, -1.36, 0.14, -1.42)
-    shape.bezierCurveTo(-0.62, -1.48, -1.34, -1.08, -1.42, -0.34)
-    shape.bezierCurveTo(-1.5, 0.46, -0.92, 1.08, -0.08, 1.2)
-  } else {
-    shape.moveTo(-0.12, 1.06)
-    shape.bezierCurveTo(0.22, 1.22, 0.58, 1.05, 0.7, 0.72)
-    shape.bezierCurveTo(1.22, 0.82, 1.5, 0.42, 1.36, -0.08)
-    shape.bezierCurveTo(1.25, -0.5, 0.92, -0.66, 0.58, -0.72)
-    shape.bezierCurveTo(0.52, -1.28, 0.05, -1.58, -0.5, -1.44)
-    shape.bezierCurveTo(-1.08, -1.28, -1.36, -0.78, -1.18, -0.22)
-    shape.bezierCurveTo(-1.56, 0.1, -1.48, 0.7, -0.98, 0.88)
-    shape.bezierCurveTo(-0.66, 1, -0.42, 0.92, -0.12, 1.06)
-  }
-  return shape
-}
-
-function PremiumBodyMaterial({ finish, colors }: { finish?: FinishOption; colors: ReturnType<typeof makeColors> }) {
-  const material = useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({
-      color: '#ffffff',
-      metalness: 0.05,
-      roughness: isNaturalFinish(finish?.id) ? Math.max(colors.finishRoughness, 0.26) : Math.min(colors.finishRoughness, 0.2),
-      envMapIntensity: 1.8,
-    })
-    const finishMode = isBurstFinish(finish?.id) ? 1 : isNaturalFinish(finish?.id) ? 2 : 0
-    mat.onBeforeCompile = shader => {
-      shader.uniforms.uFinishColor = { value: new THREE.Color(colors.finish) }
-      shader.uniforms.uFinishMode = { value: finishMode }
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vBodyPosition;')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBodyPosition = position;')
-      shader.fragmentShader = shader.fragmentShader
-        .replace(
-          '#include <common>',
-          '#include <common>\nuniform vec3 uFinishColor;\nuniform int uFinishMode;\nvarying vec3 vBodyPosition;'
-        )
-        .replace(
-          '#include <color_fragment>',
-          `#include <color_fragment>
-vec2 bodyUv = vec2(vBodyPosition.x / 1.55, (vBodyPosition.y + 0.12) / 1.64);
-float bodyRadius = length(bodyUv);
-float grain = sin(vBodyPosition.x * 22.0 + sin(vBodyPosition.y * 13.0) * 0.8) * 0.5 + 0.5;
-float curl = sin((vBodyPosition.x + vBodyPosition.y) * 34.0) * 0.5 + 0.5;
-vec3 burst = mix(vec3(0.98, 0.58, 0.18), uFinishColor, smoothstep(0.16, 0.48, bodyRadius));
-burst = mix(burst, vec3(0.08, 0.025, 0.01), smoothstep(0.58, 0.94, bodyRadius));
-vec3 natural = mix(uFinishColor * 0.72, uFinishColor * 1.16, smoothstep(0.18, 0.95, grain));
-natural = mix(natural, natural * 1.18, curl * 0.18);
-vec3 solid = mix(uFinishColor * 0.76, uFinishColor * 1.16, smoothstep(-0.8, 0.78, vBodyPosition.y - vBodyPosition.x * 0.18));
-vec3 paint = uFinishMode == 1 ? burst : uFinishMode == 2 ? natural : solid;
-float rim = smoothstep(0.62, 0.92, bodyRadius);
-float highlight = smoothstep(0.24, 0.88, 1.0 - length((bodyUv - vec2(-0.2, 0.22)) * vec2(1.0, 1.8)));
-diffuseColor.rgb = mix(paint, vec3(0.96, 0.9, 0.76), rim * 0.2);
-diffuseColor.rgb += highlight * vec3(0.12, 0.1, 0.07);`
-        )
-    }
-    mat.customProgramCacheKey = () => `premium-body-${finish?.id ?? 'default'}-${colors.finish}`
-    return mat
-  }, [colors.finish, colors.finishRoughness, finish?.id])
-
-  return <primitive object={material} attach="material" />
-}
-
-function PremiumHardwareMaterial({ color, dark = false }: { color: string; dark?: boolean }) {
-  return <meshStandardMaterial color={dark ? '#08080A' : color} metalness={dark ? 0.45 : 0.92} roughness={dark ? 0.28 : 0.18} envMapIntensity={1.8} />
-}
-
-function PremiumInstrument({ view }: { view: 'standard' | 'detail' }) {
-  const store = useConfigStore()
-  const finish = FINISHES.find(f => f.id === store.finish)
-  const neck = NECK_WOODS.find(n => n.id === store.neck)
-  const board = FRETBOARDS.find(f => f.id === store.fretboard)
-  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+function SvgPremiumPreview({ view }: { view: 'standard' | 'detail' }) {
+  const shape = useConfigStore(s => s.shape)
+  const finishId = useConfigStore(s => s.finish)
+  const neckId = useConfigStore(s => s.neck)
+  const fretboardId = useConfigStore(s => s.fretboard)
+  const hardwareId = useConfigStore(s => s.hardware)
+  const bridgeId = useConfigStore(s => s.bridge)
+  const pickupsId = useConfigStore(s => s.pickups)
+  const finish = FINISHES.find(f => f.id === finishId)
+  const neck = NECK_WOODS.find(n => n.id === neckId)
+  const board = FRETBOARDS.find(f => f.id === fretboardId)
+  const hw = HARDWARE_COLORS.find(h => h.id === hardwareId)
   const colors = makeColors(finish, neck, board, hw)
-  const bodyShape = useMemo(() => makeBodyShape(store.shape), [store.shape])
-  const isSingleCut = store.shape === 'single-cut'
-  const pickupXs = isSingleCut ? [-0.18, 0.24] : [-0.34, 0.08, 0.5]
-  const knobPositions = isSingleCut ? [[0.9, -0.5], [1.03, -0.16], [0.66, -0.78]] : [[0.8, -0.58], [1.02, -0.34], [0.56, -0.9]]
-  const stringXs = [-0.11, -0.066, -0.022, 0.022, 0.066, 0.11]
-  const headstockPoints = isSingleCut
-    ? [[-0.27, 0], [0.2, 0.06], [0.34, 0.86], [-0.05, 1.08], [-0.36, 0.78]]
-    : [[-0.2, 0.02], [0.23, 0.12], [0.36, 0.74], [0.1, 1.12], [-0.22, 0.98], [-0.3, 0.44]]
+  const isSingleCut = shape === 'single-cut'
+  const id = `${shape}-${finishId}-${hardwareId}-${bridgeId}-${pickupsId}`.replace(/[^a-z0-9-]/gi, '')
+  const bodyPath = isSingleCut
+    ? 'M -95 -120 C -40 -204 82 -195 139 -100 C 160 -66 188 -67 207 -39 C 238 8 219 95 158 151 C 92 212 -21 214 -110 161 C -198 108 -229 7 -184 -78 C -164 -116 -128 -128 -95 -120 Z'
+    : 'M -51 -151 C -2 -177 48 -151 57 -98 C 90 -127 153 -112 168 -61 C 184 -7 137 21 78 28 C 136 70 121 145 54 173 C -7 199 -77 166 -82 101 C -122 143 -194 113 -193 46 C -192 -8 -148 -42 -91 -34 C -119 -80 -102 -128 -51 -151 Z'
+  const bodyInnerPath = isSingleCut
+    ? 'M -78 -96 C -33 -162 64 -154 109 -80 C 126 -52 150 -53 165 -31 C 188 7 173 75 126 118 C 74 166 -17 167 -88 126 C -157 85 -181 7 -146 -59 C -130 -89 -103 -101 -78 -96 Z'
+    : 'M -45 -126 C -8 -145 30 -127 38 -83 C 67 -104 114 -92 126 -52 C 139 -9 103 11 54 17 C 96 51 85 108 35 129 C -11 149 -61 122 -65 73 C -96 105 -150 82 -149 34 C -148 -5 -114 -27 -70 -21 C -92 -58 -83 -105 -45 -126 Z'
+  const headstockPath = isSingleCut
+    ? 'M -37 -7 C -8 -21 38 -11 51 24 L 70 116 C 39 139 -8 146 -50 130 L -63 50 C -60 22 -53 3 -37 -7 Z'
+    : 'M -29 -3 C 2 -19 43 -7 58 26 L 74 102 C 51 137 12 153 -36 139 L -61 85 C -50 46 -48 14 -29 -3 Z'
+  const pickups = pickupsId === 'singlecoil'
+    ? ['single', 'single', 'single']
+    : pickupsId === 'hss'
+      ? ['single', 'single', 'hum']
+      : pickupsId === 'p90'
+        ? ['p90', 'p90']
+        : ['hum', 'hum']
+  const pickupYs = pickups.length === 3 ? [-56, -7, 44] : [-42, 34]
+  const strings = [-16, -9.5, -3.2, 3.2, 9.5, 16]
+  const transform = `translate(500 398) rotate(-12) scale(${view === 'detail' ? 1.15 : 1})`
+  const bridgeY = isSingleCut ? 91 : 82
 
   return (
-    <Center>
-      <group rotation={[0.04, view === 'detail' ? -0.18 : 0.1, -0.08]} position={[0, -0.55, 0]} scale={1.05}>
-        <mesh position={[0, -0.12, -0.12]} scale={[1.04, 1.04, 1]}>
-          <shapeGeometry args={[bodyShape]} />
-          <meshBasicMaterial color="#050507" transparent opacity={0.82} />
-        </mesh>
-        <mesh position={[0, -0.12, 0]}>
-          <extrudeGeometry args={[bodyShape, { depth: 0.22, bevelEnabled: true, bevelSize: 0.045, bevelThickness: 0.04, bevelSegments: 8, curveSegments: 36 }]} />
-          <meshStandardMaterial color={colors.finish} metalness={0.04} roughness={0.32} envMapIntensity={1.4} />
-        </mesh>
-        <mesh position={[0, -0.12, 0.24]}>
-          <shapeGeometry args={[bodyShape]} />
-          <PremiumBodyMaterial finish={finish} colors={colors} />
-        </mesh>
-        <mesh position={[0, -0.12, 0.255]} scale={[0.93, 0.93, 1]}>
-          <shapeGeometry args={[bodyShape]} />
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.08} />
-        </mesh>
+    <div data-preview-shape={shape} style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 43%, #19171d 0%, #09090B 64%)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+      <svg key={`${shape}-${pickupsId}-${bridgeId}-${hardwareId}-${finishId}`} data-shape={shape} viewBox="0 0 1000 760" role="img" aria-label={`${isSingleCut ? 'Single Cut' : 'S-Style'} modular guitar preview`} style={{ width: 'min(92%, 980px)', height: 'min(92%, 700px)' }}>
+        <defs>
+          <filter id={`${id}-shadow`} x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="26" stdDeviation="22" floodColor="#000000" floodOpacity="0.48" />
+          </filter>
+          <linearGradient id={`${id}-solid`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor={colors.finish} />
+            <stop offset="48%" stopColor={colors.finish} />
+            <stop offset="100%" stopColor="#09090B" stopOpacity="0.38" />
+          </linearGradient>
+          <radialGradient id={`${id}-burst`} cx="45%" cy="44%" r="73%">
+            <stop offset="0%" stopColor="#F3B24D" />
+            <stop offset="42%" stopColor={colors.finish} />
+            <stop offset="78%" stopColor="#2C0D04" />
+            <stop offset="100%" stopColor="#080303" />
+          </radialGradient>
+          <linearGradient id={`${id}-natural`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#8D5B2F" />
+            <stop offset="22%" stopColor={colors.finish} />
+            <stop offset="48%" stopColor="#F2D09A" />
+            <stop offset="72%" stopColor={colors.finish} />
+            <stop offset="100%" stopColor="#70421D" />
+          </linearGradient>
+          <linearGradient id={`${id}-neck`} x1="0" x2="1">
+            <stop offset="0%" stopColor="#5a3118" />
+            <stop offset="42%" stopColor={colors.neck} />
+            <stop offset="100%" stopColor="#2f180b" />
+          </linearGradient>
+          <linearGradient id={`${id}-metal`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.7" />
+            <stop offset="45%" stopColor={colors.hardware} />
+            <stop offset="100%" stopColor="#16171A" stopOpacity="0.8" />
+          </linearGradient>
+          <linearGradient id={`${id}-gloss`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.4" />
+            <stop offset="52%" stopColor="#FFFFFF" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.16" />
+          </linearGradient>
+          <pattern id={`${id}-grain`} width="36" height="18" patternUnits="userSpaceOnUse">
+            <path d="M0 9 C8 3 16 15 24 8 S34 8 36 4" fill="none" stroke="#2d1708" strokeOpacity="0.18" strokeWidth="1.4" />
+          </pattern>
+        </defs>
 
-        <mesh position={[0, 1.36, 0.03]}>
-          <boxGeometry args={[0.42, 3.1, 0.18]} />
-          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.44} envMapIntensity={1.2} />
-        </mesh>
-        <mesh position={[0, 1.34, 0.17]}>
-          <boxGeometry args={[0.32, 3.02, 0.08]} />
-          <meshStandardMaterial color={colors.board} metalness={0.01} roughness={0.58} envMapIntensity={0.9} />
-        </mesh>
-        {[-0.02, 0.3, 0.62, 0.94, 1.26, 1.58, 1.9, 2.22, 2.54].map(y => (
-          <mesh key={y} position={[0, y, 0.225]}>
-            <boxGeometry args={[0.34, 0.012, 0.02]} />
-            <PremiumHardwareMaterial color="#D7DCE5" />
-          </mesh>
-        ))}
-        {[0.62, 1.26, 1.9].map(y => (
-          <mesh key={y} position={[0, y + 0.12, 0.24]}>
-            <circleGeometry args={[0.035, 24]} />
-            <meshStandardMaterial color="#D7DCE5" metalness={0.3} roughness={0.22} />
-          </mesh>
-        ))}
+        <g transform={transform} filter={`url(#${id}-shadow)`}>
+          <path data-body-outline="true" d={bodyPath} transform="translate(0 126)" fill="#F4E8CB" stroke="#130D08" strokeWidth="9" strokeLinejoin="round" />
+          <path d={bodyPath} transform="translate(0 126)" fill={isBurstFinish(finish?.id) ? `url(#${id}-burst)` : isNaturalFinish(finish?.id) ? `url(#${id}-natural)` : `url(#${id}-solid)`} stroke="#F1E7CD" strokeWidth="4" strokeLinejoin="round" />
+          {isNaturalFinish(finish?.id) && <path d={bodyPath} transform="translate(0 126)" fill={`url(#${id}-grain)`} opacity="0.62" />}
+          <path d={bodyInnerPath} transform="translate(0 126)" fill={`url(#${id}-gloss)`} opacity="0.72" />
+          <path d={bodyInnerPath} transform="translate(0 126)" fill="none" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="2" />
 
-        <mesh position={[0, 3.28, 0.05]}>
-          <shapeGeometry args={[new THREE.Shape(headstockPoints.map(([x, y]) => new THREE.Vector2(x, y)))]} />
-          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.42} envMapIntensity={1.2} />
-        </mesh>
-        <mesh position={[0, 3.28, 0.19]}>
-          <boxGeometry args={[0.35, 0.08, 0.08]} />
-          <meshStandardMaterial color="#F1E4C8" metalness={0.01} roughness={0.34} />
-        </mesh>
-
-        {pickupXs.map((x, i) => (
-          <group key={x} position={[x, isSingleCut ? 0.04 - i * 0.52 : -0.02 - i * 0.33, 0.32]} rotation={[0, 0, isSingleCut ? -0.08 : -0.1]}>
-            <mesh>
-              <boxGeometry args={[isSingleCut ? 0.58 : 0.5, isSingleCut ? 0.26 : 0.16, 0.08]} />
-              <PremiumHardwareMaterial color={i === 1 && isSingleCut ? colors.hardware : '#101014'} dark={!isSingleCut || i === 0} />
-            </mesh>
-            {isSingleCut && (
-              <mesh position={[0, 0, 0.045]}>
-                <boxGeometry args={[0.44, 0.04, 0.025]} />
-                <PremiumHardwareMaterial color={colors.hardware} />
-              </mesh>
-            )}
-          </group>
-        ))}
-
-        <group position={[0.08, -0.88, 0.36]} rotation={[0, 0, -0.08]}>
-          <mesh>
-            <boxGeometry args={[0.9, 0.12, 0.12]} />
-            <PremiumHardwareMaterial color={colors.hardware} />
-          </mesh>
-          {isSingleCut && (
-            <mesh position={[0.08, -0.34, -0.02]}>
-              <boxGeometry args={[0.72, 0.1, 0.1]} />
-              <PremiumHardwareMaterial color={colors.hardware} />
-            </mesh>
-          )}
-          {stringXs.map(x => (
-            <mesh key={x} position={[x, 0.04, 0.08]}>
-              <boxGeometry args={[0.025, 0.14, 0.04]} />
-              <PremiumHardwareMaterial color="#ECEFF5" />
-            </mesh>
+          <path d="M -31 -236 L 31 -236 L 26 58 Q 0 76 -26 58 Z" fill={`url(#${id}-neck)`} stroke="#211008" strokeWidth="3" />
+          <path d="M -23 -226 L 23 -226 L 18 72 Q 0 86 -18 72 Z" fill={colors.board} stroke="#080503" strokeWidth="2" />
+          {[-198, -170, -142, -113, -84, -55, -26, 3, 32, 59].map(y => (
+            <line key={y} x1="-22" x2="22" y1={y} y2={y} stroke="#D8DDE5" strokeWidth="2.2" strokeOpacity="0.85" />
           ))}
-        </group>
-
-        {knobPositions.map(([x, y], i) => (
-          <group key={`${x}-${y}`} position={[x, y, 0.35]}>
-            <mesh>
-              <cylinderGeometry args={[0.085, 0.095, 0.06, 32]} />
-              <PremiumHardwareMaterial color={colors.hardware} />
-            </mesh>
-            <mesh position={[0, 0.01, 0.035]}>
-              <circleGeometry args={[0.05, 32]} />
-              <meshBasicMaterial color="#ffffff" transparent opacity={0.16 + i * 0.02} />
-            </mesh>
-          </group>
-        ))}
-
-        {[-0.28, 0.28].flatMap((side, sideIndex) =>
-          [3.72, 4.02, 4.3].map((y, i) => (
-            <group key={`${side}-${y}`} position={[side, y, 0.22]}>
-              <mesh>
-                <cylinderGeometry args={[0.045, 0.045, 0.16, 24]} />
-                <PremiumHardwareMaterial color={colors.hardware} />
-              </mesh>
-              <mesh position={[sideIndex === 0 ? -0.13 : 0.13, 0, 0]}>
-                <boxGeometry args={[0.16, 0.075, 0.045]} />
-                <PremiumHardwareMaterial color={colors.hardware} />
-              </mesh>
-            </group>
-          ))
-        )}
-
-        <group position={[0, 0, 0.48]}>
-          {stringXs.map((x, i) => (
-            <mesh key={x} position={[x * 0.52, 1.46, 0]} rotation={[0, 0, (i - 2.5) * 0.004]}>
-              <boxGeometry args={[0.006 + i * 0.001, 4.62, 0.004]} />
-              <meshStandardMaterial color="#E8EBF0" metalness={0.8} roughness={0.22} />
-            </mesh>
+          {[-142, -84, -26, 32].map(y => (
+            <circle key={y} cx="0" cy={y + 12} r="4.5" fill="#D7DCE5" opacity="0.92" />
           ))}
-        </group>
-      </group>
-    </Center>
+          <path d={headstockPath} transform="translate(0 -350)" fill={`url(#${id}-neck)`} stroke="#211008" strokeWidth="3" strokeLinejoin="round" />
+          <rect x="-31" y="-246" width="62" height="11" rx="3" fill="#F1E4C8" stroke="#2a1b0e" strokeWidth="1.5" />
+
+          {[-46, 46].flatMap((x, sideIndex) => [-328, -295, -262].map((y, i) => (
+            <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}>
+              <circle r="8" fill={`url(#${id}-metal)`} stroke="#111318" strokeWidth="1.3" />
+              <rect x={sideIndex === 0 ? -30 : 10} y="-5" width="21" height="10" rx="4" fill={`url(#${id}-metal)`} stroke="#111318" strokeWidth="1" />
+            </g>
+          )))}
+
+          {pickups.map((type, i) => (
+            <g key={`${type}-${i}`} transform={`translate(${isSingleCut ? -10 : 0} ${126 + pickupYs[i]}) rotate(${isSingleCut ? -3 : -7})`}>
+              {type === 'single' ? (
+                <>
+                  <rect x="-58" y="-10" width="116" height="20" rx="9" fill="#F4EDE1" stroke="#161514" strokeWidth="2" />
+                  {[...Array(6)].map((_, p) => <circle key={p} cx={-37 + p * 15} cy="0" r="3" fill={`url(#${id}-metal)`} />)}
+                </>
+              ) : type === 'p90' ? (
+                <>
+                  <rect x="-64" y="-17" width="128" height="34" rx="12" fill="#E8DDC7" stroke="#15130F" strokeWidth="2.2" />
+                  {[...Array(6)].map((_, p) => <circle key={p} cx={-38 + p * 15.5} cy="0" r="3.5" fill="#151515" />)}
+                </>
+              ) : (
+                <>
+                  <rect x="-70" y="-23" width="140" height="46" rx="8" fill={`url(#${id}-metal)`} stroke="#15171B" strokeWidth="2.5" />
+                  <rect x="-58" y="-16" width="52" height="32" rx="4" fill="#101014" />
+                  <rect x="6" y="-16" width="52" height="32" rx="4" fill="#101014" />
+                  {[...Array(6)].map((_, p) => <circle key={p} cx={-43 + p * 17} cy="0" r="3" fill="#DDE2EA" opacity="0.82" />)}
+                </>
+              )}
+            </g>
+          ))}
+
+          <g transform={`translate(${isSingleCut ? -14 : 0} ${126 + bridgeY}) rotate(-4)`}>
+            <rect x="-75" y="-13" width="150" height="26" rx="10" fill={`url(#${id}-metal)`} stroke="#121419" strokeWidth="2" />
+            {bridgeId === 'tuneomatic' || bridgeId === 'bigsby' ? <rect x="-92" y="38" width="184" height="20" rx="10" fill={`url(#${id}-metal)`} stroke="#121419" strokeWidth="2" /> : null}
+            {bridgeId === 'trem' ? <path d="M 42 16 C 92 48 105 74 82 99" fill="none" stroke={`url(#${id}-metal)`} strokeWidth="8" strokeLinecap="round" /> : null}
+            {strings.map(x => <rect key={x} x={x - 2.1} y="-20" width="4.2" height="18" rx="1.5" fill="#EEF2F7" opacity="0.86" />)}
+          </g>
+
+          {(isSingleCut ? [[112, 61], [146, 9], [83, 115], [141, 116]] : [[88, 82], [119, 50], [60, 122]]).map(([x, y], i) => (
+            <g key={`${x}-${y}`} transform={`translate(${x} ${126 + y})`}>
+              <circle r={i === 3 ? 9 : 13} fill={`url(#${id}-metal)`} stroke="#111318" strokeWidth="2" />
+              <circle r={i === 3 ? 4 : 6} fill="#ffffff" opacity="0.18" />
+            </g>
+          ))}
+
+          {strings.map((x, i) => (
+            <line key={x} x1={x * 0.75} y1="-239" x2={x * 1.15} y2={126 + bridgeY - 22} stroke="#EFF3F8" strokeWidth={1.1 + i * 0.18} strokeOpacity="0.8" />
+          ))}
+        </g>
+      </svg>
+    </div>
   )
 }
 
@@ -528,7 +467,6 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
 
 function ConfiguredInstrument({ view }: { view: 'standard' | 'detail' }) {
   const shape = useConfigStore(s => s.shape)
-  if (shape === 'modern-s' || shape === 'single-cut') return <PremiumInstrument view={view} />
   return <GlbInstrument view={view} />
 }
 
@@ -553,11 +491,16 @@ export default function GuitarCanvas() {
   const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
   const [webglLost, setWebglLost] = useState(false)
   const shape = useConfigStore(s => s.shape)
+  const showSvgPremiumPreview = shape === 'modern-s' || shape === 'single-cut'
   const showSingleCutFallback = webglLost && shape === 'single-cut'
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
+      {showSvgPremiumPreview ? (
+        <div key={`premium-preview-${shape}`} style={{ width: '100%', height: '100%' }}>
+          <SvgPremiumPreview view={view === 'detail' ? 'detail' : 'standard'} />
+        </div>
+      ) : showSingleCutFallback ? (
         <SingleCutFinishFallback />
       ) : (
         <Canvas
