@@ -31,8 +31,52 @@ const CAMERA_DISTANCE: Record<string, number> = {
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number; finishGroup?: 'solid' | 'burst' | 'natural' }
 
+const S_STYLE_MODEL_PATH = '/models/s-style-electric.glb'
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
+
+function isSStyleModel(shapeId: string, modelPath: string) {
+  return shapeId === 'modern-s' && modelPath === S_STYLE_MODEL_PATH
+}
+
+function objectNumber(name?: string) {
+  const match = name?.match(/^Object_(\d+)$/)
+  return match ? Number(match[1]) : undefined
+}
+
+function applySStyleMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+  const mat = material as THREE.MeshStandardMaterial
+  if (!mat.isMeshStandardMaterial) return
+
+  const nodeNumber = objectNumber(mesh.name)
+
+  mat.envMapIntensity = 1.55
+  if (material.name === 'BodyMaterial' && nodeNumber === 3) {
+    mat.map = null
+    mat.color = new THREE.Color(colors.finish)
+    mat.metalness = 0.04
+    mat.roughness = Math.min(colors.finishRoughness, 0.24)
+  } else if (material.name === 'NeckMaterial' && nodeNumber === 32) {
+    mat.map = null
+    mat.color = new THREE.Color(colors.board)
+    mat.metalness = 0
+    mat.roughness = 0.58
+  } else if (material.name === 'NeckMaterial' && (nodeNumber === 30 || nodeNumber === 31)) {
+    mat.map = null
+    mat.color = new THREE.Color(colors.neck)
+    mat.metalness = 0.02
+    mat.roughness = 0.42
+  } else if (material.name === 'MetalPartsMaterial' && nodeNumber !== undefined && nodeNumber >= 4 && nodeNumber <= 26) {
+    mat.map = null
+    mat.color = new THREE.Color(colors.hardware)
+    mat.metalness = 0.9
+    mat.roughness = 0.2
+  } else if (material.name === 'StringMaterial' && nodeNumber !== undefined && nodeNumber >= 27 && nodeNumber <= 29) {
+    mat.metalness = 0.85
+    mat.roughness = 0.26
+  }
+  mat.needsUpdate = true
+}
 
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const key = `${meshName} ${materialName}`.toLowerCase()
@@ -184,20 +228,28 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
+    const sStyleModel = isSStyleModel(shape.id, modelPath)
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
       mesh.castShadow = true
       mesh.receiveShadow = true
+
       if (Array.isArray(mesh.material)) {
         mesh.material = mesh.material.map(mat => mat.clone())
       } else {
         mesh.material = mesh.material.clone()
       }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish))
+      materials.forEach(mat => {
+        if (sStyleModel) {
+          applySStyleMaterial(mesh, mat, colors)
+        } else {
+          enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
+        }
+      })
     })
-  }, [colors, finish, maxDimension, model, shape.id])
+  }, [colors, finish, maxDimension, model, modelPath, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
