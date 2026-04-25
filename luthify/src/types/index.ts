@@ -54,8 +54,12 @@ export interface Builder {
   slug:        string
   shopName:    string
   location:    string
+  country?:    string
   speciality:  string
   bio:         string
+  yearsExperience?: number
+  gallery?: string[]
+  reviewQuote?: string
   rating:      number
   reviewCount: number
   avgBuildWeeks: number

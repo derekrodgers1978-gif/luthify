@@ -6,6 +6,33 @@ import { BUILDERS } from '@/lib/builders-data'
 
 const MARQUEE_ITEMS = ['Handbuilt Electric Guitars','Master Grade Violins','Custom Acoustic Builds','Boutique Bass Guitars','Hawaiian Koa Ukuleles','Concert Cellos','F-Style Mandolins','Classical Guitars','Archtop Hollowbody','7-String Custom']
 
+const TRUST_SIGNALS = [
+  { title: 'Verified Builders', copy: 'Every maker is reviewed before they can receive quote requests.' },
+  { title: 'Secure Deposits', copy: 'Clear milestones before money changes hands.' },
+  { title: 'Global Shipping', copy: 'Commission from anywhere with insured delivery support.' },
+  { title: 'Custom Made Worldwide', copy: 'Boutique builders across North America, Europe, and Asia.' },
+]
+
+const FEATURED_BUILDS = [
+  ['S-Style Custom', 'Roasted maple neck · Ocean finish · Gold hardware', '$3,900'],
+  ['Semi-Hollow Commission', 'Figured maple top · Vintage vibrato · P-90s', '$4,850'],
+  ['Resonator Build', 'Steel body voice · Slide-ready setup · Nickel hardware', '$3,450'],
+]
+
+const CATEGORIES = ['Electric Guitars', 'Acoustics', 'Basses', 'Orchestral', 'Ukuleles', 'Resonators']
+
+const RECENT_ORDERS = [
+  ['Toronto, Canada', 'Double Cut Electric', 'Accepted in 19 hours'],
+  ['Austin, USA', 'Dreadnought Acoustic', '3 builder quotes'],
+  ['Berlin, Germany', 'Semi-Hollow Electric', 'Deposit pending'],
+]
+
+const TESTIMONIALS = [
+  ['“The spec felt serious enough that builders replied with real numbers, not guesses.”', 'Mara L.', 'Custom electric buyer'],
+  ['“Luthify makes my one-off work look as premium online as it does in the shop.”', 'Jon M.', 'Verified builder'],
+  ['“I compared three builders and chose the one who understood the neck profile immediately.”', 'Elliot R.', 'Commission buyer'],
+]
+
 export default function HomePage() {
   const [quoteOpen, setQuoteOpen] = useState(false)
   const revealRefs = useRef<HTMLElement[]>([])
@@ -23,28 +50,37 @@ export default function HomePage() {
   return (
     <>
       {/* ── HERO ── */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 'calc(100vh - 76px)', width: 'min(1280px, calc(100% - 48px))', margin: '0 auto', alignItems: 'center', gap: 0 }}>
-        <div ref={addReveal} className="reveal" style={{ paddingRight: 60, paddingTop: 80, paddingBottom: 80 }}>
+      <section style={{ display: 'grid', gridTemplateColumns: '1.04fr 0.96fr', minHeight: 'calc(100vh - 76px)', width: 'min(1280px, calc(100% - 48px))', margin: '0 auto', alignItems: 'center', gap: 56 }}>
+        <div ref={addReveal} className="reveal" style={{ paddingRight: 24, paddingTop: 92, paddingBottom: 86 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderRadius: 999, background: 'rgba(201,164,92,0.08)', border: '1px solid rgba(201,164,92,0.18)', color: '#C9A45C', fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 36 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#C9A45C', boxShadow: '0 0 8px #C9A45C', animation: 'pulse2 2s infinite' }} />
             Free to join · Pay only when you sell
           </div>
 
-          <h1 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: 'clamp(3.2rem,4.8vw,5.2rem)', lineHeight: 0.95, letterSpacing: '-0.02em', marginBottom: 28 }}>
-            Custom<br />instruments,<br /><em style={{ color: '#C9A45C', fontStyle: 'normal' }}>built your way.</em>
+          <h1 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: 'clamp(3.4rem,5.4vw,6.4rem)', lineHeight: 0.9, letterSpacing: '-0.035em', marginBottom: 30 }}>
+            The luxury<br />marketplace for<br /><em style={{ color: '#C9A45C', fontStyle: 'normal' }}>custom instruments.</em>
           </h1>
 
-          <p style={{ fontSize: '1.05rem', lineHeight: 1.75, color: 'rgba(245,241,232,0.55)', marginBottom: 44, maxWidth: '30rem', fontWeight: 300 }}>
-            Design your dream instrument. Then request quotes from verified luthiers worldwide. Founded by real instrument sellers — including the team behind <strong style={{ color: '#C9A45C', fontWeight: 500 }}>Tsunami Guitars</strong>.
+          <p style={{ fontSize: '1.08rem', lineHeight: 1.8, color: 'rgba(245,241,232,0.62)', marginBottom: 40, maxWidth: '34rem', fontWeight: 300 }}>
+            Design, commission, buy, and sell exceptional stringed instruments with verified builders worldwide. Premium presentation, clear quotes, and a marketplace built around custom work.
           </p>
 
-          <div style={{ display: 'flex', gap: 14, marginBottom: 44, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 14, marginBottom: 34, flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => setQuoteOpen(true)} style={{ fontSize: '0.95rem', padding: '14px 28px' }}>
               Request a Quote — Free
             </button>
             <Link href="/configurator" className="btn-ghost" style={{ fontSize: '0.95rem', padding: '14px 28px' }}>
               Design Your Instrument →
             </Link>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 10, marginBottom: 34, maxWidth: 700 }}>
+            {TRUST_SIGNALS.map(signal => (
+              <div key={signal.title} style={{ border: '1px solid rgba(201,164,92,0.16)', background: 'rgba(201,164,92,0.045)', borderRadius: 16, padding: '13px 14px' }}>
+                <div style={{ color: '#F5F1E8', fontSize: '0.78rem', fontWeight: 700, marginBottom: 4 }}>{signal.title}</div>
+                <div style={{ color: 'rgba(245,241,232,0.43)', fontSize: '0.68rem', lineHeight: 1.35 }}>{signal.copy}</div>
+              </div>
+            ))}
           </div>
 
           {/* Social proof */}
@@ -67,13 +103,25 @@ export default function HomePage() {
         </div>
 
         {/* Hero right — watermark */}
-        <div style={{ position: 'relative', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', height: '100vh', minHeight: 620, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', bottom: -40, left: '50%', transform: 'translateX(-50%)', width: 460, height: 680, background: 'radial-gradient(ellipse at 50% 85%, rgba(201,164,92,0.18) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, rgba(201,164,92,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 2 }} />
           <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(680px, 88%)', opacity: 0.052, pointerEvents: 'none', zIndex: 1 }}>
             <img src="/luthify-logo.webp" alt="" style={{ width: '100%', height: 'auto', display: 'block', mixBlendMode: 'lighten', filter: 'sepia(1) saturate(2) hue-rotate(4deg) brightness(0.8)' }} />
           </div>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 55%, rgba(201,164,92,0.09) 0%, transparent 58%), radial-gradient(ellipse at 20% 50%, rgba(9,9,11,0.6) 0%, transparent 45%)', pointerEvents: 'none', zIndex: 4 }} />
           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 140, background: 'linear-gradient(to right, #09090B, transparent)', pointerEvents: 'none', zIndex: 5 }} />
+          <div className="card" style={{ width: 'min(440px, 92%)', padding: 26, zIndex: 8, background: 'linear-gradient(180deg,rgba(17,17,20,0.92),rgba(9,9,11,0.88))', borderColor: 'rgba(201,164,92,0.18)', boxShadow: '0 28px 90px rgba(0,0,0,0.38)' }}>
+            <div style={{ fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A45C', marginBottom: 18 }}>Recent custom orders</div>
+            {RECENT_ORDERS.map(([location, instrument, status]) => (
+              <div key={location + instrument} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '14px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{instrument}</div>
+                  <div style={{ color: 'rgba(245,241,232,0.46)', fontSize: '0.74rem', marginTop: 3 }}>{location}</div>
+                </div>
+                <span style={{ color: '#C9A45C', fontSize: '0.74rem', fontWeight: 700 }}>{status}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -106,6 +154,54 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* ── MARKETPLACE ── */}
+      <section style={{ padding: '80px 0 110px', width: 'min(1280px, calc(100% - 48px))', margin: '0 auto' }}>
+        <div ref={addReveal} className="reveal" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginBottom: 36 }}>
+          <div>
+            <div className="section-label">Marketplace</div>
+            <h2 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: 'clamp(2.3rem,3.5vw,3.7rem)', lineHeight: 1, letterSpacing: '-0.025em' }}>Discover finished builds<br />and commission-ready makers.</h2>
+          </div>
+          <Link href="/builders" className="btn-ghost" style={{ padding: '12px 22px' }}>Explore Builders</Link>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 20, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+            <div className="section-label" style={{ gridColumn: '1 / -1', marginBottom: 2 }}>Featured Builds</div>
+            {FEATURED_BUILDS.map(([title, spec, price]) => (
+              <div key={title} className="card" style={{ padding: 22 }}>
+                <div style={{ height: 120, borderRadius: 18, background: 'radial-gradient(circle at 50% 50%, rgba(201,164,92,0.2), rgba(201,164,92,0.04) 45%, #09090B 75%)', border: '1px solid rgba(201,164,92,0.12)', marginBottom: 18 }} />
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 700, marginBottom: 8 }}>{title}</h3>
+                <p style={{ color: 'rgba(245,241,232,0.5)', fontSize: '0.78rem', lineHeight: 1.55, minHeight: 38 }}>{spec}</p>
+                <div style={{ color: '#C9A45C', fontFamily: "'Bodoni Moda',serif", fontSize: '1.2rem', fontWeight: 700, marginTop: 14 }}>{price}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card" style={{ padding: 26 }}>
+            <div className="section-label">Browse by Category</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {CATEGORIES.map(cat => (
+                <Link key={cat} href="/builders" style={{ color: 'rgba(245,241,232,0.68)', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999, padding: '9px 14px', fontSize: '0.8rem', background: 'rgba(255,255,255,0.025)' }}>{cat}</Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ── */}
+      <section style={{ padding: '20px 0 110px', width: 'min(1280px, calc(100% - 48px))', margin: '0 auto' }}>
+        <div className="section-label">Testimonials</div>
+        <div ref={addReveal} className="reveal" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+          {TESTIMONIALS.map(([quote, name, role]) => (
+            <div key={name} className="card" style={{ padding: 28 }}>
+              <p style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.25rem', lineHeight: 1.35, color: '#F5F1E8', marginBottom: 22 }}>{quote}</p>
+              <div style={{ color: '#C9A45C', fontWeight: 700 }}>{name}</div>
+              <div style={{ color: 'rgba(245,241,232,0.42)', fontSize: '0.78rem', marginTop: 3 }}>{role}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* ── HOW IT WORKS ── */}
       <section style={{ padding: '100px 0', width: 'min(1280px, calc(100% - 48px))', margin: '0 auto' }}>
@@ -211,10 +307,12 @@ export default function HomePage() {
       <style>{`
         @media (max-width: 1024px) {
           section > div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+          section > div[style*="grid-template-columns: 1.2fr 0.8fr"] { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 768px) {
           section > div[style*="grid-template-columns: repeat(3,1fr)"] { grid-template-columns: 1fr !important; }
           section > div[style*="grid-template-columns: repeat(5,1fr)"] { grid-template-columns: repeat(3,1fr) !important; }
+          section div[style*="grid-template-columns: repeat(4,minmax"] { grid-template-columns: 1fr !important; }
           footer div[style*="grid-template-columns"] { grid-template-columns: 1fr 1fr !important; }
         }
         @keyframes pulse2 { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.6)} }

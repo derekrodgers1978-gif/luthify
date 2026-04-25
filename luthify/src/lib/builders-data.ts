@@ -15,6 +15,9 @@ export const BUILDERS: Builder[] = [
     featured: true,
     avatar: 'TG',
     listingCount: 12,
+    yearsExperience: 14,
+    gallery: ['Carved tops', 'Burst finishes', 'Custom electrics'],
+    reviewQuote: 'The build quality felt boutique from the first note.',
   },
   {
     id: 'morrison-custom',
@@ -30,6 +33,9 @@ export const BUILDERS: Builder[] = [
     featured: false,
     avatar: 'JM',
     listingCount: 8,
+    yearsExperience: 18,
+    gallery: ['Semi-hollow builds', 'Hand-carved tops', 'Nitro finishing'],
+    reviewQuote: 'Clear communication and an instrument that exceeded the brief.',
   },
   {
     id: 'nakamura-lutherie',
@@ -45,6 +51,9 @@ export const BUILDERS: Builder[] = [
     featured: false,
     avatar: 'TN',
     listingCount: 5,
+    yearsExperience: 21,
+    gallery: ['Archtop carving', 'Jazz voicing', 'Export packing'],
+    reviewQuote: 'A flawless hollowbody with remarkable balance.',
   },
   {
     id: 'rossi-instruments',
@@ -60,6 +69,9 @@ export const BUILDERS: Builder[] = [
     featured: false,
     avatar: 'AR',
     listingCount: 6,
+    yearsExperience: 24,
+    gallery: ['Violin family', 'French polish', 'Classical restoration'],
+    reviewQuote: 'Traditional craft with modern service.',
   },
   {
     id: 'chen-ukulele',
@@ -75,6 +87,9 @@ export const BUILDERS: Builder[] = [
     featured: false,
     avatar: 'MC',
     listingCount: 14,
+    yearsExperience: 16,
+    gallery: ['Koa selection', 'Abalone work', 'Concert ukes'],
+    reviewQuote: 'The koa figuring and setup were both exceptional.',
   },
   {
     id: 'wright-acoustic',
@@ -90,6 +105,9 @@ export const BUILDERS: Builder[] = [
     featured: false,
     avatar: 'WA',
     listingCount: 9,
+    yearsExperience: 11,
+    gallery: ['OM acoustics', 'Sustainable woods', 'Voicing sessions'],
+    reviewQuote: 'Warm, responsive, and delivered exactly as specified.',
   },
 ]
 

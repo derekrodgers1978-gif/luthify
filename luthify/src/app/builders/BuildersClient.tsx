@@ -85,14 +85,22 @@ function BuilderCard({ builder: b, onQuote }: { builder: Builder; onQuote: () =>
     <div style={{ background: '#111114', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 22, overflow: 'hidden', transition: 'all 0.3s', cursor: 'default' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(201,164,92,0.2)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 48px rgba(0,0,0,0.3)' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '' }}>
       {/* Card top */}
       <div style={{ padding: '28px 28px 20px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.82rem', color: '#09090B', flexShrink: 0 }}>{b.avatar}</div>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.82rem', color: '#09090B', flexShrink: 0, boxShadow: '0 12px 28px rgba(201,164,92,0.16)' }}>{b.avatar}</div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span style={{ fontSize: '0.97rem', fontWeight: 600 }}>{b.shopName}</span>
             {b.verified && <span style={{ fontSize: '0.6rem', color: '#C9A45C', background: 'rgba(201,164,92,0.08)', border: '1px solid rgba(201,164,92,0.18)', borderRadius: 999, padding: '1px 7px', fontWeight: 600 }}>✦ Verified</span>}
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'rgba(245,241,232,0.5)' }}>{b.speciality} · {b.location}</div>
+          <div style={{ fontSize: '0.78rem', color: 'rgba(245,241,232,0.5)' }}>{b.country ?? b.location} · {b.speciality} · {b.yearsExperience ?? 10}+ yrs</div>
         </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, padding: '0 28px 18px' }}>
+        {(b.gallery ?? ['Tonewood', 'Finish', 'Bench']).slice(0, 3).map((item, i) => (
+          <div key={item} style={{ minHeight: 58, borderRadius: 12, background: `linear-gradient(135deg, rgba(201,164,92,${0.08 + i * 0.03}), rgba(255,255,255,0.025))`, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'flex-end', padding: 9 }}>
+            <span style={{ fontSize: '0.62rem', color: 'rgba(245,241,232,0.48)' }}>{item}</span>
+          </div>
+        ))}
       </div>
 
       {/* Stats row */}
@@ -112,6 +120,7 @@ function BuilderCard({ builder: b, onQuote }: { builder: Builder; onQuote: () =>
       {/* Bio */}
       <div style={{ padding: '18px 28px 0' }}>
         <p style={{ fontSize: '0.84rem', color: 'rgba(245,241,232,0.6)', lineHeight: 1.65, fontWeight: 300 }}>{b.bio}</p>
+        <p style={{ marginTop: 12, fontSize: '0.78rem', color: 'rgba(245,241,232,0.48)', lineHeight: 1.55, fontStyle: 'italic' }}>“{b.reviewQuote ?? 'Clear communication, beautiful detail work, and a build that arrived exactly as specified.'}”</p>
       </div>
 
       {/* CTA */}

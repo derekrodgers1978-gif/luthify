@@ -234,6 +234,16 @@ body::before {
     gap: 16px;
   }
 
+  .site-nav-logo {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  .site-nav-logo img {
+    max-width: 112px;
+    height: auto !important;
+  }
+
   .site-nav-links,
   .site-nav-cta {
     display: none;
@@ -241,5 +251,7 @@ body::before {
 
   .site-nav-menu-button {
     display: inline-flex;
+    grid-column: 3;
+    justify-self: end;
   }
 }
