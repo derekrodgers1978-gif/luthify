@@ -28,19 +28,20 @@ const CAMERA_DISTANCE: Record<string, number> = {
   default: 6.4,
 }
 
-type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'other'
+type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const key = `${meshName} ${materialName}`.toLowerCase()
+  if (/(pickguard|scratchplate|guard|binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
   if (/(fretboard|fingerboard|finger board|fret|board)/.test(key)) return 'fretboard'
   if (/(neck|headstock|head stock|headstock|peghead)/.test(key)) return 'neck'
   if (/(pickup|pick up|humbucker|single coil|p90|p-90)/.test(key)) return 'pickup'
   if (/(bridge|tailpiece|tail piece|tremolo|vibrato|saddle)/.test(key)) return 'bridge'
   if (/(hardware|metal|chrome|tuner|tuning|knob|control|pot|string|ferrule|strap|jack|pickguard|scratchplate|guard)/.test(key)) return 'hardware'
-  if (/(body|top|paint|finish|guitar|soundboard|sound board|back|side|resonator|cover|plate)/.test(key)) return 'body'
+  if (/(body|top|paint|finish|soundboard|sound board|back|side)/.test(key)) return 'body'
   return 'other'
 }
 
@@ -63,7 +64,8 @@ function isLikelyPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
   const dims = [Math.abs(size.x), Math.abs(size.y), Math.abs(size.z)].sort((a, b) => b - a)
   const largest = dims[0] || 0
   const middle = dims[1] || 0
-  return largest > modelMaxDimension * 0.18 && middle > modelMaxDimension * 0.08
+  const ratio = middle > 0 ? largest / middle : Infinity
+  return largest > modelMaxDimension * 0.3 && middle > modelMaxDimension * 0.16 && ratio < 2.4
 }
 
 function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number) {
@@ -86,6 +88,10 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.color = new THREE.Color(colors.board)
     mat.metalness = 0
     mat.roughness = 0.58
+  } else if (role === 'protected') {
+    mat.color = new THREE.Color('#F2EEE2')
+    mat.metalness = 0.02
+    mat.roughness = 0.34
   } else if (role === 'body' || (role === 'other' && isLikelyPaintSurface(mesh, modelMaxDimension))) {
     mat.color = new THREE.Color(colors.finish)
     mat.metalness = 0.04
@@ -120,6 +126,11 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       const mesh = obj as THREE.Mesh
       mesh.castShadow = true
       mesh.receiveShadow = true
+      if (Array.isArray(mesh.material)) {
+        mesh.material = mesh.material.map(mat => mat.clone())
+      } else {
+        mesh.material = mesh.material.clone()
+      }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension))
     })
