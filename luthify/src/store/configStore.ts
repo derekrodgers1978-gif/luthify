@@ -40,11 +40,13 @@ interface ConfigStore {
 
   // Saved builds
   savedBuilds: SavedBuild[]
+  accountBuilds: SavedBuild[]
   quoteSubmissions: QuoteSubmission[]
 
   // Actions
   setOption:   (key: keyof typeof DEFAULT_CONFIG, value: string) => void
   saveBuild:   (name: string) => string
+  saveBuildToAccount: (name: string) => string
   saveQuoteSubmission: (submission: Omit<QuoteSubmission, 'id' | 'createdAt' | 'config' | 'price'>) => string
   loadBuild:   (id: string) => void
   deleteBuild: (id: string) => void
@@ -61,6 +63,7 @@ export const useConfigStore = create<ConfigStore>()(
       ...DEFAULT_CONFIG,
       livePrice:   calcPrice(DEFAULT_CONFIG),
       savedBuilds: [],
+      accountBuilds: [],
       quoteSubmissions: [],
 
       setOption: (key, value) => {
@@ -109,8 +112,26 @@ export const useConfigStore = create<ConfigStore>()(
         return id
       },
 
+      saveBuildToAccount: (name) => {
+        const state = get()
+        const id = `account_build_${Date.now()}`
+        const build: SavedBuild = {
+          id, name,
+          config: {
+            shape: state.shape, finish: state.finish, top: state.top,
+            neck: state.neck, fretboard: state.fretboard,
+            hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+          },
+          price: state.livePrice,
+          createdAt: new Date().toISOString(),
+        }
+        set(s => ({ accountBuilds: [build, ...s.accountBuilds].slice(0, 12) }))
+        return id
+      },
+
       loadBuild: (id) => {
-        const build = get().savedBuilds.find(b => b.id === id)
+        const state = get()
+        const build = [...state.savedBuilds, ...state.accountBuilds].find(b => b.id === id)
         if (!build) return
         set({ ...build.config, livePrice: calcPrice(build.config) })
       },
@@ -139,6 +160,7 @@ export const useConfigStore = create<ConfigStore>()(
         neck: state.neck, fretboard: state.fretboard,
         hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
         savedBuilds: state.savedBuilds,
+        accountBuilds: state.accountBuilds,
         quoteSubmissions: state.quoteSubmissions,
       }),
     }

@@ -7,6 +7,10 @@ export const BODY_SHAPES: ConfigOption[] = [
   { id: 'single-cut', label: 'Single Cut', priceAdj: 0 },
   { id: 'offset',     label: 'Offset',     priceAdj: 0 },
   { id: 'semi-hollow',label: 'Semi-Hollow',priceAdj: 400 },
+  { id: 't-style',    label: 'T-Style',    priceAdj: 0 },
+  { id: 'double-cut', label: 'Double Cut', priceAdj: 180 },
+  { id: 'jazz-hollow',label: 'Jazz Hollow',priceAdj: 520 },
+  { id: 'baritone',   label: 'Baritone',   priceAdj: 260 },
 ]
 
 export const FINISHES: ConfigOption[] = [
@@ -25,6 +29,7 @@ export const TOPS: ConfigOption[] = [
   { id: 'flame',   label: 'Flame Maple',  sub: 'Figured hand-selected',  texture: '/textures/flame.jpg',    priceAdj: 380 },
   { id: 'quilted', label: 'Quilted Maple',sub: 'Figured hand-selected',  texture: '/textures/quilted.jpg',  priceAdj: 520 },
   { id: 'burl',    label: 'Burl Walnut',  sub: 'Figured hand-selected',  texture: '/textures/burl.jpg',     priceAdj: 680 },
+  { id: 'spalted', label: 'Spalted Maple',sub: 'High-contrast grain',    texture: '/textures/spalted.jpg',  priceAdj: 740 },
 ]
 
 export const NECK_WOODS: ConfigOption[] = [
@@ -46,6 +51,7 @@ export const HARDWARE_COLORS: ConfigOption[] = [
   { id: 'gold',   label: 'Gold',   priceAdj: 120 },
   { id: 'chrome', label: 'Chrome', priceAdj: 0   },
   { id: 'black',  label: 'Black',  priceAdj: 80  },
+  { id: 'aged-brass', label: 'Aged Brass', priceAdj: 160 },
 ]
 
 export const BRIDGES: ConfigOption[] = [
@@ -60,6 +66,7 @@ export const PICKUPS: ConfigOption[] = [
   { id: 'hss',      label: 'HSS',              priceAdj: 0   },
   { id: 'p90',      label: 'P-90s',            priceAdj: 120 },
   { id: 'singlecoil',label: 'Single Coils',    priceAdj: 0   },
+  { id: 'active-hum', label: 'Active Humbuckers', priceAdj: 220 },
 ]
 
 export const DEFAULT_CONFIG = {

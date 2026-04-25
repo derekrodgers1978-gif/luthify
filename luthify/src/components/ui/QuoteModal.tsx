@@ -147,8 +147,8 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
               <div style={{ background: 'rgba(201,164,92,0.06)', border: '1px solid rgba(201,164,92,0.18)', borderRadius: 14, padding: '16px 18px', display: 'flex', gap: 14, marginBottom: 24 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" strokeWidth="1.5" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
                 <div>
-                  <strong style={{ fontSize: '0.85rem', color: '#F5F1E8', display: 'block', marginBottom: 3 }}>No payment until you accept a quote</strong>
-                  <p style={{ fontSize: '0.8rem', color: 'rgba(245,241,232,0.55)', lineHeight: 1.6, fontWeight: 300 }}>Builders will review your spec and respond with pricing, timeline, and availability. You choose who to proceed with — or no one. Zero commitment.</p>
+                  <strong style={{ fontSize: '0.85rem', color: '#F5F1E8', display: 'block', marginBottom: 3 }}>Builder quote submission</strong>
+                  <p style={{ fontSize: '0.8rem', color: 'rgba(245,241,232,0.55)', lineHeight: 1.6, fontWeight: 300 }}>This sends the full designer spec, price estimate, and selected builder preferences into your local Phase 1 quote queue. No payment until you accept a quote.</p>
                 </div>
               </div>
 

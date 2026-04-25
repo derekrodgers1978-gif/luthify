@@ -178,6 +178,7 @@ function PriceFooter() {
   const store = useConfigStore()
   const [showBreakdown, setShowBreakdown] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
   const [saveName, setSaveName] = useState('My custom build')
   const [status, setStatus] = useState<string | null>(null)
   const [quoteOpen, setQuoteOpen] = useState(false)
@@ -195,6 +196,15 @@ function PriceFooter() {
     const name = saveName.trim() || 'My custom build'
     store.saveBuild(name)
     setStatus('Build saved')
+    setSaveOpen(false)
+    setSaveName('My custom build')
+    setTimeout(() => setStatus(null), 1800)
+  }
+
+  const handleAccountSave = () => {
+    const name = saveName.trim() || `Account build ${store.accountBuilds.length + 1}`
+    store.saveBuildToAccount(name)
+    setStatus('Saved to account')
     setSaveOpen(false)
     setSaveName('My custom build')
     setTimeout(() => setStatus(null), 1800)
@@ -285,6 +295,9 @@ function PriceFooter() {
             <button onClick={handleSave} style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(201,164,92,0.1)', border: '1px solid rgba(201,164,92,0.25)', color: '#C9A45C', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
               Save
             </button>
+            <button onClick={handleAccountSave} style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(95,184,122,0.08)', border: '1px solid rgba(95,184,122,0.22)', color: '#5fb87a', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+              Account
+            </button>
             <button onClick={() => setSaveOpen(false)} style={{ padding: '10px', borderRadius: 10, background: 'none', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(245,241,232,0.4)', cursor: 'pointer' }}>✕</button>
           </div>
         ) : (
@@ -298,9 +311,32 @@ function PriceFooter() {
           </div>
         )}
 
+        <button onClick={handleAccountSave} style={{ width: '100%', padding: '10px', borderRadius: 12, background: 'rgba(95,184,122,0.06)', border: '1px solid rgba(95,184,122,0.2)', color: '#5fb87a', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, marginBottom: 10, transition: 'all 0.2s' }}>
+          Save to Account
+        </button>
+
+        <button onClick={() => setCompareOpen(o => !o)} style={{ width: '100%', padding: '10px', borderRadius: 12, background: compareOpen ? 'rgba(201,164,92,0.08)' : 'none', border: '1px solid rgba(255,255,255,0.07)', color: compareOpen ? '#C9A45C' : 'rgba(245,241,232,0.5)', cursor: 'pointer', fontSize: '0.8rem', marginBottom: 10, transition: 'all 0.2s' }}>
+          Compare Builds ({store.savedBuilds.length + store.accountBuilds.length})
+        </button>
+
+        {compareOpen && (
+          <div style={{ background: '#18181C', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
+            {[...store.savedBuilds, ...store.accountBuilds].length === 0 ? (
+              <p style={{ fontSize: '0.76rem', color: 'rgba(245,241,232,0.42)', lineHeight: 1.5 }}>Save a build to compare specs and pricing side by side.</p>
+            ) : (
+              [...store.savedBuilds, ...store.accountBuilds].slice(0, 4).map(build => (
+                <div key={build.id} onClick={() => store.loadBuild(build.id)} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}>
+                  <span style={{ fontSize: '0.76rem', color: '#F5F1E8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{build.name}</span>
+                  <span style={{ fontSize: '0.76rem', color: '#C9A45C', fontWeight: 700 }}>${build.price.toLocaleString()}</span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {/* Primary CTA */}
         <button onClick={openQuote} style={{ width: '100%', padding: 15, borderRadius: 14, background: 'linear-gradient(135deg,#E2C07A,#C9A45C)', color: '#09090B', fontWeight: 700, fontSize: '0.92rem', border: 'none', cursor: 'pointer', letterSpacing: '0.02em', boxShadow: '0 8px 32px rgba(201,164,92,0.3)', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 44px rgba(201,164,92,0.45)' }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 8px 32px rgba(201,164,92,0.3)' }}>
-          Request Quotes / Commission →
+          Request Builder Quote →
         </button>
         <a href="/builders" style={{ display: 'block', width: '100%', marginTop: 10, padding: 12, borderRadius: 12, textAlign: 'center', background: 'none', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(245,241,232,0.58)', textDecoration: 'none', cursor: 'pointer', fontSize: '0.82rem', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,164,92,0.3)'; e.currentTarget.style.color = '#C9A45C' }} onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'rgba(245,241,232,0.58)' }}>
           Choose Builder →
