@@ -4,6 +4,7 @@ import { useConfigStore } from '@/store/configStore'
 import {
   BODY_SHAPES, FINISHES, TOPS, NECK_WOODS,
   FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS,
+  PICKGUARDS, KNOBS, SWITCH_TIPS, TUNERS, STRINGS,
   DEFAULT_CONFIG, type ConfigKey,
 } from '@/lib/configurator-options'
 import type { ConfigOption } from '@/types'
@@ -14,7 +15,7 @@ const S = {
   label:    { fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: '#C9A45C', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   group:    { background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), #18181C', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '21px 20px 19px', transition: 'border-color 0.2s, box-shadow 0.2s' },
   tab:      (active: boolean) => ({ flex: 1, padding: '12px 8px', textAlign: 'center' as const, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', background: active ? 'rgba(201,164,92,0.08)' : 'transparent', border: 'none', borderBottom: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.05)'}`, color: active ? '#C9A45C' : 'rgba(245,241,232,0.52)', transition: 'all 0.18s', letterSpacing: '0.02em' }),
-  swatch:   (active: boolean, hex: string) => ({ width: 36, height: 36, borderRadius: 10, background: hex, border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.15s', outline: active ? '1px solid rgba(201,164,92,0.4)' : 'none', transform: active ? 'scale(1.08)' : 'scale(1)', boxShadow: active ? '0 0 0 4px rgba(201,164,92,0.14)' : 'inset 0 0 0 1px rgba(0,0,0,0.35)' }),
+  swatch:   (active: boolean, background: string) => ({ width: 38, height: 38, borderRadius: 10, background, border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.15s', outline: active ? '1px solid rgba(201,164,92,0.4)' : 'none', transform: active ? 'scale(1.08)' : 'scale(1)', boxShadow: active ? '0 0 0 4px rgba(201,164,92,0.14)' : 'inset 0 0 0 1px rgba(0,0,0,0.35)' }),
   pill:     (active: boolean) => ({ padding: '9px 15px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 650, cursor: 'pointer', background: active ? 'linear-gradient(135deg,rgba(226,192,122,0.14),rgba(201,164,92,0.08))' : '#111114', border: `1px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, color: active ? '#E2C07A' : 'rgba(245,241,232,0.58)', transition: 'all 0.15s', boxShadow: active ? '0 8px 24px rgba(201,164,92,0.08)' : 'none' }),
   topCard:  (active: boolean) => ({ padding: '15px 16px', borderRadius: 16, background: active ? 'linear-gradient(180deg,rgba(201,164,92,0.09),rgba(201,164,92,0.04))' : '#09090B', border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.18s', boxShadow: active ? '0 10px 30px rgba(201,164,92,0.08)' : 'none' }),
 }
@@ -24,6 +25,36 @@ function GroupLabel({ children, value }: { children: React.ReactNode; value?: st
     <div style={S.label}>
       <span>{children}</span>
       {value && <span style={{ color: '#F5F1E8', textTransform: 'none', letterSpacing: 0, fontWeight: 400, fontSize: '0.78rem' }}>{value}</span>}
+    </div>
+  )
+}
+
+function finishBackground(o: ConfigOption) {
+  if (o.kind === 'burst') {
+    return `radial-gradient(circle at 48% 48%, ${o.centerHex ?? o.hex} 0 28%, ${o.midHex ?? o.hex} 50%, ${o.edgeHex ?? '#080504'} 78%)`
+  }
+  return o.hex ?? '#D4B896'
+}
+
+function ColorSwatch({ option, active, onClick }: { option: ConfigOption; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      title={option.label}
+      aria-label={option.label}
+      style={S.swatch(active, finishBackground(option))}
+      onClick={onClick}
+    />
+  )
+}
+
+function OptionPills({ options, value, onChange }: { options: ConfigOption[]; value: string; onChange: (value: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+      {options.map(o => (
+        <button key={o.id} style={S.pill(value === o.id)} onClick={() => onChange(o.id)}>
+          {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
+        </button>
+      ))}
     </div>
   )
 }
@@ -74,7 +105,7 @@ export default function ConfigPanel() {
               <GroupLabel value={getLabel(FINISHES, store.finish)}>Finish</GroupLabel>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
                 {FINISHES.map(o => (
-                  <div key={o.id} title={o.label} style={S.swatch(store.finish === o.id, o.hex!)} onClick={() => store.setOption('finish', o.id)} />
+                  <ColorSwatch key={o.id} option={o} active={store.finish === o.id} onClick={() => store.setOption('finish', o.id)} />
                 ))}
               </div>
               <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)', marginTop: 4 }}>
@@ -159,6 +190,55 @@ export default function ConfigPanel() {
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
                 {PICKUPS.map(o => (
                   <button key={o.id} style={S.pill(store.pickups === o.id)} onClick={() => store.setOption('pickups', o.id)}>
+                    {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(PICKGUARDS, store.pickguard)}>Pickguard</GroupLabel>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {PICKGUARDS.map(o => (
+                  <ColorSwatch key={o.id} option={o} active={store.pickguard === o.id} onClick={() => store.setOption('pickguard', o.id)} />
+                ))}
+              </div>
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(KNOBS, store.knobs)}>Knobs</GroupLabel>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {KNOBS.map(o => (
+                  <ColorSwatch key={o.id} option={o} active={store.knobs === o.id} onClick={() => store.setOption('knobs', o.id)} />
+                ))}
+              </div>
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(SWITCH_TIPS, store.switchTip)}>Switch Tip</GroupLabel>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {SWITCH_TIPS.map(o => (
+                  <ColorSwatch key={o.id} option={o} active={store.switchTip === o.id} onClick={() => store.setOption('switchTip', o.id)} />
+                ))}
+              </div>
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(TUNERS, store.tuners)}>Tuners</GroupLabel>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                {TUNERS.map(o => (
+                  <button key={o.id} style={S.pill(store.tuners === o.id)} onClick={() => store.setOption('tuners', o.id)}>
+                    {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(STRINGS, store.strings)}>Strings</GroupLabel>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                {STRINGS.map(o => (
+                  <button key={o.id} style={S.pill(store.strings === o.id)} onClick={() => store.setOption('strings', o.id)}>
                     {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
                   </button>
                 ))}

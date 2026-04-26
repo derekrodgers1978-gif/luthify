@@ -1,10 +1,10 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
-import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
+import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, KNOBS, NECK_WOODS, PICKGUARDS, SWITCH_TIPS } from '@/lib/configurator-options'
 
 const MODEL_TARGET_SIZE: Record<string, number> = {
   cello: 4.8,
@@ -29,7 +29,8 @@ const CAMERA_DISTANCE: Record<string, number> = {
 }
 
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
-type FinishOption = { id: string; hex?: string; roughness?: number }
+type FinishOption = { id: string; hex?: string; roughness?: number; kind?: string }
+type SvgFinishOption = FinishOption & { centerHex?: string; midHex?: string; edgeHex?: string; kind?: string }
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -102,7 +103,7 @@ function applySingleCutBodyFinish(mat: THREE.MeshStandardMaterial, finish: Finis
     shader.uniforms.uBindingColor = { value: new THREE.Color('#F2EEE2') }
     shader.uniforms.uBodyCenter = { value: new THREE.Vector2(center.x, center.y) }
     shader.uniforms.uBodyHalfSize = { value: halfSize }
-    shader.uniforms.uIsBurst = { value: finish?.id === 'sunburst' ? 1 : 0 }
+    shader.uniforms.uIsBurst = { value: finish?.kind === 'burst' ? 1 : 0 }
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vFinishPosition;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFinishPosition = position;')
@@ -285,6 +286,202 @@ function SingleCutFinishFallback() {
   )
 }
 
+const BODY_PATH = 'M92 282 C54 266 36 225 50 181 C67 126 116 93 172 102 C193 67 238 50 284 64 C327 77 352 109 355 150 C394 132 442 140 469 176 C499 217 486 276 438 313 C404 339 360 346 323 330 C293 372 238 392 187 375 C147 362 121 331 119 299 C88 308 61 298 53 272 C47 251 65 242 92 282 Z'
+
+function optionHex(options: { id: string; hex?: string }[], id: string, fallback: string) {
+  return options.find(o => o.id === id)?.hex ?? fallback
+}
+
+function hexToRgb(hex = '#000000') {
+  const clean = hex.replace('#', '')
+  const value = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16)
+  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 }
+}
+
+function mixHex(a: string, b: string, amount: number) {
+  const ca = hexToRgb(a)
+  const cb = hexToRgb(b)
+  const mix = (x: number, y: number) => Math.round(x + (y - x) * amount).toString(16).padStart(2, '0')
+  return `#${mix(ca.r, cb.r)}${mix(ca.g, cb.g)}${mix(ca.b, cb.b)}`
+}
+
+function isDarkColor(hex: string) {
+  const { r, g, b } = hexToRgb(hex)
+  return r * 0.299 + g * 0.587 + b * 0.114 < 80
+}
+
+function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }) {
+  const store = useConfigStore()
+  const finish = FINISHES.find(f => f.id === store.finish) as SvgFinishOption | undefined
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const colors = makeColors(finish, neck, board, hw)
+  const pickguard = optionHex(PICKGUARDS, store.pickguard, '#EEE8D6')
+  const knobs = optionHex(KNOBS, store.knobs, '#E8DEBF')
+  const switchTip = optionHex(SWITCH_TIPS, store.switchTip, '#E8DEBF')
+  const isBurst = finish?.kind === 'burst'
+  const bodyFill = isBurst ? 'url(#sStyleBurst)' : (finish?.hex ?? colors.finish)
+  const zoom = view === 'detail' ? 'scale(1.1) translate(-34px, -4px)' : 'scale(1)'
+
+  const SingleCoil = ({ x, y, rotate = 0 }: { x: number; y: number; rotate?: number }) => (
+    <g transform={`translate(${x} ${y}) rotate(${rotate})`}>
+      <rect x="-28" y="-11" width="56" height="22" rx="9" fill="#F3EEE0" stroke="#1d1814" strokeWidth="2.4" />
+      {[...Array(6)].map((_, i) => <circle key={i} cx={-18 + i * 7.2} cy="0" r="1.9" fill={colors.hardware} />)}
+    </g>
+  )
+  const Humbucker = ({ x, y, rotate = 0 }: { x: number; y: number; rotate?: number }) => (
+    <g transform={`translate(${x} ${y}) rotate(${rotate})`}>
+      <rect x="-34" y="-18" width="68" height="36" rx="5" fill="#111114" stroke={colors.hardware} strokeWidth="3" />
+      <rect x="-28" y="-12" width="25" height="24" rx="3" fill="#232329" />
+      <rect x="3" y="-12" width="25" height="24" rx="3" fill="#232329" />
+      {[...Array(6)].map((_, i) => <circle key={i} cx={-21 + i * 8.4} cy="0" r="1.8" fill={colors.hardware} />)}
+    </g>
+  )
+  const P90 = ({ x, y, rotate = 0 }: { x: number; y: number; rotate?: number }) => (
+    <g transform={`translate(${x} ${y}) rotate(${rotate})`}>
+      <rect x="-35" y="-15" width="70" height="30" rx="8" fill="#F1EAD9" stroke="#1d1814" strokeWidth="2.6" />
+      {[...Array(6)].map((_, i) => <circle key={i} cx={-22 + i * 8.8} cy="0" r="2.2" fill={colors.hardware} />)}
+    </g>
+  )
+  const pickups = store.pickups === 'hss'
+    ? [<Humbucker key="bridge" x={342} y={256} rotate={-8} />, <SingleCoil key="middle" x={280} y={235} rotate={-8} />, <SingleCoil key="neck" x={219} y={216} rotate={-8} />]
+    : store.pickups === 'hh'
+      ? [<Humbucker key="bridge" x={335} y={256} rotate={-8} />, <Humbucker key="neck" x={226} y={218} rotate={-8} />]
+      : store.pickups === 'p90'
+        ? [<P90 key="bridge" x={335} y={256} rotate={-8} />, <P90 key="neck" x={225} y={218} rotate={-8} />]
+        : [<SingleCoil key="bridge" x={342} y={256} rotate={-8} />, <SingleCoil key="middle" x={280} y={235} rotate={-8} />, <SingleCoil key="neck" x={219} y={216} rotate={-8} />]
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 46% 42%, #15171d 0%, #050608 68%)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+      <svg viewBox="0 0 1180 500" role="img" aria-label="Realistic S-Style electric guitar preview" style={{ width: 'min(98%, 1280px)', height: 'min(86%, 620px)', filter: 'drop-shadow(0 34px 58px rgba(0,0,0,0.62))', transition: 'transform 0.28s ease', transform: zoom }}>
+        <defs>
+          <radialGradient id="sStyleBurst" cx="50%" cy="52%" r="62%">
+            <stop offset="0%" stopColor={finish?.centerHex ?? '#F6B84A'} />
+            <stop offset="38%" stopColor={finish?.centerHex ?? '#F6B84A'} />
+            <stop offset="58%" stopColor={finish?.midHex ?? finish?.hex ?? '#B33116'} />
+            <stop offset="84%" stopColor={finish?.edgeHex ?? '#120503'} />
+            <stop offset="100%" stopColor="#030202" />
+          </radialGradient>
+          <linearGradient id="sStyleBodyGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.42)" />
+            <stop offset="28%" stopColor="rgba(255,255,255,0.12)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.34)" />
+          </linearGradient>
+          <linearGradient id="sStyleNeckGrain" x1="0" x2="1">
+            <stop offset="0%" stopColor={colors.neck} />
+            <stop offset="46%" stopColor="#E0B76D" />
+            <stop offset="100%" stopColor={colors.neck} />
+          </linearGradient>
+          <linearGradient id="sStyleMetal" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#F1F3F4" />
+            <stop offset="45%" stopColor={colors.hardware} />
+            <stop offset="100%" stopColor="#575C64" />
+          </linearGradient>
+          <linearGradient id="sStylePickguardGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.16)" />
+          </linearGradient>
+          <linearGradient id="sStyleGuardSheen" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.38)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.2)" />
+          </linearGradient>
+          <filter id="sStyleFineGrain" x="-8%" y="-8%" width="116%" height="116%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.018 0.42" numOctaves="3" seed="7" />
+            <feColorMatrix type="saturate" values="0" />
+            <feComponentTransfer>
+              <feFuncA type="table" tableValues="0 0.24" />
+            </feComponentTransfer>
+          </filter>
+          <filter id="sStyleDepth" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="-2" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.42" />
+          </filter>
+        </defs>
+        <g transform="translate(52 34)">
+          <g stroke="#DDE3E9" strokeLinecap="round" opacity={store.strings === 'stainless-10' ? 0.96 : 0.72}>
+            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={176} y1={248 + i * 5.5} x2={1042} y2={203 + i * 9.4} strokeWidth={0.85 + i * 0.15} />)}
+          </g>
+
+          <path d="M396 202 L972 202 L972 280 L396 280 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1608" strokeWidth="5" />
+          <path d="M406 213 L950 213 L950 268 L406 268 Z" fill={colors.board} stroke="#120807" strokeWidth="2" />
+          {[435, 467, 499, 532, 566, 603, 641, 683, 728, 776, 828, 884, 944].map(x => <line key={x} x1={x} x2={x} y1="213" y2="268" stroke="#B7BDC4" strokeWidth="2" opacity="0.78" />)}
+          {[498, 566, 641, 728, 828, 912].map(x => <circle key={x} cx={x} cy="240" r="4.2" fill="#DCD6C8" opacity="0.86" />)}
+
+          <path d="M950 190 C1006 179 1064 187 1110 211 C1119 216 1113 232 1102 232 L950 232 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1608" strokeWidth="5" />
+          <g fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="2">
+            {[973, 1000, 1027, 1054, 1081, 1108].map((x, i) => <circle key={i} cx={x} cy={i < 3 ? 198 : 225} r={8.2} />)}
+            {[973, 1000, 1027, 1054, 1081, 1108].map((x, i) => <rect key={`post-${i}`} x={x - 4} y={i < 3 ? 181 : 232} width="8" height="17" rx="3" fill={store.tuners === 'locking' || store.tuners === 'staggered' ? '#1B1C20' : colors.hardware} />)}
+          </g>
+
+          <g transform="translate(70 42) rotate(-2 230 240) scale(0.96 0.86)">
+            <path d={BODY_PATH} fill="#060607" opacity="0.72" transform="translate(13 16)" />
+            <path d={BODY_PATH} fill={bodyFill} stroke="#111114" strokeWidth="9" strokeLinejoin="round" />
+            {isBurst ? (
+              <path d={BODY_PATH} fill="url(#sStyleBodyGloss)" opacity="0.5" />
+            ) : (
+              <path d={BODY_PATH} fill="rgba(255,255,255,0.08)" opacity="0.45" />
+            )}
+            <path d={BODY_PATH} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="3" strokeLinejoin="round" transform="translate(-4 -4)" />
+            <path d={BODY_PATH} fill="none" stroke="rgba(0,0,0,0.42)" strokeWidth="12" strokeLinejoin="round" opacity="0.28" />
+            <path d="M62 255 C95 241 123 252 148 283 C174 315 214 338 269 333 C221 365 158 355 124 316 C103 292 82 278 58 282 Z" fill="rgba(0,0,0,0.24)" opacity="0.42" />
+            <path d="M302 120 C348 107 407 121 446 172 C416 151 376 151 343 171 C337 149 324 132 302 120 Z" fill="rgba(255,255,255,0.12)" opacity="0.5" />
+            {isBurst && [...Array(18)].map((_, i) => (
+              <path
+                key={i}
+                d={`M${88 + i * 16} ${176 + Math.sin(i) * 13} C${138 + i * 13} ${205 + Math.cos(i) * 19} ${176 + i * 10} ${286 + Math.sin(i * 0.7) * 17} ${250 + i * 7} ${361 + Math.cos(i * 0.8) * 9}`}
+                fill="none"
+                stroke={i % 2 ? 'rgba(255,220,145,0.2)' : 'rgba(48,18,6,0.22)'}
+                strokeWidth="2"
+              />
+            ))}
+
+            <path d="M137 287 C135 242 158 180 208 156 C258 132 323 143 376 187 C358 210 356 240 373 266 C335 286 285 296 230 301 C184 306 151 299 137 287 Z" fill={pickguard} stroke="rgba(0,0,0,0.62)" strokeWidth="2.4" />
+            <path d="M154 281 C155 247 176 196 218 175 C260 154 315 163 353 195 C339 214 338 236 352 256 C320 272 279 280 233 285 C195 290 166 287 154 281 Z" fill="url(#sStyleGuardSheen)" opacity={store.pickguard === 'black' ? 0.14 : 0.38} />
+            {store.pickguard === 'tortoise' && (
+              <g opacity="0.45" fill="#C46B2D">
+                <ellipse cx="206" cy="190" rx="28" ry="13" transform="rotate(-24 206 190)" />
+                <ellipse cx="292" cy="205" rx="34" ry="15" transform="rotate(17 292 205)" />
+                <ellipse cx="241" cy="288" rx="40" ry="16" transform="rotate(-13 241 288)" />
+              </g>
+            )}
+
+            <g transform="translate(4 -4)">{pickups}</g>
+
+            {store.bridge === 'hardtail' ? (
+              <g transform="translate(366 305) rotate(-7)">
+                <rect x="-43" y="-18" width="86" height="36" rx="5" fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="3" />
+                {[...Array(6)].map((_, i) => <rect key={i} x={-28 + i * 11} y="-11" width="7" height="22" rx="2" fill="#CDD2D8" stroke="#444951" />)}
+              </g>
+            ) : store.bridge === 'locking-tremolo' ? (
+              <g transform="translate(367 304) rotate(-7)">
+                <rect x="-48" y="-20" width="96" height="40" rx="5" fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="3" />
+                {[...Array(6)].map((_, i) => <rect key={i} x={-33 + i * 12} y="-13" width="8" height="26" rx="2" fill="#1C1E23" stroke="#B8BEC7" />)}
+                <circle cx="54" cy="-20" r="5" fill={colors.hardware} />
+                <line x1="56" y1="-21" x2="100" y2="-55" stroke={colors.hardware} strokeWidth="5" strokeLinecap="round" />
+              </g>
+            ) : (
+              <g transform="translate(365 304) rotate(-7)">
+                <rect x="-44" y="-18" width="88" height="36" rx="5" fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="3" />
+                {[...Array(6)].map((_, i) => <rect key={i} x={-31 + i * 11.5} y="-11" width="7" height="22" rx="2" fill="#E4E7EA" stroke="#545A62" />)}
+                <circle cx="48" cy="-18" r="4" fill={colors.hardware} />
+                <line x1="50" y1="-20" x2="92" y2="-54" stroke={colors.hardware} strokeWidth="4" strokeLinecap="round" />
+              </g>
+            )}
+
+            <g fill={knobs} stroke="#9E967D" strokeWidth="2.4">
+              <circle cx="354" cy="333" r="12" />
+              <circle cx="400" cy="306" r="12" />
+              <circle cx="410" cy="258" r="7.5" fill={switchTip} />
+            </g>
+            <path d="M392 280 L426 239" stroke={colors.hardware} strokeWidth="3.4" strokeLinecap="round" />
+            <ellipse cx="118" cy="326" rx="22" ry="14" transform="rotate(-38 118 326)" fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="3.2" />
+          </g>
+        </g>
+      </svg>
+    </div>
+  )
+}
+
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
   return (
@@ -329,7 +526,9 @@ export default function GuitarCanvas() {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
+      {shape === 'modern-s' ? (
+        <SStyleConfiguratorPreview view={view} />
+      ) : showSingleCutFallback ? (
         <SingleCutFinishFallback />
       ) : (
         <Canvas

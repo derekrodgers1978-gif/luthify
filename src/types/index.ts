@@ -21,6 +21,10 @@ export interface ConfigOption {
   sub?:     string
   priceAdj: number
   hex?:     string
+  centerHex?: string
+  midHex?: string
+  edgeHex?: string
+  kind?:    'burst' | 'solid'
   roughness?: number
   texture?: string
   modelPath?: string
@@ -35,6 +39,11 @@ export interface ConfigState {
   hardware:  string
   bridge:    string
   pickups:   string
+  pickguard: string
+  knobs:     string
+  switchTip: string
+  tuners:    string
+  strings:   string
   livePrice: number
 }
 
