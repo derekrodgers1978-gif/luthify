@@ -302,7 +302,6 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
       : store.pickups === 'p90'
         ? ['p90', 'p90']
         : ['hum', 'hum']
-
   const bridgeLabel = store.bridge === 'bigsby'
     ? 'vibrato-tail'
     : store.bridge === 'trem'
@@ -310,24 +309,21 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
       : store.bridge === 'hardtail'
         ? 'hardtail'
         : 'tuneomatic'
-
-  const pickupYs = pickupLayout.length === 3 ? [235, 286, 337] : [251, 322]
-  const bodyPath = 'M375 242 C352 199 321 169 283 177 C243 185 213 224 220 264 C225 292 245 305 277 309 C230 318 193 347 176 392 C154 453 191 509 256 527 C318 544 366 510 390 456 C418 516 493 523 552 469 C606 419 604 340 552 301 C530 284 502 279 468 288 C506 257 522 212 493 184 C460 152 417 181 399 226 C393 239 386 244 375 242 Z'
-  const bodyGlossPath = 'M289 323 C252 332 224 359 213 397 C201 441 232 480 285 494 C333 506 366 482 388 441 C418 486 474 491 521 449 C562 412 563 357 528 325 C506 305 480 300 446 307 C475 279 475 244 449 235 C421 225 398 244 378 278 C352 244 319 238 298 263 C284 281 285 305 310 318 Z'
+  const pickupXs = pickupLayout.length === 3 ? [214, 286, 358] : [250, 350]
 
   return (
     <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
-      <svg viewBox="0 0 900 620" role="img" aria-label="S-Style Electric finish preview" style={{ width: isZoomed ? 'min(102%, 980px)' : 'min(88%, 900px)', height: isZoomed ? 'min(96%, 660px)' : 'min(86%, 620px)', transform: isZoomed ? 'translateY(18px) scale(1.08)' : 'translateY(2px)', transition: 'transform 280ms ease, width 280ms ease, height 280ms ease', filter: 'drop-shadow(0 30px 68px rgba(0,0,0,0.52))' }}>
+      <svg viewBox="0 0 900 520" role="img" aria-label="S-Style Electric finish preview" style={{ width: isZoomed ? 'min(102%, 980px)' : 'min(90%, 940px)', height: isZoomed ? 'min(94%, 620px)' : 'min(82%, 560px)', transform: isZoomed ? 'translateY(8px) scale(1.06)' : 'translateY(0)', transition: 'transform 280ms ease, width 280ms ease, height 280ms ease', filter: 'drop-shadow(0 30px 68px rgba(0,0,0,0.52))' }}>
         <defs>
-          <radialGradient id="sStyleBurst" cx="46%" cy="54%" r="66%">
+          <radialGradient id="sStyleBurst" cx="36%" cy="48%" r="70%">
             <stop offset="0%" stopColor="#F4B04A" />
             <stop offset="42%" stopColor={colors.finish} />
-            <stop offset="82%" stopColor="#180704" />
+            <stop offset="84%" stopColor="#180704" />
             <stop offset="100%" stopColor="#080302" />
           </radialGradient>
           <linearGradient id="sStyleBodyGloss" x1="0" x2="1" y1="0" y2="1">
             <stop offset="0%" stopColor="rgba(255,255,255,0.34)" />
-            <stop offset="36%" stopColor="rgba(255,255,255,0.08)" />
+            <stop offset="45%" stopColor="rgba(255,255,255,0.08)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.24)" />
           </linearGradient>
           <linearGradient id="sStyleMetal" x1="0" x2="1" y1="0" y2="1">
@@ -342,120 +338,108 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
           </linearGradient>
         </defs>
 
-        <g transform="translate(112 16) rotate(-8 360 302)">
-          <g data-part="neck" transform="translate(-18 24)">
-            <path d="M360 60 L418 60 L407 360 L371 360 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1609" strokeWidth="4" />
-            <path d="M360 60 L418 60 L407 360 L371 360 Z" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
-          </g>
-
-          <g data-part="fretboard" transform="translate(-18 24)">
-            <path d="M374 68 L405 68 L398 359 L381 359 Z" fill={colors.board} stroke="#110805" strokeWidth="3" />
-            {[92, 118, 145, 173, 202, 232, 263, 295, 329].map((y, i) => (
-              <line key={y} x1={374.5 + i * 0.7} x2={404.5 - i * 0.55} y1={y} y2={y} stroke="#D5D8D8" strokeWidth="2" opacity="0.86" />
-            ))}
-            {[132, 188, 247, 309].map(y => (
-              <circle key={y} cx="389.5" cy={y} r="3.2" fill="#D9CBA4" opacity="0.8" />
-            ))}
-          </g>
-
-          <g data-part="tuners" transform="translate(-18 24)">
-            <path d="M350 54 C348 30 365 12 394 6 C431 0 456 17 463 43 C454 57 439 64 418 64 L360 64 C356 63 352 60 350 54 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" />
-            <path d="M399 10 C430 10 450 23 455 43 C441 49 430 50 415 50 L374 50 C372 31 381 16 399 10 Z" fill="rgba(255,255,255,0.12)" />
-            {[0, 1, 2].map(i => (
-              <g key={`left-${i}`} transform={`translate(${357 - i * 6} ${28 + i * 12})`}>
-                <circle r="5.8" fill="url(#sStyleMetal)" stroke="#26282d" strokeWidth="2" />
-                <rect x="-20" y="-5" width="15" height="10" rx="4" fill="url(#sStyleMetal)" stroke="#26282d" strokeWidth="2" />
-              </g>
-            ))}
-            {[0, 1, 2].map(i => (
-              <g key={`right-${i}`} transform={`translate(${430 + i * 5} ${25 + i * 12})`}>
-                <circle r="5.8" fill="url(#sStyleMetal)" stroke="#26282d" strokeWidth="2" />
-                <rect x="5" y="-5" width="15" height="10" rx="4" fill="url(#sStyleMetal)" stroke="#26282d" strokeWidth="2" />
-              </g>
-            ))}
-          </g>
-
+        <g transform="translate(26 8) rotate(-4 452 260)">
           <g data-part="body">
             <path
-              d={bodyPath}
+              d="M391 227 C352 172 300 151 250 174 C221 187 207 212 213 239 C217 259 232 270 256 274 C212 287 180 321 171 367 C160 425 201 472 266 476 C319 479 363 450 383 405 C405 455 465 468 515 435 C562 404 578 350 551 306 C532 275 501 262 462 268 C501 247 515 211 492 185 C462 151 413 177 391 227 Z"
               fill="#EEE7D6"
               stroke="#D8C89E"
               strokeWidth="16"
               strokeLinejoin="round"
             />
             <path
-              d={bodyPath}
+              d="M391 227 C352 172 300 151 250 174 C221 187 207 212 213 239 C217 259 232 270 256 274 C212 287 180 321 171 367 C160 425 201 472 266 476 C319 479 363 450 383 405 C405 455 465 468 515 435 C562 404 578 350 551 306 C532 275 501 262 462 268 C501 247 515 211 492 185 C462 151 413 177 391 227 Z"
               fill={bodyFill}
               stroke="rgba(255,255,255,0.28)"
               strokeWidth="5"
               strokeLinejoin="round"
             />
-            <path
-              d={bodyGlossPath}
-              fill="url(#sStyleBodyGloss)"
-              opacity="0.62"
-            />
-            <path d="M478 281 C516 296 548 338 545 383 C561 345 548 309 523 290 C506 278 492 274 478 281 Z" fill="rgba(0,0,0,0.14)" />
-            <path d="M259 392 C281 432 326 454 372 438" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="4" strokeLinecap="round" />
-            <path d="M418 238 C435 217 452 211 468 218" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="4" strokeLinecap="round" />
-            <path d="M300 304 C326 307 345 309 366 307" fill="none" stroke="rgba(0,0,0,0.16)" strokeWidth="3" strokeLinecap="round" />
+            <path d="M246 291 C207 308 190 341 194 375 C201 425 243 455 292 452 C337 449 365 420 381 386 C410 427 460 436 501 407 C535 383 543 337 520 309 C498 282 462 281 427 294 C462 263 469 225 442 211 C415 198 391 222 375 262 C341 224 296 226 271 250 C254 266 250 282 246 291 Z" fill="url(#sStyleBodyGloss)" opacity="0.62" />
+            <path d="M229 391 C257 423 315 427 358 391" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="4" strokeLinecap="round" />
+            <path d="M412 237 C433 212 460 206 481 219" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="4" strokeLinecap="round" />
           </g>
 
-          <g data-part="pickguard" transform="translate(-42 0)">
+          <g data-part="neck">
+            <path d="M390 238 L720 226 L724 276 L393 284 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1609" strokeWidth="4" />
+          </g>
+          <g data-part="fretboard">
+            <path d="M398 248 L718 238 L721 265 L399 275 Z" fill={colors.board} stroke="#110805" strokeWidth="3" />
+            {[435, 470, 506, 542, 578, 614, 650, 686].map(x => (
+              <line key={x} x1={x} x2={x + 2} y1="246" y2="268" stroke="#D5D8D8" strokeWidth="2" opacity="0.86" />
+            ))}
+            {[488, 560, 632].map(x => <circle key={x} cx={x} cy="257" r="3.2" fill="#D9CBA4" opacity="0.8" />)}
+          </g>
+          <g data-part="tuners">
+            <path d="M715 219 C750 195 794 199 826 226 C821 252 796 273 762 278 L724 276 L720 226 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" />
+            {[0, 1, 2].map(i => (
+              <g key={`top-${i}`} transform={`translate(${744 + i * 25} ${218 - i * 6})`}>
+                <circle r="5.8" fill="url(#sStyleMetal)" stroke="#26282d" strokeWidth="2" />
+                <rect x="-5" y="-24" width="10" height="16" rx="4" fill="url(#sStyleMetal)" stroke="#26282d" strokeWidth="2" />
+              </g>
+            ))}
+            {[0, 1, 2].map(i => (
+              <g key={`bottom-${i}`} transform={`translate(${746 + i * 25} ${270 - i * 3})`}>
+                <circle r="5.8" fill="url(#sStyleMetal)" stroke="#26282d" strokeWidth="2" />
+                <rect x="-5" y="8" width="10" height="16" rx="4" fill="url(#sStyleMetal)" stroke="#26282d" strokeWidth="2" />
+              </g>
+            ))}
+          </g>
+
+          <g data-part="pickguard">
             <path
-              d="M342 271 C368 250 399 254 421 275 C445 298 476 304 508 300 C523 318 525 348 509 375 C491 404 458 413 426 401 C398 391 377 370 350 363 C330 358 315 367 303 383 C295 357 300 320 318 294 C326 283 334 276 342 271 Z"
+              d="M216 288 C260 255 326 252 373 280 C409 301 453 305 501 286 C530 314 532 363 501 396 C465 434 404 424 360 391 C323 363 286 360 246 389 C220 366 204 319 216 288 Z"
               fill="#F2EEE2"
               stroke="#D7D0C2"
               strokeWidth="5"
               strokeLinejoin="round"
             />
-            <path d="M344 278 C379 260 407 267 432 287 C456 305 486 311 514 303" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" />
+            <path d="M236 296 C292 270 344 275 383 299 C422 322 464 322 503 301" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" />
           </g>
 
-          <g data-part="pickups" transform="translate(-42 0)">
+          <g data-part="pickups">
             {pickupLayout.map((type, i) => {
-              const y = pickupYs[i]
-              const x = type === 'p90' ? 365 : 374
-              const width = type === 'single' ? 88 : type === 'p90' ? 104 : 102
-              const height = type === 'single' ? 22 : 31
+              const x = pickupXs[i]
+              const width = type === 'single' ? 24 : type === 'p90' ? 34 : 38
+              const height = type === 'single' ? 86 : 102
+              const y = 287 - (height - 86) / 2
               return (
-                <g key={`${type}-${i}`} transform={`rotate(-6 ${x + width / 2} ${y + height / 2})`}>
+                <g key={`${type}-${i}`} transform={`rotate(84 ${x + width / 2} ${y + height / 2})`}>
                   <rect x={x} y={y} width={width} height={height} rx={type === 'single' ? 10 : 7} fill={type === 'p90' ? '#EEE7D6' : '#07070A'} stroke={type === 'p90' ? '#1E2025' : '#D5D8D8'} strokeWidth="3" />
-                  {type === 'hum' && <line x1={x + width / 2} x2={x + width / 2} y1={y + 3} y2={y + height - 3} stroke="#2E3036" strokeWidth="2" />}
+                  {type === 'hum' && <line x1={x + width / 2} x2={x + width / 2} y1={y + 4} y2={y + height - 4} stroke="#2E3036" strokeWidth="2" />}
                   {[0, 1, 2, 3, 4, 5].map(p => (
-                    <circle key={p} cx={x + 17 + p * ((width - 34) / 5)} cy={y + height / 2} r="2.2" fill={type === 'p90' ? colors.hardware : '#C9CED6'} opacity="0.9" />
+                    <circle key={p} cx={x + width / 2} cy={y + 17 + p * ((height - 34) / 5)} r="2.2" fill={type === 'p90' ? colors.hardware : '#C9CED6'} opacity="0.9" />
                   ))}
                 </g>
               )
             })}
           </g>
 
-          <g data-part="bridge" transform="translate(-42 0) rotate(-6 415 392)">
-            <rect x="360" y="382" width="120" height="24" rx="7" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />
+          <g data-part="bridge">
+            <rect x="414" y="314" width="126" height="25" rx="7" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />
             {[0, 1, 2, 3, 4, 5].map(i => (
-              <rect key={i} x={370 + i * 17} y="377" width="11" height="33" rx="3" fill={colors.hardware} stroke="#25272d" strokeWidth="1.4" />
+              <rect key={i} x={423 + i * 18} y="309" width="12" height="35" rx="3" fill={colors.hardware} stroke="#25272d" strokeWidth="1.4" />
             ))}
-            {bridgeLabel === 'vibrato-tail' && <path d="M487 395 C535 409 549 438 529 467" fill="none" stroke="url(#sStyleMetal)" strokeWidth="8" strokeLinecap="round" />}
-            {bridgeLabel === 'locking-trem' && <rect x="351" y="412" width="137" height="18" rx="7" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
-            {bridgeLabel === 'hardtail' && <rect x="375" y="414" width="92" height="16" rx="6" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
-            {bridgeLabel === 'tuneomatic' && <rect x="349" y="421" width="137" height="17" rx="8" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
+            {bridgeLabel === 'vibrato-tail' && <path d="M537 330 C584 353 590 389 558 413" fill="none" stroke="url(#sStyleMetal)" strokeWidth="8" strokeLinecap="round" />}
+            {bridgeLabel === 'locking-trem' && <rect x="408" y="346" width="139" height="18" rx="7" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
+            {bridgeLabel === 'hardtail' && <rect x="430" y="348" width="93" height="16" rx="6" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
+            {bridgeLabel === 'tuneomatic' && <rect x="407" y="355" width="140" height="17" rx="8" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
           </g>
 
-          <g data-part="knobs" transform="translate(-42 0)" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3">
-            <circle cx="492" cy="351" r="16" />
-            <circle cx="513" cy="392" r="15" />
-            <circle cx="467" cy="418" r="14" />
+          <g data-part="knobs" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3">
+            <circle cx="443" cy="380" r="16" />
+            <circle cx="483" cy="398" r="15" />
+            <circle cx="407" cy="411" r="14" />
           </g>
 
-          <g data-part="switch" transform="translate(-42 0) rotate(-28 511 321)">
-            <rect x="493" y="314" width="42" height="12" rx="6" fill="#EEE7D6" stroke="#20232A" strokeWidth="2.5" />
-            <line x1="514" x2="528" y1="320" y2="302" stroke="url(#sStyleMetal)" strokeWidth="4" strokeLinecap="round" />
-            <circle cx="531" cy="299" r="5" fill={colors.hardware} stroke="#20232A" strokeWidth="2" />
+          <g data-part="switch" transform="rotate(-16 473 294)">
+            <rect x="452" y="287" width="44" height="12" rx="6" fill="#EEE7D6" stroke="#20232A" strokeWidth="2.5" />
+            <line x1="474" x2="492" y1="293" y2="273" stroke="url(#sStyleMetal)" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="495" cy="270" r="5" fill={colors.hardware} stroke="#20232A" strokeWidth="2" />
           </g>
 
           <g data-part="strings" stroke="#DDE2EA" strokeLinecap="round" opacity="0.86">
             {[0, 1, 2, 3, 4, 5].map(i => (
-              <line key={i} x1={361 + i * 5} y1="84" x2={332 + i * 16} y2="441" strokeWidth={1.1 + i * 0.14} />
+              <line key={i} x1="187" y1={322 + i * 5} x2={805} y2={240 + i * 5} strokeWidth={1.1 + i * 0.14} />
             ))}
           </g>
         </g>
