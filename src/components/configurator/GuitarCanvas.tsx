@@ -313,85 +313,85 @@ function SStyleFinishFallback() {
             <stop offset="100%" stopColor="#DCD4C1" />
           </linearGradient>
         </defs>
-        <g transform="translate(95 30) rotate(-12 315 245)">
+        <g transform="translate(34 70)">
           <g id="s-style-neck">
-            <rect x="295" y="56" width="62" height="190" rx="9" fill={colors.neck} stroke="#3a1b0a" strokeWidth="4" />
-            <rect x="307" y="66" width="38" height="184" rx="8" fill={colors.board} />
-            <rect x="301" y="65" width="50" height="12" rx="3" fill="#EFE4C6" stroke="#1d120b" strokeWidth="2" />
-            {[88, 109, 130, 151, 172, 193, 214, 235].map(y => (
-              <line key={y} x1="308" x2="344" y1={y} y2={y} stroke="#D5D9E1" strokeWidth="1.8" opacity="0.85" />
+            <path d="M350 219 L618 207 L618 277 L350 265 Z" fill={colors.neck} stroke="#3a1b0a" strokeWidth="3" strokeLinejoin="round" />
+            <path d="M360 227 L614 217 L614 267 L360 257 Z" fill={colors.board} />
+            <rect x="612" y="216" width="8" height="52" rx="2" fill="#EFE4C6" stroke="#1d120b" strokeWidth="1.4" />
+            {[390, 420, 450, 480, 510, 540, 570].map(x => (
+              <line key={x} x1={x} x2={x} y1="224" y2="260" stroke="#D5D9E1" strokeWidth="1.35" opacity="0.86" />
             ))}
-            {[120, 162, 204].map(y => (
-              <circle key={y} cx="326" cy={y} r="2.8" fill="#CFC8B3" opacity="0.85" />
+            {[420, 480, 540].map(x => (
+              <circle key={x} cx={x} cy="242" r="2.4" fill="#CFC8B3" opacity="0.85" />
             ))}
           </g>
 
           <g id="s-style-headstock">
-            <path d="M286 52 C283 26 303 9 331 8 C354 7 369 20 369 39 C369 58 350 64 332 58 C319 54 306 54 286 52 Z" fill={colors.neck} stroke="#2B1408" strokeWidth="4" strokeLinejoin="round" />
-            {[303, 321, 339, 357].map((x, i) => (
-              <g key={x} transform={`translate(${x} ${22 + i * 7})`}>
-                <circle cx="0" cy="0" r="6" fill={colors.hardware} stroke="#1E2025" strokeWidth="2" />
-                <rect x="-17" y="-3" width="15" height="6" rx="2" fill={colors.hardware} stroke="#1E2025" strokeWidth="1.5" />
+            <path d="M616 205 C640 185 671 185 693 200 C713 214 708 239 684 247 C661 255 643 250 620 271 L616 271 Z" fill={colors.neck} stroke="#2B1408" strokeWidth="3.3" strokeLinejoin="round" />
+            {[637, 658, 679].map((x, i) => (
+              <g key={x} transform={`translate(${x} ${199 + i * 9})`}>
+                <circle cx="0" cy="0" r="5.2" fill={colors.hardware} stroke="#1E2025" strokeWidth="1.8" />
+                <rect x="-3" y="-18" width="6" height="14" rx="1.8" fill={colors.hardware} stroke="#1E2025" strokeWidth="1.3" />
               </g>
             ))}
-            {[322, 344].map((x, i) => (
-              <g key={x} transform={`translate(${x} ${50 + i * 6})`}>
-                <circle cx="0" cy="0" r="5.5" fill={colors.hardware} stroke="#1E2025" strokeWidth="2" />
-                <rect x="4" y="-3" width="14" height="6" rx="2" fill={colors.hardware} stroke="#1E2025" strokeWidth="1.5" />
+            {[635, 657, 679].map((x, i) => (
+              <g key={x} transform={`translate(${x} ${268 - i * 9})`}>
+                <circle cx="0" cy="0" r="5" fill={colors.hardware} stroke="#1E2025" strokeWidth="1.8" />
+                <rect x="-3" y="4" width="6" height="13" rx="1.8" fill={colors.hardware} stroke="#1E2025" strokeWidth="1.3" />
               </g>
             ))}
           </g>
 
           <g id="s-style-body">
             <path
-              d="M309 174 C281 137 235 144 213 179 C197 205 190 224 158 231 C105 243 79 286 96 339 C116 402 183 435 253 417 C304 454 381 428 405 367 C424 318 410 289 377 272 C351 259 350 237 377 218 C410 195 418 164 392 144 C366 123 333 135 325 170 C321 187 314 186 309 174 Z"
+              d="M333 208 C351 173 389 162 414 184 C389 195 371 211 368 233 C397 232 420 248 421 273 C421 300 397 318 366 317 C362 348 340 381 299 395 C255 410 221 400 196 375 C160 393 111 381 88 342 C63 300 78 252 119 228 C148 211 177 214 195 226 C207 183 241 156 282 157 C310 158 326 178 333 208 Z"
               fill={bodyFill}
               stroke="#F0E7D6"
-              strokeWidth="7"
+              strokeWidth="4.8"
               strokeLinejoin="round"
             />
             <path
-              d="M309 174 C281 137 235 144 213 179 C197 205 190 224 158 231 C105 243 79 286 96 339 C116 402 183 435 253 417 C304 454 381 428 405 367 C424 318 410 289 377 272 C351 259 350 237 377 218 C410 195 418 164 392 144 C366 123 333 135 325 170 C321 187 314 186 309 174 Z"
+              d="M333 208 C351 173 389 162 414 184 C389 195 371 211 368 233 C397 232 420 248 421 273 C421 300 397 318 366 317 C362 348 340 381 299 395 C255 410 221 400 196 375 C160 393 111 381 88 342 C63 300 78 252 119 228 C148 211 177 214 195 226 C207 183 241 156 282 157 C310 158 326 178 333 208 Z"
               fill="url(#sStyleBodyGloss)"
-              opacity="0.58"
+              opacity="0.5"
             />
           </g>
 
-          <path id="s-style-pickguard" d="M305 187 L350 188 C358 205 351 223 331 230 C310 237 306 255 324 268 C343 281 370 283 387 305 C406 331 391 361 357 373 C321 386 286 369 278 335 C271 306 254 292 226 289 C194 286 180 259 195 231 C209 205 241 195 271 201 C288 204 297 198 305 187 Z" fill="url(#sStyleGuardTint)" stroke="#BEB5A1" strokeWidth="4" strokeLinejoin="round" />
+          <path id="s-style-pickguard" d="M338 219 C356 197 383 191 401 203 C381 217 371 233 373 252 C397 252 411 265 406 286 C399 311 370 325 339 316 C319 310 306 318 299 342 C291 368 267 382 239 374 C216 367 204 348 210 328 C217 306 236 296 260 293 C282 290 291 278 291 259 C291 235 308 222 338 219 Z" fill="url(#sStyleGuardTint)" stroke="#BEB5A1" strokeWidth="3" strokeLinejoin="round" />
 
           <g id="s-style-pickups" fill="#F5F1E8" stroke="#25262A" strokeWidth="3">
             {[
-              { x: 259, y: 225, r: -3 },
-              { x: 254, y: 267, r: -4 },
-              { x: 247, y: 309, r: -11 },
+              { x: 320, y: 206, r: 0 },
+              { x: 278, y: 209, r: 0 },
+              { x: 234, y: 213, r: -12 },
             ].map(pickup => (
-              <g key={pickup.y} transform={`rotate(${pickup.r} ${pickup.x + 47} ${pickup.y + 10})`}>
-                <rect x={pickup.x} y={pickup.y} width="95" height="21" rx="5" />
+              <g key={pickup.x} transform={`rotate(${pickup.r} ${pickup.x + 9} ${pickup.y + 43})`}>
+                <rect x={pickup.x} y={pickup.y} width="18" height="86" rx="3.2" />
                 {[0, 1, 2, 3, 4, 5].map(i => (
-                  <circle key={i} cx={pickup.x + 14 + i * 13.2} cy={pickup.y + 10.5} r="2.4" fill={colors.hardware} stroke="none" />
+                  <circle key={i} cx={pickup.x + 9} cy={pickup.y + 11 + i * 12.7} r="2" fill={colors.hardware} stroke="none" />
                 ))}
               </g>
             ))}
           </g>
 
           <g id="s-style-bridge" fill={colors.hardware} stroke="#1E2025" strokeWidth="2.4">
-            <rect x="241" y="349" width="122" height="26" rx="4" />
+            <rect x="158" y="218" width="48" height="88" rx="3.2" />
             {[0, 1, 2, 3, 4, 5].map(i => (
-              <rect key={i} x={253 + i * 16} y="343" width="11" height="38" rx="2" fill="#D6DAE2" />
+              <rect key={i} x="149" y={229 + i * 11.5} width="66" height="7.5" rx="1.6" fill="#D6DAE2" />
             ))}
           </g>
 
           <g id="s-style-controls" fill={colors.hardware} stroke="#1E2025" strokeWidth="2.4">
-            <line x1="367" x2="397" y1="282" y2="260" stroke={colors.hardware} strokeWidth="5" strokeLinecap="round" />
-            <circle cx="397" cy="260" r="5" />
-            <circle cx="384" cy="331" r="13" />
-            <circle cx="395" cy="368" r="13" />
-            <circle cx="357" cy="395" r="7" />
+            <line x1="345" x2="372" y1="286" y2="305" stroke={colors.hardware} strokeWidth="4" strokeLinecap="round" />
+            <circle cx="372" cy="305" r="4.4" />
+            <circle cx="322" cy="342" r="10.5" />
+            <circle cx="350" cy="360" r="10.5" />
+            <circle cx="379" cy="344" r="5.8" />
           </g>
 
           <g id="s-style-strings" stroke="#E8ECF2" strokeLinecap="round" opacity="0.82">
             {[0, 1, 2, 3, 4, 5].map(i => (
-              <line key={i} x1={311 + i * 6.2} x2={255 + i * 18.1} y1="66" y2="363" strokeWidth={1.1 + i * 0.08} />
+              <line key={i} x1="169" x2="676" y1={231 + i * 11.5} y2={224 + i * 8.5} strokeWidth={0.95 + i * 0.07} />
             ))}
           </g>
         </g>
