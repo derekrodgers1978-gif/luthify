@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import {
   BODY_SHAPES, FINISHES, FINISH_GROUPS, TOPS, NECK_WOODS,
-  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS,
+  FRETBOARDS, PICKGUARDS, HARDWARE_COLORS, BRIDGES, PICKUPS,
   DEFAULT_CONFIG, type ConfigKey,
 } from '@/lib/configurator-options'
 import type { ConfigOption } from '@/types'
@@ -15,6 +15,7 @@ const S = {
   group:    { background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), #18181C', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '21px 20px 19px', transition: 'border-color 0.2s, box-shadow 0.2s' },
   tab:      (active: boolean) => ({ flex: 1, padding: '12px 8px', textAlign: 'center' as const, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', background: active ? 'rgba(201,164,92,0.08)' : 'transparent', border: 'none', borderBottom: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.05)'}`, color: active ? '#C9A45C' : 'rgba(245,241,232,0.52)', transition: 'all 0.18s', letterSpacing: '0.02em' }),
   swatch:   (active: boolean, hex: string) => ({ width: 36, height: 36, borderRadius: 10, background: hex, border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.15s', outline: active ? '1px solid rgba(201,164,92,0.4)' : 'none', transform: active ? 'scale(1.08)' : 'scale(1)', boxShadow: active ? '0 0 0 4px rgba(201,164,92,0.14)' : 'inset 0 0 0 1px rgba(0,0,0,0.35)' }),
+  burstSwatch: (active: boolean, burst: NonNullable<ConfigOption['burst']>) => ({ width: 44, height: 36, borderRadius: 10, background: `radial-gradient(circle at 50% 45%, ${burst.inner} 0%, ${burst.inner} 28%, ${burst.middle} 56%, ${burst.outer} 100%)`, border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.15s', outline: active ? '1px solid rgba(201,164,92,0.4)' : 'none', transform: active ? 'scale(1.08)' : 'scale(1)', boxShadow: active ? '0 0 0 4px rgba(201,164,92,0.14)' : 'inset 0 0 0 1px rgba(0,0,0,0.35)' }),
   finishGroupLabel: { fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase' as const, color: 'rgba(226,192,122,0.72)', margin: '2px 0 8px' },
   pill:     (active: boolean) => ({ padding: '9px 15px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 650, cursor: 'pointer', background: active ? 'linear-gradient(135deg,rgba(226,192,122,0.14),rgba(201,164,92,0.08))' : '#111114', border: `1px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, color: active ? '#E2C07A' : 'rgba(245,241,232,0.58)', transition: 'all 0.15s', boxShadow: active ? '0 8px 24px rgba(201,164,92,0.08)' : 'none' }),
   topCard:  (active: boolean) => ({ padding: '15px 16px', borderRadius: 16, background: active ? 'linear-gradient(180deg,rgba(201,164,92,0.09),rgba(201,164,92,0.04))' : '#09090B', border: `2px solid ${active ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.18s', boxShadow: active ? '0 10px 30px rgba(201,164,92,0.08)' : 'none' }),
@@ -80,7 +81,13 @@ export default function ConfigPanel() {
                     <div style={S.finishGroupLabel}>{group.label}</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
                       {options.map(o => (
-                        <div key={o.id} title={o.label} style={S.swatch(store.finish === o.id, o.hex!)} onClick={() => store.setOption('finish', o.id)} />
+                        <div
+                          key={o.id}
+                          title={o.label}
+                          aria-label={o.label}
+                          style={o.finishGroup === 'burst' && o.burst ? S.burstSwatch(store.finish === o.id, o.burst) : S.swatch(store.finish === o.id, o.hex!)}
+                          onClick={() => store.setOption('finish', o.id)}
+                        />
                       ))}
                     </div>
                   </div>
@@ -129,6 +136,16 @@ export default function ConfigPanel() {
                 ))}
               </div>
               <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)' }}>{FRETBOARDS.find(f => f.id === store.fretboard)?.label}</p>
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(PICKGUARDS, store.pickguard)}>Pickguard</GroupLabel>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                {PICKGUARDS.map(o => (
+                  <div key={o.id} title={o.label} style={S.swatch(store.pickguard === o.id, o.hex!)} onClick={() => store.setOption('pickguard', o.id)} />
+                ))}
+              </div>
+              <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)' }}>{PICKGUARDS.find(p => p.id === store.pickguard)?.label}</p>
             </div>
           </>
         )}
