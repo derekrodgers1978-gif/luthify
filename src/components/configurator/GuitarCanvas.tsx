@@ -1,7 +1,7 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas, ThreeElements, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, isBurstFinish, isNaturalFinish } from '@/lib/configurator-options'
@@ -188,16 +188,16 @@ function SStylePreview({ view }: { view: 'standard' | 'detail' }) {
   return (
     <Center>
       <group {...groupProps}>
-        <mesh position={[-0.36, -0.58, 0]} rotation={[0, 0, -0.08]} material={bodyMaterial} castShadow receiveShadow>
+        <mesh position={[-0.36, -0.58, 0]} rotation={[0, 0, -0.08]} scale={[1.04, 1.12, 0.14]} material={bodyMaterial} castShadow receiveShadow>
           <sphereGeometry args={[1.12, 64, 32]} />
         </mesh>
-        <mesh position={[0.48, -0.3, 0.02]} rotation={[0, 0, 0.08]} material={bodyMaterial} castShadow receiveShadow>
+        <mesh position={[0.48, -0.3, 0.02]} rotation={[0, 0, 0.08]} scale={[0.96, 1.12, 0.14]} material={bodyMaterial} castShadow receiveShadow>
           <sphereGeometry args={[0.78, 64, 32]} />
         </mesh>
-        <mesh position={[0.2, 0.32, 0.03]} rotation={[0, 0, -0.36]} material={bodyMaterial} castShadow receiveShadow>
+        <mesh position={[0.2, 0.32, 0.03]} rotation={[0, 0, -0.36]} scale={[0.9, 1.15, 0.14]} material={bodyMaterial} castShadow receiveShadow>
           <sphereGeometry args={[0.72, 48, 24]} />
         </mesh>
-        <mesh position={[0.33, 0.36, 0.1]} rotation={[0, 0, -0.34]} scale={[0.54, 1.4, 0.08]} castShadow>
+        <mesh position={[0.33, 0.36, 0.24]} rotation={[0, 0, -0.34]} scale={[0.54, 1.4, 0.08]} castShadow>
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial color="#F2EEE2" metalness={0.02} roughness={0.34} envMapIntensity={1.25} />
         </mesh>
@@ -205,7 +205,7 @@ function SStylePreview({ view }: { view: 'standard' | 'detail' }) {
           <boxGeometry args={[0.34, 3.3, 0.12]} />
           <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.42} envMapIntensity={1.15} />
         </mesh>
-        <mesh position={[0.24, 1.9, 0.1]} rotation={[0, 0, -0.08]} castShadow>
+        <mesh position={[0.24, 1.9, 0.12]} rotation={[0, 0, -0.08]} castShadow>
           <boxGeometry args={[0.22, 3.16, 0.08]} />
           <meshStandardMaterial color={colors.board} metalness={0} roughness={0.58} />
         </mesh>
@@ -226,23 +226,23 @@ function SStylePreview({ view }: { view: 'standard' | 'detail' }) {
           </mesh>
         ))}
         {[-0.22, 0.1, 0.42].map((x, i) => (
-          <mesh key={`pickup-${i}`} position={[x, -0.36 + i * 0.38, 0.24]} rotation={[0, 0, -0.16]} castShadow>
+          <mesh key={`pickup-${i}`} position={[x, -0.36 + i * 0.38, 0.32]} rotation={[0, 0, -0.16]} castShadow>
             <boxGeometry args={[0.74, 0.16, 0.09]} />
             <meshStandardMaterial color="#08080A" metalness={0.35} roughness={0.3} />
           </mesh>
         ))}
-        <mesh position={[-0.28, -0.94, 0.25]} rotation={[0, 0, -0.1]} castShadow>
+        <mesh position={[-0.28, -0.94, 0.34]} rotation={[0, 0, -0.1]} castShadow>
           <boxGeometry args={[0.88, 0.16, 0.1]} />
           <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
         </mesh>
         {[0, 1, 2].map(i => (
-          <mesh key={`knob-${i}`} position={[0.56 + i * 0.18, -0.72 - i * 0.2, 0.26]} castShadow>
+          <mesh key={`knob-${i}`} position={[0.56 + i * 0.18, -0.72 - i * 0.2, 0.38]} castShadow>
             <cylinderGeometry args={[0.09, 0.09, 0.08, 24]} />
             <meshStandardMaterial color={hardwareColor} metalness={0.7} roughness={0.22} />
           </mesh>
         ))}
         {[-0.15, -0.09, -0.03, 0.03, 0.09, 0.15].map((x, i) => (
-          <mesh key={`string-${i}`} position={[x + 0.2, 1.02, 0.28]} rotation={[0, 0, -0.08]}>
+          <mesh key={`string-${i}`} position={[x + 0.2, 1.02, 0.42]} rotation={[0, 0, -0.08]}>
             <boxGeometry args={[0.008, 3.75, 0.008]} />
             <meshStandardMaterial color="#DDE2EA" metalness={0.85} roughness={0.18} />
           </mesh>
