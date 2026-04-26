@@ -286,7 +286,7 @@ function SingleCutFinishFallback() {
   )
 }
 
-const BODY_PATH = 'M93 292 C49 279 31 238 43 192 C57 140 103 108 151 119 C164 82 202 59 247 63 C294 67 332 97 344 142 C383 128 427 140 454 176 C484 216 477 274 439 314 C407 348 362 360 323 344 C294 389 237 417 181 399 C137 385 109 349 112 315 C81 324 54 309 50 282 C46 259 65 250 93 292 Z'
+const BODY_PATH = 'M84 280 C45 267 26 229 39 187 C55 134 103 104 153 116 C174 78 220 57 266 69 C309 80 337 112 344 153 C384 136 430 146 459 180 C493 220 482 283 437 318 C404 344 360 354 323 338 C294 383 236 405 182 387 C141 373 114 340 114 305 C83 315 53 300 50 274 C47 253 63 243 84 280 Z'
 
 function optionHex(options: { id: string; hex?: string }[], id: string, fallback: string) {
   return options.find(o => o.id === id)?.hex ?? fallback
@@ -322,7 +322,7 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
   const switchTip = optionHex(SWITCH_TIPS, store.switchTip, '#E8DEBF')
   const isBurst = finish?.kind === 'burst'
   const bodyFill = isBurst ? 'url(#sStyleBurst)' : (finish?.hex ?? colors.finish)
-  const zoom = view === 'detail' ? 'scale(1.14) translate(-36px, -4px)' : 'scale(1)'
+  const zoom = view === 'detail' ? 'scale(1.1) translate(-34px, -4px)' : 'scale(1)'
 
   const SingleCoil = ({ x, y, rotate = 0 }: { x: number; y: number; rotate?: number }) => (
     <g transform={`translate(${x} ${y}) rotate(${rotate})`}>
@@ -354,7 +354,7 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
 
   return (
     <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 46% 42%, #15171d 0%, #050608 68%)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
-      <svg viewBox="0 0 1180 520" role="img" aria-label="Realistic S-Style electric guitar preview" style={{ width: 'min(98%, 1280px)', height: 'min(86%, 620px)', filter: 'drop-shadow(0 34px 58px rgba(0,0,0,0.62))', transition: 'transform 0.28s ease', transform: zoom }}>
+      <svg viewBox="0 0 1180 500" role="img" aria-label="Realistic S-Style electric guitar preview" style={{ width: 'min(98%, 1280px)', height: 'min(86%, 620px)', filter: 'drop-shadow(0 34px 58px rgba(0,0,0,0.62))', transition: 'transform 0.28s ease', transform: zoom }}>
         <defs>
           <radialGradient id="sStyleBurst" cx="50%" cy="52%" r="62%">
             <stop offset="0%" stopColor={finish?.centerHex ?? '#F6B84A'} />
@@ -365,8 +365,8 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
           </radialGradient>
           <linearGradient id="sStyleBodyGloss" x1="0" x2="1" y1="0" y2="1">
             <stop offset="0%" stopColor="rgba(255,255,255,0.42)" />
-            <stop offset="42%" stopColor="rgba(255,255,255,0.08)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.28)" />
+            <stop offset="28%" stopColor="rgba(255,255,255,0.12)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.34)" />
           </linearGradient>
           <linearGradient id="sStyleNeckGrain" x1="0" x2="1">
             <stop offset="0%" stopColor={colors.neck} />
@@ -382,6 +382,20 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
             <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.16)" />
           </linearGradient>
+          <linearGradient id="sStyleGuardSheen" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.38)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.2)" />
+          </linearGradient>
+          <filter id="sStyleFineGrain" x="-8%" y="-8%" width="116%" height="116%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.018 0.42" numOctaves="3" seed="7" />
+            <feColorMatrix type="saturate" values="0" />
+            <feComponentTransfer>
+              <feFuncA type="table" tableValues="0 0.24" />
+            </feComponentTransfer>
+          </filter>
+          <filter id="sStyleDepth" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="-2" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.42" />
+          </filter>
         </defs>
         <g transform="translate(52 34)">
           <g stroke="#DDE3E9" strokeLinecap="round" opacity={store.strings === 'stainless-10' ? 0.96 : 0.72}>
@@ -407,10 +421,20 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
             ) : (
               <path d={BODY_PATH} fill="rgba(255,255,255,0.08)" opacity="0.45" />
             )}
+            <path d={BODY_PATH} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="3" strokeLinejoin="round" transform="translate(-4 -4)" />
             <path d="M116 286 C92 244 110 174 153 143 C190 116 240 126 270 161 C233 181 210 212 209 250 C207 291 236 328 278 341 C239 373 185 369 151 337 C133 321 123 304 116 286 Z" fill="rgba(0,0,0,0.28)" opacity="0.36" />
+            {isBurst && [...Array(18)].map((_, i) => (
+              <path
+                key={i}
+                d={`M${88 + i * 16} ${176 + Math.sin(i) * 13} C${138 + i * 13} ${205 + Math.cos(i) * 19} ${176 + i * 10} ${286 + Math.sin(i * 0.7) * 17} ${250 + i * 7} ${361 + Math.cos(i * 0.8) * 9}`}
+                fill="none"
+                stroke={i % 2 ? 'rgba(255,220,145,0.2)' : 'rgba(48,18,6,0.22)'}
+                strokeWidth="2"
+              />
+            ))}
 
-            <path d="M149 304 C140 251 159 180 218 154 C273 130 344 149 388 199 C370 224 365 254 381 286 C347 307 293 323 232 331 C192 337 162 328 149 304 Z" fill={pickguard} stroke="rgba(0,0,0,0.6)" strokeWidth="3.2" />
-            <path d="M163 296 C157 251 175 190 226 169 C270 151 329 167 366 203 C349 225 347 253 362 278 C331 296 285 307 235 313 C197 318 171 313 163 296 Z" fill="url(#sStyleGuardSheen)" opacity={store.pickguard === 'black' ? 0.16 : 0.5} />
+            <path d="M144 297 C140 252 161 187 209 164 C259 140 329 151 381 195 C360 217 356 249 373 276 C335 294 287 304 230 310 C185 315 153 309 144 297 Z" fill={pickguard} stroke="rgba(0,0,0,0.62)" strokeWidth="2.6" />
+            <path d="M157 290 C154 253 174 198 216 178 C260 157 316 166 358 200 C342 220 340 244 354 266 C322 282 280 290 232 295 C195 299 165 296 157 290 Z" fill="url(#sStyleGuardSheen)" opacity={store.pickguard === 'black' ? 0.14 : 0.42} />
             {store.pickguard === 'tortoise' && (
               <g opacity="0.45" fill="#C46B2D">
                 <ellipse cx="206" cy="190" rx="28" ry="13" transform="rotate(-24 206 190)" />
@@ -419,7 +443,7 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
               </g>
             )}
 
-            {pickups}
+            <g transform="translate(4 -4)">{pickups}</g>
 
             {store.bridge === 'hardtail' ? (
               <g transform="translate(366 305) rotate(-7)">
