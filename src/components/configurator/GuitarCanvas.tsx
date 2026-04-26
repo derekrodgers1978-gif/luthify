@@ -237,10 +237,12 @@ function SStyleVectorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }
   const pickupYs = pickupLayout.length === 3 ? [224, 267, 310] : [242, 304]
   const hardwareColor = colors.hardware
   const guitarTransform = view === 'detail'
-    ? 'translate(148 6) rotate(-10 315 268) scale(1.08)'
-    : 'translate(108 24) rotate(-10 315 268)'
-  const pickupWidth = (kind: string) => kind === 'single' ? 86 : kind === 'p90' ? 98 : 108
-  const pickupHeight = (kind: string) => kind === 'single' ? 16 : kind === 'p90' ? 29 : 31
+    ? 'translate(140 2) rotate(-9 315 268) scale(1.1)'
+    : 'translate(104 22) rotate(-9 315 268)'
+  const pickupWidth = (kind: string) => kind === 'single' ? 78 : kind === 'p90' ? 94 : 102
+  const pickupHeight = (kind: string) => kind === 'single' ? 15 : kind === 'p90' ? 28 : 29
+  const bodyPath = 'M318 151 C286 116 225 114 194 151 C166 184 176 225 219 246 C158 245 107 276 94 326 C78 388 120 428 174 409 C196 462 275 463 309 416 C365 442 421 405 415 346 C409 293 370 259 321 248 C362 239 390 207 382 166 C419 202 477 193 508 146 C532 110 504 78 461 84 C414 90 365 121 347 154 C338 149 326 147 318 151 Z'
+  const pickguardPath = 'M259 174 C296 160 340 171 367 198 C393 224 384 271 350 304 C318 335 272 337 236 319 C207 304 204 269 218 239 C229 215 245 202 264 192 L225 184 C236 179 247 175 259 174 Z'
 
   return (
     <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
@@ -259,9 +261,9 @@ function SStyleVectorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }
         </defs>
         <g transform={guitarTransform}>
           <g transform="rotate(-2 342 214)">
-            <path d="M314 24 L371 24 L362 348 L325 348 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="4" strokeLinejoin="round" />
-            <path d="M326 36 L359 36 L354 342 L331 342 Z" fill={colors.board} />
-            <path d="M314 22 L371 22 L384 -50 C407 -62 442 -42 438 -12 C435 9 413 21 389 17 L377 82 L306 82 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" strokeLinejoin="round" />
+            <path d="M320 24 L365 24 L359 354 L327 354 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="3.2" strokeLinejoin="round" />
+            <path d="M330 36 L356 36 L352 348 L334 348 Z" fill={colors.board} />
+            <path d="M318 22 L367 22 L382 -50 C406 -63 440 -42 435 -12 C431 10 408 22 386 17 L374 75 L310 75 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="4" strokeLinejoin="round" />
             {[62, 96, 130, 164, 198, 232, 266, 300, 332].map(y => (
               <line key={y} x1="327" x2="359" y1={y} y2={y} stroke="#DDE2EA" strokeWidth="2" opacity="0.86" />
             ))}
@@ -273,16 +275,19 @@ function SStyleVectorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }
             ))}
           </g>
 
-          <path d="M341 149 C356 104 412 82 458 92 C498 101 515 130 497 161 C479 193 436 201 396 174 C387 211 360 235 318 243 C382 251 423 296 415 355 C407 415 350 444 304 413 C276 460 205 455 176 406 C129 429 80 399 78 348 C76 300 117 275 178 276 C132 249 126 198 158 163 C192 127 245 134 290 176 C301 155 320 145 341 149 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="10" strokeLinejoin="round" />
-          <path d="M341 149 C356 104 412 82 458 92 C498 101 515 130 497 161 C479 193 436 201 396 174 C387 211 360 235 318 243 C382 251 423 296 415 355 C407 415 350 444 304 413 C276 460 205 455 176 406 C129 429 80 399 78 348 C76 300 117 275 178 276 C132 249 126 198 158 163 C192 127 245 134 290 176 C301 155 320 145 341 149 Z" fill={bodyFill} stroke="#F2EEE2" strokeWidth="5" strokeLinejoin="round" />
-          <path d="M236 205 C270 174 329 171 365 198 C391 218 397 258 378 291 C353 334 296 352 245 332 C211 319 196 289 204 255 C210 231 222 216 236 205 Z" fill="url(#sStyleGloss)" opacity="0.58" />
-          <path d="M250 181 C279 165 329 166 361 192 C390 215 390 262 362 295 C335 327 286 339 241 323 C211 312 200 286 209 254 C216 230 229 213 248 199 L225 188 C233 184 241 182 250 181 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="4" strokeLinejoin="round" />
-          <path d="M147 324 C170 303 208 306 230 330" fill="none" stroke="rgba(255,255,255,0.34)" strokeWidth="5" strokeLinecap="round" />
-          <path d="M388 176 C427 198 461 192 482 164" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="5" strokeLinecap="round" />
+          <path d={bodyPath} fill={bodyFill} stroke="#141217" strokeWidth="6" strokeLinejoin="round" />
+          <path d={bodyPath} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M227 212 C267 177 330 177 363 205 C387 226 389 264 367 297 C337 338 282 348 240 327 C209 312 198 284 208 253 C214 234 222 221 227 212 Z" fill="url(#sStyleGloss)" opacity="0.34" />
+          <path d={pickguardPath} fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="3.2" strokeLinejoin="round" />
+          <path d="M137 330 C168 302 212 306 239 332" fill="none" stroke="rgba(255,255,255,0.24)" strokeWidth="2.8" strokeLinecap="round" />
+          <path d="M384 166 C428 202 479 190 508 146" fill="none" stroke="rgba(0,0,0,0.24)" strokeWidth="2.8" strokeLinecap="round" />
+          {[244, 282, 354, 240, 336, 310, 224, 378].map((x, i) => (
+            <circle key={i} cx={x} cy={[188, 176, 218, 315, 305, 326, 252, 259][i]} r="3.2" fill="#D9CBA4" stroke="#9C8E6C" strokeWidth="1" />
+          ))}
 
           {pickupLayout.map((kind, i) => (
             <g key={`${kind}-${i}`} transform={`rotate(-5 300 ${pickupYs[i]})`}>
-              <rect x={300 - pickupWidth(kind) / 2} y={pickupYs[i] - pickupHeight(kind) / 2} width={pickupWidth(kind)} height={pickupHeight(kind)} rx={kind === 'single' ? 5 : 4} fill={kind === 'hum' ? '#08080A' : '#EFE9D7'} stroke={kind === 'hum' ? hardwareColor : '#CFC3A4'} strokeWidth="3" />
+              <rect x={300 - pickupWidth(kind) / 2} y={pickupYs[i] - pickupHeight(kind) / 2} width={pickupWidth(kind)} height={pickupHeight(kind)} rx={kind === 'single' ? 3 : 4} fill={kind === 'hum' ? '#08080A' : '#EFE9D7'} stroke={kind === 'hum' ? hardwareColor : '#CFC3A4'} strokeWidth="3" />
               {kind === 'hum' && <line x1="300" x2="300" y1={pickupYs[i] - 14} y2={pickupYs[i] + 14} stroke={hardwareColor} strokeWidth="2" />}
               {kind !== 'hum' && <line x1={300 - pickupWidth(kind) / 2 + 13} x2={300 + pickupWidth(kind) / 2 - 13} y1={pickupYs[i]} y2={pickupYs[i]} stroke="#B8AA87" strokeWidth="2" />}
             </g>
@@ -290,6 +295,7 @@ function SStyleVectorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }
 
           <g transform="rotate(-5 298 355)" fill={hardwareColor} stroke="#1E2025" strokeWidth="3">
             <rect x={store.bridge === 'trem' || store.bridge === 'bigsby' ? 238 : 254} y="344" width={store.bridge === 'trem' || store.bridge === 'bigsby' ? 124 : 94} height="22" rx="5" />
+            {[0, 1, 2, 3, 4, 5].map(i => <rect key={i} x={250 + i * 17} y="340" width="10" height="30" rx="2" fill="#E4E8EF" stroke="#1E2025" strokeWidth="1.5" />)}
             {(store.bridge === 'trem' || store.bridge === 'bigsby') && <rect x="354" y="360" width="8" height="76" rx="4" transform="rotate(-31 358 398)" />}
           </g>
           <g fill={hardwareColor} stroke="#1E2025" strokeWidth="3">
