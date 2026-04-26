@@ -286,10 +286,28 @@ function SingleCutFinishFallback() {
   )
 }
 
-const BODY_PATH = 'M92 286 C38 258 32 180 78 134 C118 95 178 99 219 128 C255 100 314 103 354 139 C385 167 401 202 395 239 C458 247 488 279 477 326 C466 374 407 395 356 371 C324 411 252 429 201 393 C150 420 84 396 70 338 C64 315 71 297 92 286 Z'
+const BODY_PATH = 'M93 292 C49 279 31 238 43 192 C57 140 103 108 151 119 C164 82 202 59 247 63 C294 67 332 97 344 142 C383 128 427 140 454 176 C484 216 477 274 439 314 C407 348 362 360 323 344 C294 389 237 417 181 399 C137 385 109 349 112 315 C81 324 54 309 50 282 C46 259 65 250 93 292 Z'
 
 function optionHex(options: { id: string; hex?: string }[], id: string, fallback: string) {
   return options.find(o => o.id === id)?.hex ?? fallback
+}
+
+function hexToRgb(hex = '#000000') {
+  const clean = hex.replace('#', '')
+  const value = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16)
+  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 }
+}
+
+function mixHex(a: string, b: string, amount: number) {
+  const ca = hexToRgb(a)
+  const cb = hexToRgb(b)
+  const mix = (x: number, y: number) => Math.round(x + (y - x) * amount).toString(16).padStart(2, '0')
+  return `#${mix(ca.r, cb.r)}${mix(ca.g, cb.g)}${mix(ca.b, cb.b)}`
+}
+
+function isDarkColor(hex: string) {
+  const { r, g, b } = hexToRgb(hex)
+  return r * 0.299 + g * 0.587 + b * 0.114 < 80
 }
 
 function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }) {
@@ -340,8 +358,9 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
         <defs>
           <radialGradient id="sStyleBurst" cx="50%" cy="52%" r="62%">
             <stop offset="0%" stopColor={finish?.centerHex ?? '#F6B84A'} />
-            <stop offset="42%" stopColor={finish?.midHex ?? finish?.hex ?? '#B33116'} />
-            <stop offset="76%" stopColor={finish?.edgeHex ?? '#120503'} />
+            <stop offset="38%" stopColor={finish?.centerHex ?? '#F6B84A'} />
+            <stop offset="58%" stopColor={finish?.midHex ?? finish?.hex ?? '#B33116'} />
+            <stop offset="84%" stopColor={finish?.edgeHex ?? '#120503'} />
             <stop offset="100%" stopColor="#030202" />
           </radialGradient>
           <linearGradient id="sStyleBodyGloss" x1="0" x2="1" y1="0" y2="1">
@@ -359,10 +378,14 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
             <stop offset="45%" stopColor={colors.hardware} />
             <stop offset="100%" stopColor="#575C64" />
           </linearGradient>
+          <linearGradient id="sStylePickguardGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.16)" />
+          </linearGradient>
         </defs>
         <g transform="translate(52 34)">
-          <g stroke="#DDE3E9" strokeWidth="1.35" opacity={store.strings === 'stainless-10' ? 0.96 : 0.72}>
-            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={178} y1={256 + i * 5.8} x2={1042} y2={203 + i * 9.4} />)}
+          <g stroke="#DDE3E9" strokeLinecap="round" opacity={store.strings === 'stainless-10' ? 0.96 : 0.72}>
+            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={178} y1={256 + i * 5.8} x2={1042} y2={203 + i * 9.4} strokeWidth={0.85 + i * 0.15} />)}
           </g>
 
           <path d="M396 202 L972 202 L972 280 L396 280 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1608" strokeWidth="5" />
@@ -386,8 +409,8 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
             )}
             <path d="M116 286 C92 244 110 174 153 143 C190 116 240 126 270 161 C233 181 210 212 209 250 C207 291 236 328 278 341 C239 373 185 369 151 337 C133 321 123 304 116 286 Z" fill="rgba(0,0,0,0.28)" opacity="0.36" />
 
-            <path d="M150 303 C140 249 161 173 224 150 C273 132 340 151 386 199 C367 223 362 255 379 286 C345 307 292 322 232 331 C192 337 163 328 150 303 Z" fill={pickguard} stroke="rgba(0,0,0,0.55)" strokeWidth="3.5" />
-            <path d="M164 295 C157 249 176 190 226 169 C269 152 327 166 366 203 C348 225 346 254 361 278 C330 296 285 306 235 313 C197 318 171 312 164 295 Z" fill="rgba(255,255,255,0.22)" opacity={store.pickguard === 'black' ? 0.08 : 0.38} />
+            <path d="M149 304 C140 251 159 180 218 154 C273 130 344 149 388 199 C370 224 365 254 381 286 C347 307 293 323 232 331 C192 337 162 328 149 304 Z" fill={pickguard} stroke="rgba(0,0,0,0.6)" strokeWidth="3.2" />
+            <path d="M163 296 C157 251 175 190 226 169 C270 151 329 167 366 203 C349 225 347 253 362 278 C331 296 285 307 235 313 C197 318 171 313 163 296 Z" fill="url(#sStyleGuardSheen)" opacity={store.pickguard === 'black' ? 0.16 : 0.5} />
             {store.pickguard === 'tortoise' && (
               <g opacity="0.45" fill="#C46B2D">
                 <ellipse cx="206" cy="190" rx="28" ry="13" transform="rotate(-24 206 190)" />
@@ -420,12 +443,12 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
             )}
 
             <g fill={knobs} stroke="#9E967D" strokeWidth="2.4">
-              <circle cx="367" cy="345" r="16" />
-              <circle cx="421" cy="316" r="16" />
-              <circle cx="430" cy="263" r="10" fill={switchTip} />
+              <circle cx="367" cy="345" r="13" />
+              <circle cx="415" cy="318" r="13" />
+              <circle cx="423" cy="267" r="8" fill={switchTip} />
             </g>
-            <path d="M410 286 L446 244" stroke={colors.hardware} strokeWidth="4" strokeLinecap="round" />
-            <ellipse cx="124" cy="335" rx="31" ry="20" transform="rotate(-42 124 335)" fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="4" />
+            <path d="M404 289 L438 247" stroke={colors.hardware} strokeWidth="3.4" strokeLinecap="round" />
+            <ellipse cx="122" cy="338" rx="24" ry="15" transform="rotate(-42 122 338)" fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="3.2" />
           </g>
         </g>
       </svg>
