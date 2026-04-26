@@ -360,10 +360,10 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
           </g>
 
           <g data-part="neck">
-            <path d="M390 238 L720 226 L724 276 L393 284 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1609" strokeWidth="4" />
+            <path d="M350 240 L720 226 L724 276 L352 286 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1609" strokeWidth="4" />
           </g>
           <g data-part="fretboard">
-            <path d="M398 248 L718 238 L721 265 L399 275 Z" fill={colors.board} stroke="#110805" strokeWidth="3" />
+            <path d="M363 250 L718 238 L721 265 L364 276 Z" fill={colors.board} stroke="#110805" strokeWidth="3" />
             {[435, 470, 506, 542, 578, 614, 650, 686].map(x => (
               <line key={x} x1={x} x2={x + 2} y1="246" y2="268" stroke="#D5D8D8" strokeWidth="2" opacity="0.86" />
             ))}
@@ -393,6 +393,7 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
               strokeWidth="5"
               strokeLinejoin="round"
             />
+            <rect x="342" y="248" width="60" height="38" rx="12" fill="#F2EEE2" stroke="#D7D0C2" strokeWidth="4" />
             <path d="M236 296 C292 270 344 275 383 299 C422 322 464 322 503 301" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" />
           </g>
 
