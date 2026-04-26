@@ -286,7 +286,7 @@ function SingleCutFinishFallback() {
   )
 }
 
-const BODY_PATH = 'M93 274 C58 259 38 225 45 185 C53 139 90 105 136 101 C160 99 181 105 198 119 C214 86 249 65 290 67 C334 69 368 98 381 143 C407 130 441 129 468 145 C498 163 512 194 504 228 C498 257 475 279 445 288 C461 319 454 351 428 374 C394 404 338 401 302 370 C272 408 219 424 172 406 C135 391 112 361 110 326 C78 331 50 316 44 289 C39 265 58 254 93 274 Z'
+const BODY_PATH = 'M64 285 C38 254 40 202 64 158 C90 111 138 89 185 107 C204 72 248 53 294 63 C342 73 376 111 383 164 C414 147 455 147 487 169 C531 199 531 264 488 303 C461 328 420 341 384 329 C356 376 297 408 233 402 C185 398 145 371 129 333 C97 345 67 331 56 304 C51 294 54 289 64 285 Z'
 
 function optionHex(options: { id: string; hex?: string }[], id: string, fallback: string) {
   return options.find(o => o.id === id)?.hex ?? fallback
@@ -399,7 +399,7 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
         </defs>
         <g transform="translate(52 34)">
           <g stroke="#DDE3E9" strokeLinecap="round" opacity={store.strings === 'stainless-10' ? 0.96 : 0.72}>
-            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={178} y1={256 + i * 5.8} x2={1042} y2={203 + i * 9.4} strokeWidth={0.85 + i * 0.15} />)}
+            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={176} y1={248 + i * 5.5} x2={1042} y2={203 + i * 9.4} strokeWidth={0.85 + i * 0.15} />)}
           </g>
 
           <path d="M396 202 L972 202 L972 280 L396 280 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1608" strokeWidth="5" />
@@ -413,7 +413,7 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
             {[973, 1000, 1027, 1054, 1081, 1108].map((x, i) => <rect key={`post-${i}`} x={x - 4} y={i < 3 ? 181 : 232} width="8" height="17" rx="3" fill={store.tuners === 'locking' || store.tuners === 'staggered' ? '#1B1C20' : colors.hardware} />)}
           </g>
 
-          <g transform="translate(70 34) rotate(-2 230 260)">
+          <g transform="translate(70 42) rotate(-2 230 240) scale(0.96 0.86)">
             <path d={BODY_PATH} fill="#060607" opacity="0.72" transform="translate(13 16)" />
             <path d={BODY_PATH} fill={bodyFill} stroke="#111114" strokeWidth="9" strokeLinejoin="round" />
             {isBurst ? (
