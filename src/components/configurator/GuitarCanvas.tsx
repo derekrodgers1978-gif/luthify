@@ -1,7 +1,7 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
+import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
@@ -30,9 +30,6 @@ const CAMERA_DISTANCE: Record<string, number> = {
 
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number }
-
-const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
-MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const key = `${meshName} ${materialName}`.toLowerCase()
@@ -158,6 +155,196 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.roughness = Math.min(colors.finishRoughness, 0.24)
   }
   mat.needsUpdate = true
+}
+
+function makeSStyleBodyShape() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.18, 0.96)
+  shape.bezierCurveTo(-0.48, 1.16, -0.9, 1.02, -0.88, 0.62)
+  shape.bezierCurveTo(-1.18, 0.48, -1.31, 0.14, -1.08, -0.12)
+  shape.bezierCurveTo(-1.55, -0.46, -1.46, -1.36, -0.92, -1.69)
+  shape.bezierCurveTo(-0.48, -1.96, 0.18, -1.85, 0.38, -1.48)
+  shape.bezierCurveTo(0.86, -1.77, 1.45, -1.48, 1.52, -0.92)
+  shape.bezierCurveTo(1.62, -0.19, 1.08, 0.24, 0.64, 0.17)
+  shape.bezierCurveTo(0.82, 0.56, 0.54, 0.93, 0.16, 0.77)
+  shape.bezierCurveTo(0.05, 0.86, -0.04, 0.92, -0.18, 0.96)
+  return shape
+}
+
+function makePickguardShape() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.38, 0.61)
+  shape.bezierCurveTo(-0.78, 0.52, -0.91, 0.1, -0.64, -0.13)
+  shape.bezierCurveTo(-0.86, -0.54, -0.65, -1.08, -0.18, -1.16)
+  shape.bezierCurveTo(0.24, -1.23, 0.68, -0.95, 0.82, -0.52)
+  shape.bezierCurveTo(0.44, -0.34, 0.26, -0.02, 0.32, 0.35)
+  shape.bezierCurveTo(0.07, 0.5, -0.14, 0.6, -0.38, 0.61)
+  return shape
+}
+
+function InstancedParts({ name, matrices, castShadow, children }: { name: string; matrices: THREE.Matrix4[]; castShadow?: boolean; children: ReactNode }) {
+  const ref = useRef<THREE.InstancedMesh>(null)
+
+  useEffect(() => {
+    matrices.forEach((matrix, index) => ref.current?.setMatrixAt(index, matrix))
+    if (ref.current) ref.current.instanceMatrix.needsUpdate = true
+  }, [matrices])
+
+  return (
+    <instancedMesh ref={ref} name={name} args={[undefined, undefined, matrices.length]} castShadow={castShadow}>
+      {children}
+    </instancedMesh>
+  )
+}
+
+function SStyleInstrument({ view }: { view: 'standard' | 'detail' }) {
+  const store = useConfigStore()
+  const finish = FINISHES.find(f => f.id === store.finish)
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const colors = makeColors(finish, neck, board, hw)
+  const bodyGeometry = useMemo(() => new THREE.ExtrudeGeometry(makeSStyleBodyShape(), {
+    depth: 0.26,
+    bevelEnabled: true,
+    bevelSegments: 4,
+    bevelSize: 0.055,
+    bevelThickness: 0.055,
+    curveSegments: 18,
+  }).center(), [])
+  const pickguardGeometry = useMemo(() => new THREE.ShapeGeometry(makePickguardShape(), 24), [])
+  const topOpacity = store.top === 'solid' ? 0 : store.top === 'flame' ? 0.18 : store.top === 'quilted' ? 0.14 : 0.22
+  const groupRotation: [number, number, number] = [0.02, view === 'detail' ? -0.18 : 0.12, -0.08]
+  const pickupLayout = store.pickups === 'hss'
+    ? ['single', 'single', 'hum']
+    : store.pickups === 'singlecoil'
+      ? ['single', 'single', 'single']
+      : ['hum', 'hum']
+  const fretMatrices = useMemo(() => Array.from({ length: 18 }, (_, i) => new THREE.Matrix4().makeTranslation(0, 0.05 + i * 0.145, 0.125)), [])
+  const figureMatrices = useMemo(() => Array.from({ length: 9 }, (_, i) => new THREE.Matrix4().compose(
+    new THREE.Vector3(0, -0.78 + i * 0.16, 0.163),
+    new THREE.Quaternion(),
+    new THREE.Vector3(1.1 - i * 0.035, 0.09, 1)
+  )), [])
+  const saddleMatrices = useMemo(() => Array.from({ length: 6 }, (_, i) => new THREE.Matrix4().makeTranslation(-0.31 + i * 0.124, 0.02, 0.07)), [])
+  const knobMatrices = useMemo(() => Array.from({ length: 3 }, (_, i) => new THREE.Matrix4().compose(
+    new THREE.Vector3(-0.1 * i, i * 0.27, 0),
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)),
+    new THREE.Vector3(1, 1, 1)
+  )), [])
+  const tunerPostMatrices = useMemo(() => Array.from({ length: 6 }, (_, i) => {
+    const side = i < 3 ? -1 : 1
+    const y = -0.23 + (i % 3) * 0.22
+    return new THREE.Matrix4().makeTranslation(side * 0.42, y, 0)
+  }), [])
+  const tunerButtonMatrices = useMemo(() => Array.from({ length: 6 }, (_, i) => {
+    const side = i < 3 ? -1 : 1
+    const y = -0.23 + (i % 3) * 0.22
+    return new THREE.Matrix4().makeTranslation(side * 0.55, y, 0)
+  }), [])
+  const stringMatrices = useMemo(() => Array.from({ length: 6 }, (_, i) => new THREE.Matrix4().makeTranslation(-0.15 + i * 0.06, 0, 0)), [])
+
+  return (
+    <Center>
+      <group rotation={groupRotation} scale={1.02} position={[0, -0.12, 0]}>
+        <mesh name="neck" position={[0, 1.47, -0.05]} castShadow receiveShadow>
+          <boxGeometry args={[0.54, 2.96, 0.16]} />
+          <meshStandardMaterial color={colors.neck} roughness={0.42} metalness={0.02} envMapIntensity={1.2} />
+        </mesh>
+        <mesh name="neck headstock" position={[0.18, 3.14, -0.05]} rotation={[0, 0, -0.16]} castShadow receiveShadow>
+          <boxGeometry args={[0.82, 0.74, 0.18]} />
+          <meshStandardMaterial color={colors.neck} roughness={0.44} metalness={0.02} envMapIntensity={1.15} />
+        </mesh>
+        <mesh name="fretboard" position={[0, 1.35, 0.06]} castShadow receiveShadow>
+          <boxGeometry args={[0.36, 2.82, 0.08]} />
+          <meshStandardMaterial color={colors.board} roughness={0.56} metalness={0.01} envMapIntensity={0.9} />
+        </mesh>
+        <InstancedParts name="frets" matrices={fretMatrices}>
+          <boxGeometry args={[0.39, 0.012, 0.018]} />
+          <meshStandardMaterial color="#D8DCE2" roughness={0.18} metalness={0.88} />
+        </InstancedParts>
+        <mesh name="body" geometry={bodyGeometry} position={[0, -0.72, 0]} castShadow receiveShadow>
+          <meshStandardMaterial color={colors.finish} roughness={Math.min(colors.finishRoughness, 0.24)} metalness={0.04} envMapIntensity={1.65} />
+        </mesh>
+        {finish?.id === 'sunburst' && (
+          <mesh name="body burst center" geometry={bodyGeometry} position={[0, -0.72, 0.155]} scale={[0.72, 0.72, 0.04]}>
+            <meshStandardMaterial color="#E6A445" roughness={0.16} metalness={0.02} transparent opacity={0.62} depthWrite={false} />
+          </mesh>
+        )}
+        {topOpacity > 0 && (
+          <InstancedParts name="body figure" matrices={figureMatrices}>
+            <torusGeometry args={[0.72, 0.006, 6, 48]} />
+            <meshStandardMaterial color={store.top === 'burl' ? '#3A2114' : '#F6DEAA'} transparent opacity={topOpacity} roughness={0.6} depthWrite={false} />
+          </InstancedParts>
+        )}
+        <mesh name="pickguard" geometry={pickguardGeometry} position={[-0.08, -0.72, 0.182]} castShadow>
+          <meshStandardMaterial color="#F2EEE2" roughness={0.34} metalness={0.02} envMapIntensity={0.85} />
+        </mesh>
+        <group name="pickups" position={[0, -0.46, 0.245]}>
+          {pickupLayout.map((type, i) => {
+            const y = pickupLayout.length === 3 ? 0.2 - i * 0.34 : 0.12 - i * 0.58
+            return type === 'single' ? (
+              <mesh key={`${type}-${i}`} name="single coil pickup" position={[0, y, 0]} castShadow>
+                <boxGeometry args={[0.74, 0.14, 0.08]} />
+                <meshStandardMaterial color="#ECE7D8" roughness={0.24} metalness={0.04} />
+              </mesh>
+            ) : (
+              <group key={`${type}-${i}`} name="humbucker pickup" position={[0, y, 0]}>
+                {[-0.1, 0.1].map(offset => (
+                  <mesh key={offset} position={[0, offset, 0]} castShadow>
+                    <boxGeometry args={[0.78, 0.13, 0.09]} />
+                    <meshStandardMaterial color={store.pickups === 'active-hum' ? '#07080A' : '#17171A'} roughness={0.28} metalness={0.34} />
+                  </mesh>
+                ))}
+              </group>
+            )
+          })}
+        </group>
+        <group name="bridge" position={[0, -1.18, 0.28]}>
+          <mesh name="bridge plate" castShadow>
+            <boxGeometry args={[0.88, store.bridge === 'trem' ? 0.28 : 0.18, 0.08]} />
+            <meshStandardMaterial color={colors.hardware} roughness={0.2} metalness={0.9} envMapIntensity={1.7} />
+          </mesh>
+          <InstancedParts name="bridge saddles" matrices={saddleMatrices}>
+            <boxGeometry args={[0.075, 0.16, 0.07]} />
+            <meshStandardMaterial color="#E1E5EA" roughness={0.18} metalness={0.9} />
+          </InstancedParts>
+          {store.bridge === 'bigsby' && (
+            <mesh name="bridge vibrato tailpiece" position={[0, -0.46, 0]} castShadow>
+              <cylinderGeometry args={[0.12, 0.12, 0.9, 32]} />
+              <meshStandardMaterial color={colors.hardware} roughness={0.22} metalness={0.9} />
+            </mesh>
+          )}
+        </group>
+        <group name="knobs" position={[0.76, -1.2, 0.29]}>
+          <InstancedParts name="control knobs" matrices={knobMatrices}>
+            <cylinderGeometry args={[0.09, 0.09, 0.055, 24]} />
+            <meshStandardMaterial color={colors.hardware} roughness={0.28} metalness={0.8} envMapIntensity={1.5} />
+          </InstancedParts>
+        </group>
+        <mesh name="switch tip" position={[0.58, -0.18, 0.31]} rotation={[0.46, 0.12, -0.48]} castShadow>
+          <capsuleGeometry args={[0.035, 0.18, 6, 12]} />
+          <meshStandardMaterial color="#F4EFE0" roughness={0.32} metalness={0.02} />
+        </mesh>
+        <group name="tuners" position={[0.18, 3.18, 0.08]}>
+          <InstancedParts name="tuner posts" matrices={tunerPostMatrices}>
+            <cylinderGeometry args={[0.045, 0.045, 0.12, 16]} />
+            <meshStandardMaterial color={colors.hardware} roughness={0.2} metalness={0.88} />
+          </InstancedParts>
+          <InstancedParts name="tuner buttons" matrices={tunerButtonMatrices}>
+            <boxGeometry args={[0.17, 0.075, 0.04]} />
+            <meshStandardMaterial color={colors.hardware} roughness={0.22} metalness={0.86} />
+          </InstancedParts>
+        </group>
+        <group name="strings" position={[0, 0.64, 0.36]}>
+          <InstancedParts name="strings" matrices={stringMatrices}>
+            <cylinderGeometry args={[0.0045, 0.0045, 4.78, 8]} />
+            <meshStandardMaterial color="#EEF2F5" roughness={0.22} metalness={0.92} />
+          </InstancedParts>
+        </group>
+      </group>
+    </Center>
+  )
 }
 
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
@@ -287,17 +474,20 @@ function SingleCutFinishFallback() {
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
+  const shape = useConfigStore(s => s.shape)
+  const castSceneShadows = shape !== 'modern-s'
+
   return (
     <>
       <ambientLight intensity={0.42} />
-      <directionalLight position={[4.5, 7, 4]} intensity={1.35} castShadow shadow-mapSize={[2048, 2048]} />
-      <spotLight position={[-4, 4, 4]} angle={0.45} penumbra={0.7} intensity={0.8} color="#E2C07A" castShadow />
+      <directionalLight position={[4.5, 7, 4]} intensity={1.35} castShadow={castSceneShadows} shadow-mapSize={[2048, 2048]} />
+      <spotLight position={[-4, 4, 4]} angle={0.45} penumbra={0.7} intensity={0.8} color="#E2C07A" castShadow={castSceneShadows} />
       <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
-      <Environment preset="studio" />
-      <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
+      {shape !== 'modern-s' && <Environment preset="studio" />}
+      {shape !== 'modern-s' && <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />}
       <Suspense fallback={<ModelLoading />}>
         <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
+          {shape === 'modern-s' ? <SStyleInstrument view={view} /> : <GlbInstrument view={view} />}
         </Bounds>
       </Suspense>
     </>
@@ -307,16 +497,17 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
 function CameraControls({ view }: { view: 'standard' | 'detail' | 'reset' }) {
   const { camera } = useThree()
   const shape = useConfigStore(s => s.shape)
-  useFrame(() => {
+  useEffect(() => {
     const distance = CAMERA_DISTANCE[shape] ?? CAMERA_DISTANCE.default
     const target = view === 'detail'
       ? new THREE.Vector3(0.12, 0.08, Math.max(4.6, distance * 0.72))
       : view === 'reset'
         ? new THREE.Vector3(0.28, 0.32, distance)
         : new THREE.Vector3(0.28, 0.32, distance)
-    camera.position.lerp(target, 0.08)
+    camera.position.copy(target)
     camera.lookAt(0, 0, 0)
-  })
+    camera.updateProjectionMatrix()
+  }, [camera, shape, view])
   return null
 }
 
@@ -334,9 +525,10 @@ export default function GuitarCanvas() {
       ) : (
         <Canvas
           camera={{ position: [0.35, 0.25, 5.35], fov: 37 }}
+          frameloop="demand"
           gl={{ antialias: true, alpha: false }}
           style={{ background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', width: '100%', height: '100%' }}
-          shadows
+          shadows={shape !== 'modern-s'}
           onCreated={({ gl }) => {
             gl.domElement.addEventListener('webglcontextlost', event => {
               event.preventDefault()

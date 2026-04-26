@@ -3,7 +3,7 @@ import type { ConfigOption } from '@/types'
 export const BASE_PRICE = 2800
 
 export const BODY_SHAPES: ConfigOption[] = [
-  { id: 'modern-s',   label: 'S-Style Electric',      modelPath: '/models/s-style-electric.glb',      priceAdj: 0 },
+  { id: 'modern-s',   label: 'S-Style Electric',      priceAdj: 0 },
   { id: 'single-cut', label: 'Single Cut Electric',   modelPath: '/models/single-cut-electric.glb',   priceAdj: 0 },
   { id: 'double-cut', label: 'Double Cut Electric',   modelPath: '/models/double-cut-electric.glb',   priceAdj: 180 },
   { id: 'semi-hollow',label: 'Semi-Hollow Electric',  modelPath: '/models/semi-hollow-electric.glb',  priceAdj: 400 },
