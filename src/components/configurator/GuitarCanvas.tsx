@@ -234,11 +234,11 @@ function SStyleVectorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }
       : store.pickups === 'p90'
         ? ['p90', 'p90']
         : ['hum', 'hum']
-  const pickupYs = pickupLayout.length === 3 ? [202, 248, 294] : [220, 286]
+  const pickupYs = pickupLayout.length === 3 ? [224, 267, 310] : [242, 304]
   const hardwareColor = colors.hardware
   const guitarTransform = view === 'detail'
-    ? 'translate(136 12) rotate(-12 276 268) scale(1.08)'
-    : 'translate(96 28) rotate(-12 276 268)'
+    ? 'translate(148 6) rotate(-10 315 268) scale(1.08)'
+    : 'translate(108 24) rotate(-10 315 268)'
   const pickupWidth = (kind: string) => kind === 'single' ? 86 : kind === 'p90' ? 98 : 108
   const pickupHeight = (kind: string) => kind === 'single' ? 16 : kind === 'p90' ? 29 : 31
 
@@ -258,44 +258,44 @@ function SStyleVectorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }
           </linearGradient>
         </defs>
         <g transform={guitarTransform}>
-          <g transform="rotate(-2 330 230)">
-            <rect x="314" y="30" width="58" height="318" rx="18" fill={colors.neck} stroke="#1a0d07" strokeWidth="4" />
-            <rect x="326" y="39" width="34" height="304" rx="11" fill={colors.board} />
-            <path d="M313 21 L374 21 L386 -35 C405 -48 445 -31 437 1 C433 16 416 26 398 26 L382 92 L307 92 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" strokeLinejoin="round" />
-            {[58, 91, 124, 157, 190, 223, 256, 289, 322].map(y => (
-              <line key={y} x1="326" x2="360" y1={y} y2={y} stroke="#DDE2EA" strokeWidth="2" opacity="0.86" />
+          <g transform="rotate(-2 342 214)">
+            <path d="M314 24 L371 24 L362 348 L325 348 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="4" strokeLinejoin="round" />
+            <path d="M326 36 L359 36 L354 342 L331 342 Z" fill={colors.board} />
+            <path d="M314 22 L371 22 L384 -50 C407 -62 442 -42 438 -12 C435 9 413 21 389 17 L377 82 L306 82 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" strokeLinejoin="round" />
+            {[62, 96, 130, 164, 198, 232, 266, 300, 332].map(y => (
+              <line key={y} x1="327" x2="359" y1={y} y2={y} stroke="#DDE2EA" strokeWidth="2" opacity="0.86" />
             ))}
             {[0, 1, 2].map(i => (
               <g key={i} fill={hardwareColor} stroke="#1E2025" strokeWidth="2">
-                <circle cx={398 + i * 12} cy={-10 + i * 18} r="8" />
-                <circle cx={315 - i * 10} cy={-2 + i * 22} r="8" />
+                <circle cx={399 + i * 12} cy={-30 + i * 20} r="7" />
+                <circle cx={316 - i * 8} cy={-22 + i * 22} r="7" />
               </g>
             ))}
           </g>
 
-          <path d="M252 318 C205 308 165 272 169 226 C173 184 211 159 251 171 C267 116 321 93 368 122 C386 94 424 78 458 96 C484 109 490 140 469 158 C445 179 413 179 391 164 C382 189 365 208 338 219 C382 226 414 254 415 296 C416 345 369 381 316 370 C296 419 234 438 190 402 C145 431 91 404 86 353 C82 310 121 282 166 297 C188 306 216 322 252 318 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="13" strokeLinejoin="round" />
-          <path d="M252 318 C205 308 165 272 169 226 C173 184 211 159 251 171 C267 116 321 93 368 122 C386 94 424 78 458 96 C484 109 490 140 469 158 C445 179 413 179 391 164 C382 189 365 208 338 219 C382 226 414 254 415 296 C416 345 369 381 316 370 C296 419 234 438 190 402 C145 431 91 404 86 353 C82 310 121 282 166 297 C188 306 216 322 252 318 Z" fill={bodyFill} stroke="#F2EEE2" strokeWidth="7" strokeLinejoin="round" />
-          <path d="M233 299 C198 286 181 256 190 225 C199 193 230 184 259 192 C279 155 330 142 365 169 C393 190 397 238 377 273 C358 306 318 329 278 331 C264 331 250 318 233 299 Z" fill="url(#sStyleGloss)" opacity="0.58" />
-          <path d="M247 179 C278 143 342 139 375 172 C402 199 399 262 369 292 C344 318 300 337 254 325 C208 313 186 280 196 239 C204 205 225 195 247 179 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="4" strokeLinejoin="round" />
+          <path d="M293 180 C265 148 218 153 197 185 C180 211 185 246 215 265 C170 269 133 294 122 337 C109 388 151 424 202 413 C229 455 289 452 322 411 C367 425 417 398 424 349 C431 296 396 265 352 256 C379 237 393 210 390 176 C419 202 465 195 488 159 C506 130 493 99 463 91 C424 81 389 105 370 141 C342 113 305 109 272 128 C251 140 236 158 227 180 C245 170 272 166 293 180 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="10" strokeLinejoin="round" />
+          <path d="M293 180 C265 148 218 153 197 185 C180 211 185 246 215 265 C170 269 133 294 122 337 C109 388 151 424 202 413 C229 455 289 452 322 411 C367 425 417 398 424 349 C431 296 396 265 352 256 C379 237 393 210 390 176 C419 202 465 195 488 159 C506 130 493 99 463 91 C424 81 389 105 370 141 C342 113 305 109 272 128 C251 140 236 158 227 180 C245 170 272 166 293 180 Z" fill={bodyFill} stroke="#F2EEE2" strokeWidth="5" strokeLinejoin="round" />
+          <path d="M252 199 C279 167 336 162 368 190 C391 211 394 254 377 286 C356 325 308 346 258 334 C215 323 194 291 202 252 C207 225 227 210 252 199 Z" fill="url(#sStyleGloss)" opacity="0.58" />
+          <path d="M249 193 C276 166 336 165 367 194 C389 215 388 263 364 293 C338 324 292 341 247 326 C207 313 190 281 200 244 C207 218 226 205 249 193 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="4" strokeLinejoin="round" />
 
           {pickupLayout.map((kind, i) => (
             <g key={`${kind}-${i}`} transform={`rotate(-5 300 ${pickupYs[i]})`}>
-              <rect x={300 - pickupWidth(kind) / 2} y={pickupYs[i] - pickupHeight(kind) / 2} width={pickupWidth(kind)} height={pickupHeight(kind)} rx={kind === 'single' ? 8 : 6} fill={kind === 'hum' ? '#08080A' : '#EFE9D7'} stroke={kind === 'hum' ? hardwareColor : '#CFC3A4'} strokeWidth="3" />
+              <rect x={300 - pickupWidth(kind) / 2} y={pickupYs[i] - pickupHeight(kind) / 2} width={pickupWidth(kind)} height={pickupHeight(kind)} rx={kind === 'single' ? 5 : 4} fill={kind === 'hum' ? '#08080A' : '#EFE9D7'} stroke={kind === 'hum' ? hardwareColor : '#CFC3A4'} strokeWidth="3" />
               {kind === 'hum' && <line x1="300" x2="300" y1={pickupYs[i] - 14} y2={pickupYs[i] + 14} stroke={hardwareColor} strokeWidth="2" />}
               {kind !== 'hum' && <line x1={300 - pickupWidth(kind) / 2 + 13} x2={300 + pickupWidth(kind) / 2 - 13} y1={pickupYs[i]} y2={pickupYs[i]} stroke="#B8AA87" strokeWidth="2" />}
             </g>
           ))}
 
-          <g transform="rotate(-5 298 345)" fill={hardwareColor} stroke="#1E2025" strokeWidth="3">
-            <rect x={store.bridge === 'trem' || store.bridge === 'bigsby' ? 238 : 254} y="334" width={store.bridge === 'trem' || store.bridge === 'bigsby' ? 124 : 94} height="24" rx="8" />
-            {(store.bridge === 'trem' || store.bridge === 'bigsby') && <rect x="354" y="351" width="10" height="72" rx="5" transform="rotate(-31 359 387)" />}
+          <g transform="rotate(-5 298 355)" fill={hardwareColor} stroke="#1E2025" strokeWidth="3">
+            <rect x={store.bridge === 'trem' || store.bridge === 'bigsby' ? 238 : 254} y="344" width={store.bridge === 'trem' || store.bridge === 'bigsby' ? 124 : 94} height="22" rx="5" />
+            {(store.bridge === 'trem' || store.bridge === 'bigsby') && <rect x="354" y="360" width="8" height="76" rx="4" transform="rotate(-31 358 398)" />}
           </g>
           <g fill={hardwareColor} stroke="#1E2025" strokeWidth="3">
-            {[0, 1, 2].map(i => <circle key={i} cx={401 + i * 28} cy={315 + i * 26} r="12" />)}
-            <rect x="452" y="384" width="40" height="13" rx="6" transform="rotate(-36 472 390)" />
+            {[0, 1, 2].map(i => <circle key={i} cx={400 + i * 27} cy={321 + i * 25} r="10" />)}
+            <rect x="450" y="389" width="38" height="11" rx="5" transform="rotate(-36 469 394)" />
           </g>
           <g stroke="#DDE2EA" strokeWidth="1.4" opacity="0.82">
-            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={329 + i * 5} x2={255 + i * 15} y1="22" y2="354" />)}
+            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={329 + i * 5} x2={255 + i * 15} y1="22" y2="364" />)}
           </g>
         </g>
       </svg>
