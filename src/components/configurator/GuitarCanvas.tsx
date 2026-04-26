@@ -228,67 +228,185 @@ function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colo
   mat.needsUpdate = true
 }
 
-function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
+function StratLayeredModel({ colors, finish }: { colors: ReturnType<typeof makeColors>; finish?: FinishOption }) {
   const pickups = useConfigStore(s => s.pickups)
   const bridge = useConfigStore(s => s.bridge)
-  const pickupZ = [-0.17, -0.05, 0.08]
-  const singleCoils = (
-    <group>
-      {pickupZ.map(z => (
-        <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-          <boxGeometry args={[0.095, 0.017, 0.032]} />
-          <meshStandardMaterial color="#f5f0e6" metalness={0.02} roughness={0.35} />
-        </mesh>
-      ))}
-    </group>
-  )
-  const humbucker = (z: number) => (
-    <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-      <boxGeometry args={[0.11, 0.017, 0.048]} />
-      <meshStandardMaterial color="#101014" metalness={0.22} roughness={0.32} />
-    </mesh>
-  )
 
-  return (
-    <group>
-      {(pickups === 'singlecoil' || pickups === 'hss') && singleCoils}
-      {(pickups === 'dual-hum' || pickups === 'active-hum') && <group>{humbucker(-0.15)}{humbucker(0.04)}</group>}
-      {pickups === 'p90' && <group>{pickupZ.map(z => humbucker(z))}</group>}
-      {pickups === 'hss' && humbucker(-0.17)}
+  const bodyGeometry = useMemo(() => {
+    const shape = new THREE.Shape()
+    shape.moveTo(-0.42, -0.1)
+    shape.bezierCurveTo(-0.5, -0.26, -0.47, -0.44, -0.34, -0.5)
+    shape.bezierCurveTo(-0.18, -0.57, -0.03, -0.5, 0.08, -0.4)
+    shape.bezierCurveTo(0.16, -0.34, 0.21, -0.36, 0.22, -0.44)
+    shape.bezierCurveTo(0.25, -0.58, 0.36, -0.62, 0.44, -0.55)
+    shape.bezierCurveTo(0.54, -0.46, 0.5, -0.3, 0.42, -0.2)
+    shape.bezierCurveTo(0.35, -0.1, 0.33, -0.03, 0.4, 0.05)
+    shape.bezierCurveTo(0.52, 0.16, 0.55, 0.36, 0.42, 0.47)
+    shape.bezierCurveTo(0.31, 0.56, 0.1, 0.52, -0.01, 0.45)
+    shape.bezierCurveTo(-0.07, 0.42, -0.14, 0.43, -0.19, 0.49)
+    shape.bezierCurveTo(-0.3, 0.59, -0.5, 0.54, -0.57, 0.4)
+    shape.bezierCurveTo(-0.64, 0.26, -0.57, 0.06, -0.45, -0.01)
+    shape.bezierCurveTo(-0.39, -0.04, -0.38, -0.06, -0.42, -0.1)
 
-      {bridge === 'trem' && (
-        <mesh position={[-0.03, 0.01, -0.24]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.15, 0.012, 0.06]} />
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.12,
+      bevelEnabled: true,
+      bevelSize: 0.01,
+      bevelThickness: 0.015,
+      bevelSegments: 3,
+      curveSegments: 20,
+    })
+    geometry.rotateX(-Math.PI / 2)
+    geometry.translate(0, -0.045, 0)
+    return geometry
+  }, [])
+
+  const pickguardGeometry = useMemo(() => {
+    const shape = new THREE.Shape()
+    shape.moveTo(-0.32, -0.02)
+    shape.bezierCurveTo(-0.2, -0.23, 0.09, -0.22, 0.2, -0.08)
+    shape.bezierCurveTo(0.28, 0, 0.31, 0.09, 0.24, 0.19)
+    shape.bezierCurveTo(0.13, 0.33, -0.1, 0.3, -0.23, 0.18)
+    shape.bezierCurveTo(-0.34, 0.1, -0.37, 0.04, -0.32, -0.02)
+    const geometry = new THREE.ShapeGeometry(shape)
+    geometry.rotateX(-Math.PI / 2)
+    geometry.translate(0, 0.021, 0)
+    return geometry
+  }, [])
+
+  const bodyColor = finish?.hex ?? colors.finish
+  const pickupPositions: [number, number, number][] = [
+    [-0.03, 0.03, -0.16],
+    [-0.03, 0.03, -0.04],
+    [-0.03, 0.03, 0.08],
+  ]
+
+  const renderPickupAt = (index: number, type: 'single' | 'humbucker' | 'p90') => {
+    const [x, y, z] = pickupPositions[index]
+    const width = type === 'single' ? 0.095 : type === 'p90' ? 0.11 : 0.12
+    const depth = type === 'single' ? 0.034 : 0.048
+    const color = type === 'single' ? '#f5f0e6' : '#111116'
+    return (
+      <mesh key={`${type}-${index}`} position={[x, y, z]}>
+        <boxGeometry args={[width, 0.018, depth]} />
+        <meshStandardMaterial color={color} metalness={0.2} roughness={0.3} />
+      </mesh>
+    )
+  }
+
+  const pickupLayout =
+    pickups === 'hss'
+      ? ['humbucker', 'single', 'single']
+      : pickups === 'singlecoil'
+        ? ['single', 'single', 'single']
+        : pickups === 'dual-hum' || pickups === 'active-hum'
+          ? ['humbucker', 'single', 'humbucker']
+          : pickups === 'p90'
+            ? ['p90', 'p90', 'p90']
+            : ['single', 'single', 'single']
+
+  const bridgeNode =
+    bridge === 'trem' ? (
+      <group>
+        <mesh position={[-0.03, 0.024, -0.275]}>
+          <boxGeometry args={[0.16, 0.016, 0.065]} />
           <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
         </mesh>
-      )}
-      {bridge === 'hardtail' && (
-        <mesh position={[-0.03, 0.01, -0.24]}>
-          <boxGeometry args={[0.13, 0.014, 0.045]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.25} />
+        <mesh position={[-0.09, 0.01, -0.315]} rotation={[0.7, 0, 0]}>
+          <cylinderGeometry args={[0.004, 0.004, 0.1, 12]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
         </mesh>
-      )}
-      {bridge === 'tuneomatic' && (
-        <group>
-          <mesh position={[-0.03, 0.012, -0.22]}>
-            <boxGeometry args={[0.115, 0.012, 0.022]} />
-            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
-          </mesh>
-          <mesh position={[-0.03, 0.012, -0.265]}>
-            <boxGeometry args={[0.085, 0.011, 0.018]} />
-            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
-          </mesh>
-        </group>
-      )}
-      {bridge === 'bigsby' && (
-        <mesh position={[-0.03, 0.01, -0.245]}>
-          <cylinderGeometry args={[0.018, 0.018, 0.13, 16]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
+      </group>
+    ) : bridge === 'hardtail' ? (
+      <mesh position={[-0.03, 0.024, -0.275]}>
+        <boxGeometry args={[0.145, 0.018, 0.05]} />
+        <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.24} />
+      </mesh>
+    ) : bridge === 'tuneomatic' ? (
+      <group>
+        <mesh position={[-0.03, 0.028, -0.25]}>
+          <boxGeometry args={[0.12, 0.014, 0.022]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.24} />
         </mesh>
-      )}
+        <mesh position={[-0.03, 0.028, -0.295]}>
+          <boxGeometry args={[0.092, 0.013, 0.018]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.24} />
+        </mesh>
+      </group>
+    ) : (
+      <group>
+        <mesh position={[-0.03, 0.02, -0.29]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.12, 18]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.24} />
+        </mesh>
+        <mesh position={[-0.03, 0.028, -0.24]}>
+          <boxGeometry args={[0.1, 0.012, 0.02]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.24} />
+        </mesh>
+      </group>
+    )
+
+  return (
+    <group rotation={[0, Math.PI / 2 + 0.08, 0]}>
+      <mesh geometry={bodyGeometry} castShadow receiveShadow>
+        <meshStandardMaterial color={bodyColor} metalness={0.08} roughness={Math.min(finish?.roughness ?? 0.2, 0.26)} />
+      </mesh>
+      <mesh geometry={pickguardGeometry} castShadow receiveShadow>
+        <meshStandardMaterial color="#f2eee2" metalness={0.02} roughness={0.35} />
+      </mesh>
+
+      <mesh position={[0, 0.005, 0.64]} castShadow receiveShadow>
+        <boxGeometry args={[0.1, 0.06, 0.9]} />
+        <meshStandardMaterial color={colors.neck} roughness={0.44} metalness={0.03} />
+      </mesh>
+      <mesh position={[0, 0.04, 0.64]} castShadow receiveShadow>
+        <boxGeometry args={[0.062, 0.014, 0.88]} />
+        <meshStandardMaterial color={colors.board} roughness={0.6} metalness={0} />
+      </mesh>
+      <mesh position={[0, 0.01, 1.16]} castShadow receiveShadow>
+        <boxGeometry args={[0.14, 0.055, 0.24]} />
+        <meshStandardMaterial color={colors.neck} roughness={0.42} metalness={0.02} />
+      </mesh>
+
+      {pickupLayout.map((kind, i) => renderPickupAt(i, kind as 'single' | 'humbucker' | 'p90'))}
+      {bridgeNode}
+
+      <group>
+        {[-0.18, -0.135, -0.09].map(z => (
+          <mesh key={z} position={[0.23, 0.026, z]}>
+            <cylinderGeometry args={[0.022, 0.022, 0.02, 18]} />
+            <meshStandardMaterial color="#101015" roughness={0.35} metalness={0.4} />
+          </mesh>
+        ))}
+      </group>
+
+      <mesh position={[0.205, 0.03, -0.02]} rotation={[0.5, 0.3, 0.1]}>
+        <boxGeometry args={[0.08, 0.008, 0.025]} />
+        <meshStandardMaterial color="#f5f5f5" roughness={0.25} metalness={0.12} />
+      </mesh>
+
+      <group>
+        {[-0.05, -0.03, -0.01, 0.01, 0.03, 0.05].map((x, i) => (
+          <group key={x}>
+            <mesh position={[x, 0.055, 1.19]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.008, 0.008, 0.045, 14]} />
+              <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
+            </mesh>
+            <mesh position={[x, 0.067, 1.22]}>
+              <boxGeometry args={[0.016, 0.012, 0.02]} />
+              <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
+            </mesh>
+            <mesh position={[x, 0.051, 0.48 - i * 0.02]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.0015, 0.0015, 1.52, 8]} />
+              <meshStandardMaterial color="#cfd6df" metalness={0.9} roughness={0.18} />
+            </mesh>
+          </group>
+        ))}
+      </group>
     </group>
   )
 }
+
 
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const store = useConfigStore()
@@ -335,11 +453,20 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
 
+  if (shape.id === 'modern-s') {
+    return (
+      <Center>
+        <group scale={2.35}>
+          <StratLayeredModel colors={colors} finish={finish} />
+        </group>
+      </Center>
+    )
+  }
+
   return (
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && <group scale={0.74}><StratOptionOverlays colors={colors} /></group>}
       </group>
     </Center>
   )
