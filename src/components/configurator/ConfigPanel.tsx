@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import {
   BODY_SHAPES, FINISHES, TOPS, NECK_WOODS,
-  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS,
+  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKGUARDS, PICKUPS,
   DEFAULT_CONFIG, type ConfigKey,
 } from '@/lib/configurator-options'
 import type { ConfigOption } from '@/types'
@@ -126,6 +126,16 @@ export default function ConfigPanel() {
 
         {tab === 'hardware' && (
           <>
+            <div style={S.group}>
+              <GroupLabel value={getLabel(PICKGUARDS, store.pickguard)}>Pickguard</GroupLabel>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                {PICKGUARDS.map(o => (
+                  <div key={o.id} title={o.label} style={{ width: 36, height: 36, borderRadius: 9, background: o.hex, border: `2px solid ${store.pickguard === o.id ? '#C9A45C' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer', transition: 'all 0.15s', transform: store.pickguard === o.id ? 'scale(1.12)' : 'scale(1)', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.35)' }} onClick={() => store.setOption('pickguard', o.id)} />
+                ))}
+              </div>
+              <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)' }}>{PICKGUARDS.find(p => p.id === store.pickguard)?.label}</p>
+            </div>
+
             <div style={S.group}>
               <GroupLabel value={getLabel(HARDWARE_COLORS, store.hardware)}>Hardware</GroupLabel>
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
