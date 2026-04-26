@@ -342,20 +342,12 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
           <g data-part="body">
             <path
               d="M391 227 C352 172 300 151 250 174 C221 187 207 212 213 239 C217 259 232 270 256 274 C212 287 180 321 171 367 C160 425 201 472 266 476 C319 479 363 450 383 405 C405 455 465 468 515 435 C562 404 578 350 551 306 C532 275 501 262 462 268 C501 247 515 211 492 185 C462 151 413 177 391 227 Z"
-              fill="#EEE7D6"
-              stroke="#D8C89E"
-              strokeWidth="16"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M391 227 C352 172 300 151 250 174 C221 187 207 212 213 239 C217 259 232 270 256 274 C212 287 180 321 171 367 C160 425 201 472 266 476 C319 479 363 450 383 405 C405 455 465 468 515 435 C562 404 578 350 551 306 C532 275 501 262 462 268 C501 247 515 211 492 185 C462 151 413 177 391 227 Z"
               fill={bodyFill}
-              stroke="rgba(255,255,255,0.28)"
-              strokeWidth="5"
+              stroke="rgba(255,255,255,0.34)"
+              strokeWidth="4"
               strokeLinejoin="round"
             />
-            <path d="M246 291 C207 308 190 341 194 375 C201 425 243 455 292 452 C337 449 365 420 381 386 C410 427 460 436 501 407 C535 383 543 337 520 309 C498 282 462 281 427 294 C462 263 469 225 442 211 C415 198 391 222 375 262 C341 224 296 226 271 250 C254 266 250 282 246 291 Z" fill="url(#sStyleBodyGloss)" opacity="0.62" />
-            <path d="M229 391 C257 423 315 427 358 391" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="4" strokeLinecap="round" />
+            <path d="M230 390 C258 423 315 427 358 391" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" strokeLinecap="round" />
             <path d="M412 237 C433 212 460 206 481 219" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="4" strokeLinecap="round" />
           </g>
 
