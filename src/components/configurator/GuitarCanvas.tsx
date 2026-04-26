@@ -30,7 +30,6 @@ const CAMERA_DISTANCE: Record<string, number> = {
 
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?: 'solid' | 'burst'; burstEdgeHex?: string }
-type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -161,131 +160,156 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   mat.needsUpdate = true
 }
 
-function parseObjectIndex(name: string) {
-  const match = /Object_(\d+)/i.exec(name)
-  return match ? Number(match[1]) : -1
+function getTopFigureColor(top: string) {
+  if (top === 'flame') return '#D2A56E'
+  if (top === 'quilted') return '#C59157'
+  if (top === 'burl') return '#8C5B36'
+  if (top === 'spalted') return '#5E4B38'
+  return '#B37A43'
 }
 
-function stratPartRole(mesh: THREE.Mesh, materialName: string): StratPartRole {
-  const objectIndex = parseObjectIndex(mesh.name)
-  const key = `${mesh.name} ${materialName}`.toLowerCase()
-  if (key.includes('bodymaterial')) return 'body'
-  if (key.includes('stringmaterial') || key.includes('metalpartsmaterial')) return 'hardware'
-  if (key.includes('neckmaterial')) {
-    if (objectIndex === 32) return 'fretboard'
-    return 'neck'
-  }
-  return 'other'
-}
-
-function applyModernSBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined) {
-  mat.color = new THREE.Color(finish?.hex ?? '#D4B896')
-  mat.metalness = 0.12
-  mat.roughness = Math.min(finish?.roughness ?? 0.18, 0.24)
-  if (finish?.finishStyle !== 'burst') {
-    mat.customProgramCacheKey = () => `modern-s-solid-${finish?.id ?? 'default'}`
-    return
-  }
-  mat.onBeforeCompile = shader => {
-    shader.uniforms.uBurstCenter = { value: new THREE.Color(finish.hex ?? '#A35E28') }
-    shader.uniforms.uBurstEdge = { value: new THREE.Color(finish.burstEdgeHex ?? '#150706') }
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec2 vBurstUv;')
-      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvBurstUv = uv;')
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uBurstCenter;\nuniform vec3 uBurstEdge;\nvarying vec2 vBurstUv;')
-      .replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-float d = distance(vBurstUv, vec2(0.52, 0.5));
-vec3 burstMix = mix(uBurstCenter, uBurstEdge, smoothstep(0.28, 0.82, d));
-diffuseColor.rgb *= burstMix;`
-      )
-  }
-  mat.customProgramCacheKey = () => `modern-s-burst-${finish?.id ?? 'default'}-${finish?.hex ?? ''}-${finish?.burstEdgeHex ?? ''}`
-}
-
-function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>, finish?: FinishOption) {
-  const mat = material as THREE.MeshStandardMaterial
-  if (!mat.isMeshStandardMaterial) return
-  const role = stratPartRole(mesh, mat.name)
-  mat.envMapIntensity = 1.8
-  if (role === 'body') {
-    applyModernSBodyFinish(mat, finish)
-  } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.03
-    mat.roughness = 0.45
-  } else if (role === 'fretboard') {
-    mat.color = new THREE.Color(colors.board)
-    mat.metalness = 0
-    mat.roughness = 0.62
-  } else if (role === 'hardware') {
-    mat.color = new THREE.Color(colors.hardware)
-    mat.metalness = 0.95
-    mat.roughness = 0.2
-  }
-  mat.needsUpdate = true
-}
-
-function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
+function SStyleLayeredRenderer({ colors, finish }: { colors: ReturnType<typeof makeColors>; finish?: FinishOption }) {
+  const top = useConfigStore(s => s.top)
   const pickups = useConfigStore(s => s.pickups)
   const bridge = useConfigStore(s => s.bridge)
-  const pickupZ = [-0.17, -0.05, 0.08]
-  const singleCoils = (
-    <group>
-      {pickupZ.map(z => (
-        <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-          <boxGeometry args={[0.095, 0.017, 0.032]} />
-          <meshStandardMaterial color="#f5f0e6" metalness={0.02} roughness={0.35} />
-        </mesh>
-      ))}
-    </group>
-  )
-  const humbucker = (z: number) => (
-    <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-      <boxGeometry args={[0.11, 0.017, 0.048]} />
-      <meshStandardMaterial color="#101014" metalness={0.22} roughness={0.32} />
-    </mesh>
-  )
+  const burstCenter = finish?.hex ?? '#B6763D'
+  const burstEdge = finish?.burstEdgeHex ?? '#130706'
+  const figureTint = getTopFigureColor(top)
 
   return (
-    <group>
-      {(pickups === 'singlecoil' || pickups === 'hss') && singleCoils}
-      {(pickups === 'dual-hum' || pickups === 'active-hum') && <group>{humbucker(-0.15)}{humbucker(0.04)}</group>}
-      {pickups === 'p90' && <group>{pickupZ.map(z => humbucker(z))}</group>}
-      {pickups === 'hss' && humbucker(-0.17)}
+    <group position={[0.1, -0.18, 0]} rotation={[0.14, -0.9, 0]}>
+      <mesh castShadow receiveShadow position={[0, -0.05, 0]}>
+        <capsuleGeometry args={[0.64, 1.38, 20, 40]} />
+        <meshStandardMaterial color={colors.finish} metalness={0.12} roughness={Math.min(colors.finishRoughness, 0.24)} />
+      </mesh>
+      {finish?.finishStyle === 'burst' && (
+        <mesh castShadow receiveShadow position={[0, -0.05, 0.001]} scale={[0.99, 0.99, 1]}>
+          <capsuleGeometry args={[0.62, 1.35, 20, 40]} />
+          <meshStandardMaterial color={burstCenter} metalness={0.08} roughness={0.2} />
+        </mesh>
+      )}
+      {finish?.finishStyle === 'burst' && (
+        <mesh position={[0, -0.05, -0.01]} scale={[1.02, 1.02, 1]}>
+          <torusGeometry args={[0.77, 0.19, 20, 80]} />
+          <meshStandardMaterial color={burstEdge} metalness={0.06} roughness={0.26} />
+        </mesh>
+      )}
+      {top !== 'solid' && (
+        <mesh position={[-0.01, -0.04, 0.015]} rotation={[0, 0, -0.03]}>
+          <capsuleGeometry args={[0.56, 1.2, 18, 32]} />
+          <meshStandardMaterial color={figureTint} transparent opacity={0.14} metalness={0.03} roughness={0.28} />
+        </mesh>
+      )}
+
+      <mesh castShadow receiveShadow position={[0.16, 0.05, 0.03]} rotation={[0.02, 0.05, -0.26]}>
+        <capsuleGeometry args={[0.33, 0.74, 14, 28]} />
+        <meshStandardMaterial color="#F3EFE6" metalness={0.02} roughness={0.34} />
+      </mesh>
+
+      <mesh castShadow receiveShadow position={[0.01, 0.87, 0]}>
+        <boxGeometry args={[0.18, 1.64, 0.12]} />
+        <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.44} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0.01, 0.95, 0.052]}>
+        <boxGeometry args={[0.11, 1.56, 0.03]} />
+        <meshStandardMaterial color={colors.board} metalness={0} roughness={0.62} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0.03, 1.82, 0.01]} rotation={[0, 0, -0.22]}>
+        <boxGeometry args={[0.2, 0.34, 0.12]} />
+        <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.44} />
+      </mesh>
+
+      {(pickups === 'singlecoil' || pickups === 'hss') && (
+        <group>
+          {[-0.2, -0.02, 0.16].map(z => (
+            <mesh key={z} position={[0.04, -0.02, z]} rotation={[0, 0.02, -0.05]}>
+              <boxGeometry args={[0.125, 0.02, 0.048]} />
+              <meshStandardMaterial color="#F7F3EC" metalness={0.03} roughness={0.36} />
+            </mesh>
+          ))}
+        </group>
+      )}
+      {(pickups === 'dual-hum' || pickups === 'active-hum') && (
+        <group>
+          {[-0.17, 0.09].map(z => (
+            <mesh key={z} position={[0.05, -0.02, z]} rotation={[0, 0.02, -0.05]}>
+              <boxGeometry args={[0.14, 0.02, 0.065]} />
+              <meshStandardMaterial color="#0F1015" metalness={0.24} roughness={0.3} />
+            </mesh>
+          ))}
+        </group>
+      )}
+      {pickups === 'p90' && (
+        <group>
+          {[-0.18, -0.01, 0.15].map(z => (
+            <mesh key={z} position={[0.05, -0.02, z]} rotation={[0, 0.02, -0.05]}>
+              <boxGeometry args={[0.135, 0.02, 0.055]} />
+              <meshStandardMaterial color="#0F1015" metalness={0.2} roughness={0.32} />
+            </mesh>
+          ))}
+        </group>
+      )}
+      {pickups === 'hss' && (
+        <mesh position={[0.05, -0.02, -0.2]} rotation={[0, 0.02, -0.05]}>
+          <boxGeometry args={[0.145, 0.02, 0.065]} />
+          <meshStandardMaterial color="#101217" metalness={0.24} roughness={0.3} />
+        </mesh>
+      )}
 
       {bridge === 'trem' && (
-        <mesh position={[-0.03, 0.01, -0.24]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.15, 0.012, 0.06]} />
+        <mesh position={[0.03, -0.02, -0.31]}>
+          <boxGeometry args={[0.2, 0.028, 0.085]} />
           <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
         </mesh>
       )}
       {bridge === 'hardtail' && (
-        <mesh position={[-0.03, 0.01, -0.24]}>
-          <boxGeometry args={[0.13, 0.014, 0.045]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.25} />
+        <mesh position={[0.03, -0.02, -0.305]}>
+          <boxGeometry args={[0.18, 0.03, 0.06]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.94} roughness={0.23} />
         </mesh>
       )}
       {bridge === 'tuneomatic' && (
         <group>
-          <mesh position={[-0.03, 0.012, -0.22]}>
-            <boxGeometry args={[0.115, 0.012, 0.022]} />
+          <mesh position={[0.03, -0.018, -0.28]}>
+            <boxGeometry args={[0.16, 0.025, 0.03]} />
             <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
           </mesh>
-          <mesh position={[-0.03, 0.012, -0.265]}>
-            <boxGeometry args={[0.085, 0.011, 0.018]} />
+          <mesh position={[0.03, -0.02, -0.33]}>
+            <boxGeometry args={[0.12, 0.023, 0.026]} />
             <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
           </mesh>
         </group>
       )}
       {bridge === 'bigsby' && (
-        <mesh position={[-0.03, 0.01, -0.245]}>
-          <cylinderGeometry args={[0.018, 0.018, 0.13, 16]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
+        <mesh position={[0.03, -0.01, -0.315]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.022, 0.022, 0.16, 18]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.21} />
         </mesh>
       )}
+
+      <group>
+        {[0, 1, 2, 3, 4, 5].map(i => (
+          <mesh key={i} position={[0.11 - i * 0.035, 1.95 + i * 0.01, 0.075]} rotation={[0, 0, -0.12]}>
+            <cylinderGeometry args={[0.018, 0.018, 0.03, 16]} />
+            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
+          </mesh>
+        ))}
+        {[[-0.24, -0.34], [-0.3, -0.22], [-0.2, -0.14], [0.2, -0.12]].map(([x, z], idx) => (
+          <mesh key={idx} position={[x, -0.02, z]}>
+            <cylinderGeometry args={[0.03, 0.03, 0.02, 24]} />
+            <meshStandardMaterial color={colors.hardware} metalness={0.92} roughness={0.24} />
+          </mesh>
+        ))}
+      </group>
+
+      <group>
+        {[0, 1, 2, 3, 4, 5].map(i => (
+          <mesh key={i} position={[0.01 + i * 0.012, 0.66, -0.06]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.0018, 0.0018, 2.4, 12]} />
+            <meshStandardMaterial color="#D8DDE4" metalness={0.96} roughness={0.18} />
+          </mesh>
+        ))}
+      </group>
     </group>
   )
 }
@@ -297,9 +321,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const useLayeredModernS = shape.id === 'modern-s'
   const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
   const { model, center, scale, maxDimension } = useMemo(() => {
+    if (useLayeredModernS) {
+      return { model: null, center: new THREE.Vector3(), scale: 1, maxDimension: 1 }
+    }
     const clone = scene.clone(true)
     const box = new THREE.Box3().setFromObject(clone)
     const size = box.getSize(new THREE.Vector3())
@@ -307,10 +335,11 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
     const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
     return { model: clone, center, scale: targetSize / maxDimension, maxDimension }
-  }, [scene, shape.id])
+  }, [scene, shape.id, useLayeredModernS])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
+    if (!model) return
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
@@ -323,10 +352,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach(mat => {
-        if (shape.id === 'modern-s') {
-          enhanceModernSMaterial(mesh, mat, colors, finish)
-          return
-        }
         enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
       })
     })
@@ -338,8 +363,11 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   return (
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
-        <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && <group scale={0.74}><StratOptionOverlays colors={colors} /></group>}
+        {useLayeredModernS ? (
+          <SStyleLayeredRenderer colors={colors} finish={finish} />
+        ) : (
+          <primitive object={model!} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+        )}
       </group>
     </Center>
   )
