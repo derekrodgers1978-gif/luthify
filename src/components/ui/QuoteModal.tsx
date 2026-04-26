@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import { BUILDERS } from '@/lib/builders-data'
-import { FINISHES, TOPS, HARDWARE_COLORS, FRETBOARDS, BODY_SHAPES, BRIDGES, PICKUPS, NECK_WOODS } from '@/lib/configurator-options'
+import { FINISHES, TOPS, HARDWARE_COLORS, FRETBOARDS, BODY_SHAPES, BRIDGES, PICKUPS, NECK_WOODS, PICKGUARDS, KNOBS, SWITCH_TIPS, TUNERS, STRINGS } from '@/lib/configurator-options'
 
 interface Props { open: boolean; onClose: () => void; preselectedBuilderId?: string }
 
@@ -43,6 +43,11 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
   const shape  = BODY_SHAPES.find(s => s.id === store.shape)
   const bridge = BRIDGES.find(b => b.id === store.bridge)
   const pickups = PICKUPS.find(p => p.id === store.pickups)
+  const pickguard = PICKGUARDS.find(p => p.id === store.pickguard)
+  const knobs = KNOBS.find(k => k.id === store.knobs)
+  const switchTip = SWITCH_TIPS.find(s => s.id === store.switchTip)
+  const tuners = TUNERS.find(t => t.id === store.tuners)
+  const strings = STRINGS.find(s => s.id === store.strings)
 
   const specTags = [
     { label: shape?.label ?? store.shape, key: 'shape' },
@@ -53,6 +58,11 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
     { label: fb?.label, key: 'fretboard' },
     { label: bridge?.label ?? store.bridge, key: 'bridge' },
     { label: pickups?.label ?? store.pickups, key: 'pickups' },
+    { label: pickguard?.label ?? store.pickguard, key: 'pickguard' },
+    { label: knobs?.label ?? store.knobs, key: 'knobs' },
+    { label: switchTip?.label ?? store.switchTip, key: 'switchTip' },
+    { label: tuners?.label ?? store.tuners, key: 'tuners' },
+    { label: strings?.label ?? store.strings, key: 'strings' },
   ]
 
   const toggleBuilder = (id: string) => {

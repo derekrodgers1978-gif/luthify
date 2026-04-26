@@ -36,6 +36,11 @@ interface ConfigStore {
   hardware:  string
   bridge:    string
   pickups:   string
+  pickguard: string
+  knobs:     string
+  switchTip: string
+  tuners:    string
+  strings:   string
   livePrice: number
 
   // Saved builds
@@ -77,6 +82,8 @@ export const useConfigStore = create<ConfigStore>()(
           shape: state.shape, finish: state.finish, top: state.top,
           neck: state.neck, fretboard: state.fretboard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+          pickguard: state.pickguard, knobs: state.knobs, switchTip: state.switchTip,
+          tuners: state.tuners, strings: state.strings,
           livePrice: state.livePrice,
         }
       },
@@ -104,6 +111,8 @@ export const useConfigStore = create<ConfigStore>()(
             shape: state.shape, finish: state.finish, top: state.top,
             neck: state.neck, fretboard: state.fretboard,
             hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+            pickguard: state.pickguard, knobs: state.knobs, switchTip: state.switchTip,
+            tuners: state.tuners, strings: state.strings,
           },
           price: state.livePrice,
           createdAt: new Date().toISOString(),
@@ -121,6 +130,8 @@ export const useConfigStore = create<ConfigStore>()(
             shape: state.shape, finish: state.finish, top: state.top,
             neck: state.neck, fretboard: state.fretboard,
             hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+            pickguard: state.pickguard, knobs: state.knobs, switchTip: state.switchTip,
+            tuners: state.tuners, strings: state.strings,
           },
           price: state.livePrice,
           createdAt: new Date().toISOString(),
@@ -150,6 +161,8 @@ export const useConfigStore = create<ConfigStore>()(
           shape: state.shape, finish: state.finish, top: state.top,
           neck: state.neck, fretboard: state.fretboard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+          pickguard: state.pickguard, knobs: state.knobs, switchTip: state.switchTip,
+          tuners: state.tuners, strings: state.strings,
         })
       },
     }),
@@ -159,6 +172,8 @@ export const useConfigStore = create<ConfigStore>()(
         shape: state.shape, finish: state.finish, top: state.top,
         neck: state.neck, fretboard: state.fretboard,
         hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+        pickguard: state.pickguard, knobs: state.knobs, switchTip: state.switchTip,
+        tuners: state.tuners, strings: state.strings,
         savedBuilds: state.savedBuilds,
         accountBuilds: state.accountBuilds,
         quoteSubmissions: state.quoteSubmissions,
