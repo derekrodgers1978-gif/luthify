@@ -350,6 +350,84 @@ function ModernSInstrument({ view }: { view: 'standard' | 'detail' }) {
   )
 }
 
+function ModernSSvgPreview({ view }: { view: 'standard' | 'detail' | 'reset' }) {
+  const store = useConfigStore()
+  const finish = FINISHES.find(f => f.id === store.finish)
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const colors = makeColors(finish, neck, board, hw)
+  const bodyFill = finish?.id === 'sunburst' ? 'url(#modernSBurst)' : colors.finish
+  const stringColor = hw?.id === 'black' ? '#3a3a42' : '#E7EBF2'
+  const pickupYs = store.pickups === 'singlecoil' || store.pickups === 'hss' ? [224, 258, 292] : [232, 286]
+  const humbucker = (index: number) => store.pickups !== 'singlecoil' && (store.pickups !== 'hss' || index === pickupYs.length - 1)
+  const bridgeLabel = store.bridge === 'bigsby' ? 'M' : store.bridge === 'trem' ? 'T' : store.bridge === 'hardtail' ? 'H' : ''
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
+      <svg viewBox="0 0 760 620" role="img" aria-label="S-Style Electric finish preview" style={{ width: view === 'detail' ? 'min(96%, 980px)' : 'min(90%, 900px)', height: view === 'detail' ? 'min(92%, 650px)' : 'min(86%, 620px)', filter: 'drop-shadow(0 30px 70px rgba(0,0,0,0.5))', transition: 'width 0.25s, height 0.25s' }}>
+        <defs>
+          <radialGradient id="modernSBurst" cx="47%" cy="58%" r="66%">
+            <stop offset="0%" stopColor="#D98B32" />
+            <stop offset="48%" stopColor={colors.finish} />
+            <stop offset="92%" stopColor="#150704" />
+          </radialGradient>
+          <linearGradient id="modernSGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.32)" />
+            <stop offset="46%" stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
+          </linearGradient>
+        </defs>
+        <g transform="translate(190 40) rotate(-10 205 285)">
+          <g id="neck">
+            <path d="M180 42 L224 42 L239 391 L165 391 Z" fill={colors.neck} stroke="#1b0e08" strokeWidth="5" strokeLinejoin="round" />
+            <path id="headstock" d="M175 36 C138 50 126 119 146 165 C165 207 230 192 232 139 C234 97 218 62 219 37 Z" fill={colors.neck} stroke="#1b0e08" strokeWidth="5" strokeLinejoin="round" />
+          </g>
+          <path id="fretboard" d="M185 54 L219 54 L228 383 L176 383 Z" fill={colors.board} stroke="rgba(255,255,255,0.16)" strokeWidth="2" />
+          <rect id="nut" x="178" y="48" width="48" height="9" rx="3" fill="#F2EEE2" />
+          {Array.from({ length: 18 }).map((_, i) => (
+            <line key={i} x1={184 + i * 0.28} x2={220 - i * 0.28} y1={76 + i * 17} y2={76 + i * 17} stroke="#DDE2EA" strokeWidth="2" opacity="0.85" />
+          ))}
+          {[145, 197, 249, 301].map(y => <circle key={y} cx="202" cy={y} r="4" fill="#EAE0C8" opacity="0.9" />)}
+          <path id="body" d="M215 356 C256 311 328 296 379 332 C426 365 419 428 367 445 C431 483 424 565 366 598 C303 633 235 594 222 532 C188 590 103 596 63 538 C27 486 53 431 104 414 C43 388 41 307 96 274 C145 244 193 286 215 356 Z" fill={bodyFill} stroke="#E8DCC6" strokeWidth="8" strokeLinejoin="round" />
+          <path id="body-gloss" d="M224 368 C262 329 318 319 359 347 C396 373 386 415 337 427 C386 462 383 528 336 554 C288 580 242 548 231 496 C199 541 129 552 93 511 C65 479 82 442 128 430 C77 404 81 337 126 311 C166 288 200 326 224 368 Z" fill="url(#modernSGloss)" opacity="0.58" />
+          <path id="pickguard" d="M166 365 C191 323 242 331 261 372 C318 382 349 426 327 474 C306 518 256 522 230 485 C186 506 134 488 123 446 C114 411 135 386 166 365 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="5" strokeLinejoin="round" />
+          <g id="pickups" transform="rotate(-8 224 260)">
+            {pickupYs.map((y, i) => (
+              <g key={y}>
+                <rect x={humbucker(i) ? 176 : 185} y={y} width={humbucker(i) ? 76 : 58} height={humbucker(i) ? 23 : 16} rx="5" fill={store.pickups === 'p90' ? '#F2EEE2' : '#07070A'} stroke="#26262b" strokeWidth="3" />
+                {humbucker(i) ? <rect x="187" y={y + 8} width="54" height="7" rx="3" fill="#18181c" /> : [194, 203, 212, 221, 230, 239].map(x => <circle key={x} cx={x} cy={y + 8} r="2.8" fill="#C9CED6" />)}
+              </g>
+            ))}
+          </g>
+          <g id="bridge" transform="rotate(-3 214 392)">
+            <rect x="171" y="392" width={store.bridge === 'bigsby' ? 92 : 80} height="25" rx="6" fill={colors.hardware} stroke="#1E2025" strokeWidth="4" />
+            {[0, 1, 2, 3, 4, 5].map(i => <rect key={i} x={180 + i * 11} y="397" width="7" height="16" rx="2" fill="#E4E8EF" />)}
+            {bridgeLabel && <text x="251" y="411" fill="#09090B" fontSize="14" fontWeight="700">{bridgeLabel}</text>}
+            {store.bridge === 'bigsby' && <ellipse cx="212" cy="455" rx="34" ry="12" fill="none" stroke={colors.hardware} strokeWidth="8" />}
+            {(store.bridge === 'bigsby' || store.bridge === 'trem') && <line x1="251" x2="302" y1="402" y2="365" stroke={colors.hardware} strokeWidth="6" strokeLinecap="round" />}
+          </g>
+          <g id="knobs" fill={colors.hardware} stroke="#1E2025" strokeWidth="3">
+            <circle cx="314" cy="483" r="15" />
+            <circle cx="287" cy="518" r="15" />
+            <circle cx="247" cy="539" r="15" />
+          </g>
+          <g id="switch" transform="rotate(-32 317 405)">
+            <circle cx="317" cy="405" r="8" fill={colors.hardware} stroke="#1E2025" strokeWidth="3" />
+            <line x1="317" x2="317" y1="397" y2="375" stroke="#EDE7D5" strokeWidth="5" strokeLinecap="round" />
+          </g>
+          <g id="tuners" fill={colors.hardware} stroke="#1E2025" strokeWidth="2">
+            {[0, 1, 2, 3, 4, 5].map(i => <rect key={i} x={i < 3 ? 124 : 221} y={76 + (i % 3) * 25} width="26" height="12" rx="4" />)}
+          </g>
+          <g id="strings" stroke={stringColor} strokeWidth="1.25" opacity="0.82">
+            {[-15, -9, -3, 3, 9, 15].map((x, i) => <line key={x} x1={202 + x} x2={181 + i * 11} y1="52" y2="405" />)}
+          </g>
+        </g>
+      </svg>
+    </div>
+  )
+}
+
 function isLikelyPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
   if (!mesh.geometry) return false
   mesh.geometry.computeBoundingBox()
@@ -624,7 +702,9 @@ export default function GuitarCanvas() {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
+      {shape === 'modern-s' ? (
+        <ModernSSvgPreview view={view} />
+      ) : showSingleCutFallback ? (
         <SingleCutFinishFallback />
       ) : (
         <Canvas
