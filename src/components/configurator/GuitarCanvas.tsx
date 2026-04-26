@@ -343,12 +343,12 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
         </defs>
 
         <g transform="translate(112 16) rotate(-8 360 302)">
-          <g data-part="neck">
+          <g data-part="neck" transform="translate(-18 24)">
             <path d="M360 60 L418 60 L407 360 L371 360 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1609" strokeWidth="4" />
             <path d="M360 60 L418 60 L407 360 L371 360 Z" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
           </g>
 
-          <g data-part="fretboard">
+          <g data-part="fretboard" transform="translate(-18 24)">
             <path d="M374 68 L405 68 L398 359 L381 359 Z" fill={colors.board} stroke="#110805" strokeWidth="3" />
             {[92, 118, 145, 173, 202, 232, 263, 295, 329].map((y, i) => (
               <line key={y} x1={374.5 + i * 0.7} x2={404.5 - i * 0.55} y1={y} y2={y} stroke="#D5D8D8" strokeWidth="2" opacity="0.86" />
@@ -358,7 +358,7 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
             ))}
           </g>
 
-          <g data-part="tuners">
+          <g data-part="tuners" transform="translate(-18 24)">
             <path d="M350 54 C348 30 365 12 394 6 C431 0 456 17 463 43 C454 57 439 64 418 64 L360 64 C356 63 352 60 350 54 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" />
             <path d="M399 10 C430 10 450 23 455 43 C441 49 430 50 415 50 L374 50 C372 31 381 16 399 10 Z" fill="rgba(255,255,255,0.12)" />
             {[0, 1, 2].map(i => (
@@ -401,7 +401,7 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
             <path d="M300 304 C326 307 345 309 366 307" fill="none" stroke="rgba(0,0,0,0.16)" strokeWidth="3" strokeLinecap="round" />
           </g>
 
-          <g data-part="pickguard">
+          <g data-part="pickguard" transform="translate(-42 0)">
             <path
               d="M342 271 C368 250 399 254 421 275 C445 298 476 304 508 300 C523 318 525 348 509 375 C491 404 458 413 426 401 C398 391 377 370 350 363 C330 358 315 367 303 383 C295 357 300 320 318 294 C326 283 334 276 342 271 Z"
               fill="#F2EEE2"
@@ -412,7 +412,7 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
             <path d="M344 278 C379 260 407 267 432 287 C456 305 486 311 514 303" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" />
           </g>
 
-          <g data-part="pickups">
+          <g data-part="pickups" transform="translate(-42 0)">
             {pickupLayout.map((type, i) => {
               const y = pickupYs[i]
               const x = type === 'p90' ? 365 : 374
@@ -430,7 +430,7 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
             })}
           </g>
 
-          <g data-part="bridge" transform="rotate(-6 415 392)">
+          <g data-part="bridge" transform="translate(-42 0) rotate(-6 415 392)">
             <rect x="360" y="382" width="120" height="24" rx="7" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />
             {[0, 1, 2, 3, 4, 5].map(i => (
               <rect key={i} x={370 + i * 17} y="377" width="11" height="33" rx="3" fill={colors.hardware} stroke="#25272d" strokeWidth="1.4" />
@@ -441,13 +441,13 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
             {bridgeLabel === 'tuneomatic' && <rect x="349" y="421" width="137" height="17" rx="8" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
           </g>
 
-          <g data-part="knobs" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3">
+          <g data-part="knobs" transform="translate(-42 0)" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3">
             <circle cx="492" cy="351" r="16" />
             <circle cx="513" cy="392" r="15" />
             <circle cx="467" cy="418" r="14" />
           </g>
 
-          <g data-part="switch" transform="rotate(-28 511 321)">
+          <g data-part="switch" transform="translate(-42 0) rotate(-28 511 321)">
             <rect x="493" y="314" width="42" height="12" rx="6" fill="#EEE7D6" stroke="#20232A" strokeWidth="2.5" />
             <line x1="514" x2="528" y1="320" y2="302" stroke="url(#sStyleMetal)" strokeWidth="4" strokeLinecap="round" />
             <circle cx="531" cy="299" r="5" fill={colors.hardware} stroke="#20232A" strokeWidth="2" />
@@ -455,7 +455,7 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
 
           <g data-part="strings" stroke="#DDE2EA" strokeLinecap="round" opacity="0.86">
             {[0, 1, 2, 3, 4, 5].map(i => (
-              <line key={i} x1={379 + i * 5} y1="60" x2={374 + i * 16} y2="441" strokeWidth={1.1 + i * 0.14} />
+              <line key={i} x1={361 + i * 5} y1="84" x2={332 + i * 16} y2="441" strokeWidth={1.1 + i * 0.14} />
             ))}
           </g>
         </g>
