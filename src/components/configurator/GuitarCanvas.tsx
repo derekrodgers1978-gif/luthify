@@ -29,7 +29,8 @@ const CAMERA_DISTANCE: Record<string, number> = {
 }
 
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
-type FinishOption = { id: string; hex?: string; roughness?: number }
+type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?: 'solid' | 'burst'; burstEdgeHex?: string }
+type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -160,6 +161,135 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   mat.needsUpdate = true
 }
 
+function parseObjectIndex(name: string) {
+  const match = /Object_(\d+)/i.exec(name)
+  return match ? Number(match[1]) : -1
+}
+
+function stratPartRole(mesh: THREE.Mesh, materialName: string): StratPartRole {
+  const objectIndex = parseObjectIndex(mesh.name)
+  const key = `${mesh.name} ${materialName}`.toLowerCase()
+  if (key.includes('bodymaterial')) return 'body'
+  if (key.includes('stringmaterial') || key.includes('metalpartsmaterial')) return 'hardware'
+  if (key.includes('neckmaterial')) {
+    if (objectIndex === 32) return 'fretboard'
+    return 'neck'
+  }
+  return 'other'
+}
+
+function applyModernSBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined) {
+  mat.color = new THREE.Color(finish?.hex ?? '#D4B896')
+  mat.metalness = 0.12
+  mat.roughness = Math.min(finish?.roughness ?? 0.18, 0.24)
+  if (finish?.finishStyle !== 'burst') {
+    mat.customProgramCacheKey = () => `modern-s-solid-${finish?.id ?? 'default'}`
+    return
+  }
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uBurstCenter = { value: new THREE.Color(finish.hex ?? '#A35E28') }
+    shader.uniforms.uBurstEdge = { value: new THREE.Color(finish.burstEdgeHex ?? '#150706') }
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vBurstUv;')
+      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvBurstUv = uv;')
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uBurstCenter;\nuniform vec3 uBurstEdge;\nvarying vec2 vBurstUv;')
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+float d = distance(vBurstUv, vec2(0.52, 0.5));
+vec3 burstMix = mix(uBurstCenter, uBurstEdge, smoothstep(0.28, 0.82, d));
+diffuseColor.rgb *= burstMix;`
+      )
+  }
+  mat.customProgramCacheKey = () => `modern-s-burst-${finish?.id ?? 'default'}-${finish?.hex ?? ''}-${finish?.burstEdgeHex ?? ''}`
+}
+
+function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>, finish?: FinishOption) {
+  const mat = material as THREE.MeshStandardMaterial
+  if (!mat.isMeshStandardMaterial) return
+  const role = stratPartRole(mesh, mat.name)
+  mat.envMapIntensity = 1.8
+  if (role === 'body') {
+    applyModernSBodyFinish(mat, finish)
+  } else if (role === 'neck') {
+    mat.color = new THREE.Color(colors.neck)
+    mat.metalness = 0.03
+    mat.roughness = 0.45
+  } else if (role === 'fretboard') {
+    mat.color = new THREE.Color(colors.board)
+    mat.metalness = 0
+    mat.roughness = 0.62
+  } else if (role === 'hardware') {
+    mat.color = new THREE.Color(colors.hardware)
+    mat.metalness = 0.95
+    mat.roughness = 0.2
+  }
+  mat.needsUpdate = true
+}
+
+function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
+  const pickups = useConfigStore(s => s.pickups)
+  const bridge = useConfigStore(s => s.bridge)
+  const pickupZ = [-0.17, -0.05, 0.08]
+  const singleCoils = (
+    <group>
+      {pickupZ.map(z => (
+        <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
+          <boxGeometry args={[0.095, 0.017, 0.032]} />
+          <meshStandardMaterial color="#f5f0e6" metalness={0.02} roughness={0.35} />
+        </mesh>
+      ))}
+    </group>
+  )
+  const humbucker = (z: number) => (
+    <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
+      <boxGeometry args={[0.11, 0.017, 0.048]} />
+      <meshStandardMaterial color="#101014" metalness={0.22} roughness={0.32} />
+    </mesh>
+  )
+
+  return (
+    <group>
+      {(pickups === 'singlecoil' || pickups === 'hss') && singleCoils}
+      {(pickups === 'dual-hum' || pickups === 'active-hum') && <group>{humbucker(-0.15)}{humbucker(0.04)}</group>}
+      {pickups === 'p90' && <group>{pickupZ.map(z => humbucker(z))}</group>}
+      {pickups === 'hss' && humbucker(-0.17)}
+
+      {bridge === 'trem' && (
+        <mesh position={[-0.03, 0.01, -0.24]} rotation={[0, 0, 0]}>
+          <boxGeometry args={[0.15, 0.012, 0.06]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
+        </mesh>
+      )}
+      {bridge === 'hardtail' && (
+        <mesh position={[-0.03, 0.01, -0.24]}>
+          <boxGeometry args={[0.13, 0.014, 0.045]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.25} />
+        </mesh>
+      )}
+      {bridge === 'tuneomatic' && (
+        <group>
+          <mesh position={[-0.03, 0.012, -0.22]}>
+            <boxGeometry args={[0.115, 0.012, 0.022]} />
+            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
+          </mesh>
+          <mesh position={[-0.03, 0.012, -0.265]}>
+            <boxGeometry args={[0.085, 0.011, 0.018]} />
+            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
+          </mesh>
+        </group>
+      )}
+      {bridge === 'bigsby' && (
+        <mesh position={[-0.03, 0.01, -0.245]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.13, 16]} />
+          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const store = useConfigStore()
   const shape = BODY_SHAPES.find(s => s.id === store.shape) ?? BODY_SHAPES[0]
@@ -192,7 +322,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         mesh.material = mesh.material.clone()
       }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish))
+      materials.forEach(mat => {
+        if (shape.id === 'modern-s') {
+          enhanceModernSMaterial(mesh, mat, colors, finish)
+          return
+        }
+        enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
+      })
     })
   }, [colors, finish, maxDimension, model, shape.id])
 
@@ -203,6 +339,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+        {shape.id === 'modern-s' && <group scale={0.74}><StratOptionOverlays colors={colors} /></group>}
       </group>
     </Center>
   )

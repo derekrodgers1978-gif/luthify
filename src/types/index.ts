@@ -22,6 +22,8 @@ export interface ConfigOption {
   priceAdj: number
   hex?:     string
   roughness?: number
+  finishStyle?: 'solid' | 'burst'
+  burstEdgeHex?: string
   texture?: string
   modelPath?: string
 }
