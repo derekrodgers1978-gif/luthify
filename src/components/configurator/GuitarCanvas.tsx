@@ -1,7 +1,7 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
@@ -31,7 +31,7 @@ const CAMERA_DISTANCE: Record<string, number> = {
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number }
 
-const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
+const MODEL_PATHS = BODY_SHAPES.filter(shape => shape.id !== 'modern-s').map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
 function materialRole(meshName: string, materialName: string): MaterialRole {
@@ -54,6 +54,300 @@ function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: 
     board: board?.hex ?? '#1A0A00',
     hardware: hw?.id === 'gold' || hw?.id === 'aged-brass' ? '#C9A45C' : hw?.id === 'black' ? '#111116' : '#C9CED6',
   }
+}
+
+function createModernSBodyGeometry() {
+  const shape = new THREE.Shape()
+  shape.moveTo(0.3, 0.52)
+  shape.bezierCurveTo(0.57, 0.76, 0.84, 0.94, 1.08, 0.83)
+  shape.bezierCurveTo(1.33, 0.72, 1.21, 0.31, 0.86, 0.05)
+  shape.bezierCurveTo(1.23, -0.2, 1.41, -0.58, 1.27, -1.04)
+  shape.bezierCurveTo(1.08, -1.72, 0.5, -2.25, -0.15, -2.28)
+  shape.bezierCurveTo(-0.86, -2.31, -1.43, -1.83, -1.48, -1.18)
+  shape.bezierCurveTo(-1.52, -0.61, -1.26, -0.24, -0.89, -0.05)
+  shape.bezierCurveTo(-1.15, 0.25, -1.25, 0.72, -1.02, 0.97)
+  shape.bezierCurveTo(-0.75, 1.26, -0.39, 0.93, -0.23, 0.53)
+  shape.bezierCurveTo(-0.08, 0.4, 0.15, 0.4, 0.3, 0.52)
+  shape.closePath()
+  return new THREE.ExtrudeGeometry(shape, { depth: 0.22, bevelEnabled: true, bevelThickness: 0.045, bevelSize: 0.045, bevelSegments: 12 })
+}
+
+function createModernSPickguardGeometry() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.68, 0.53)
+  shape.bezierCurveTo(-0.45, 0.84, -0.08, 0.62, 0.12, 0.36)
+  shape.bezierCurveTo(0.55, 0.28, 0.86, 0.02, 0.84, -0.36)
+  shape.bezierCurveTo(0.81, -0.78, 0.43, -1.0, 0.1, -0.92)
+  shape.bezierCurveTo(-0.22, -0.84, -0.47, -0.51, -0.67, -0.13)
+  shape.bezierCurveTo(-0.9, 0.1, -0.92, 0.35, -0.68, 0.53)
+  shape.closePath()
+  return new THREE.ExtrudeGeometry(shape, { depth: 0.035, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.01, bevelSegments: 5 })
+}
+
+function createModernSFretboardGeometry() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.17, -0.15)
+  shape.lineTo(0.17, -0.15)
+  shape.lineTo(0.12, 2.35)
+  shape.quadraticCurveTo(0, 2.43, -0.12, 2.35)
+  shape.lineTo(-0.17, -0.15)
+  shape.closePath()
+  return new THREE.ExtrudeGeometry(shape, { depth: 0.045, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 4 })
+}
+
+function createModernSNeckGeometry() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.23, -0.22)
+  shape.lineTo(0.23, -0.22)
+  shape.lineTo(0.17, 2.54)
+  shape.quadraticCurveTo(0, 2.64, -0.17, 2.54)
+  shape.lineTo(-0.23, -0.22)
+  shape.closePath()
+  return new THREE.ExtrudeGeometry(shape, { depth: 0.13, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.018, bevelSegments: 8 })
+}
+
+function createModernSHeadstockGeometry() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.19, 2.36)
+  shape.bezierCurveTo(-0.45, 2.55, -0.51, 3.12, -0.29, 3.45)
+  shape.bezierCurveTo(-0.11, 3.72, 0.36, 3.57, 0.34, 3.18)
+  shape.bezierCurveTo(0.32, 2.84, 0.22, 2.58, 0.17, 2.36)
+  shape.closePath()
+  return new THREE.ExtrudeGeometry(shape, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.018, bevelSize: 0.015, bevelSegments: 7 })
+}
+
+function createModernSNutGeometry() {
+  return new THREE.BoxGeometry(0.42, 0.035, 0.065)
+}
+
+function createModernSBridgePlateGeometry(kind: string) {
+  const width = kind === 'tuneomatic' ? 0.64 : kind === 'bigsby' ? 0.74 : 0.68
+  const height = kind === 'bigsby' ? 0.22 : 0.18
+  return new THREE.BoxGeometry(width, height, 0.09)
+}
+
+function createRoundedPartGeometry(width: number, height: number, depth: number, radius: number) {
+  const x = width / 2
+  const y = height / 2
+  const r = Math.min(radius, x, y)
+  const shape = new THREE.Shape()
+  shape.moveTo(-x + r, -y)
+  shape.lineTo(x - r, -y)
+  shape.quadraticCurveTo(x, -y, x, -y + r)
+  shape.lineTo(x, y - r)
+  shape.quadraticCurveTo(x, y, x - r, y)
+  shape.lineTo(-x + r, y)
+  shape.quadraticCurveTo(-x, y, -x, y - r)
+  shape.lineTo(-x, -y + r)
+  shape.quadraticCurveTo(-x, -y, -x + r, -y)
+  shape.closePath()
+  return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: Math.min(depth * 0.28, 0.012), bevelSize: 0.01, bevelSegments: 4 })
+}
+
+function createModernSHeadstockFaceGeometry() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.15, 2.42)
+  shape.bezierCurveTo(-0.36, 2.6, -0.41, 3.06, -0.24, 3.33)
+  shape.bezierCurveTo(-0.09, 3.56, 0.27, 3.45, 0.26, 3.14)
+  shape.bezierCurveTo(0.25, 2.86, 0.16, 2.61, 0.12, 2.42)
+  shape.closePath()
+  return new THREE.ShapeGeometry(shape)
+}
+
+function StringSegment({ start, end, color }: { start: [number, number, number]; end: [number, number, number]; color: string }) {
+  const points = useMemo(() => [new THREE.Vector3(...start), new THREE.Vector3(...end)], [end, start])
+  const geometry = useMemo(() => new THREE.BufferGeometry().setFromPoints(points), [points])
+  const line = useMemo(() => new THREE.Line(geometry, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.78 })), [color, geometry])
+  return <primitive object={line} />
+}
+
+function RoundedPart({ width, height, depth, radius, children, ...props }: {
+  width: number
+  height: number
+  depth: number
+  radius: number
+  children: React.ReactNode
+} & React.ComponentProps<'mesh'>) {
+  const geometry = useMemo(() => createRoundedPartGeometry(width, height, depth, radius), [depth, height, radius, width])
+  return (
+    <mesh geometry={geometry} {...props}>
+      {children}
+    </mesh>
+  )
+}
+
+function ModernSPickups({ type }: { type: string }) {
+  const positions = type === 'singlecoil'
+    ? [-0.43, -0.76, -1.09]
+    : type === 'hss'
+      ? [-0.43, -0.76, -1.09]
+      : [-0.5, -1.05]
+  return (
+    <>
+      {positions.map((y, index) => {
+        const isHumbucker = type !== 'singlecoil' && (type !== 'hss' || index === positions.length - 1)
+        const width = isHumbucker ? 0.66 : 0.52
+        const height = isHumbucker ? 0.2 : 0.14
+        return (
+          <group key={`${type}-${y}`} position={[0.05, y, 0.18]} rotation={[0, 0, -0.08]}>
+            <RoundedPart width={width} height={height} depth={0.055} radius={0.035} castShadow receiveShadow>
+              <meshStandardMaterial color={type === 'p90' ? '#F2EEE2' : '#07070A'} metalness={0.22} roughness={0.36} />
+            </RoundedPart>
+            {isHumbucker && (
+              <RoundedPart width={width * 0.9} height={height * 0.35} depth={0.018} radius={0.02} position={[0, 0, 0.035]}>
+                <meshStandardMaterial color="#17171B" metalness={0.45} roughness={0.24} />
+              </RoundedPart>
+            )}
+            {!isHumbucker && [-0.19, -0.11, -0.03, 0.05, 0.13, 0.21].map(x => (
+              <mesh key={x} position={[x, 0, 0.04]}>
+                <cylinderGeometry args={[0.018, 0.018, 0.018, 16]} />
+                <meshStandardMaterial color="#C9CED6" metalness={0.85} roughness={0.18} />
+              </mesh>
+            ))}
+          </group>
+        )
+      })}
+    </>
+  )
+}
+
+function ModernSBridge({ type, hardwareColor }: { type: string; hardwareColor: string }) {
+  const isBigsby = type === 'bigsby'
+  const isTrem = type === 'trem'
+  const bridgeGeometry = useMemo(() => createModernSBridgePlateGeometry(type), [type])
+  return (
+    <group position={[0.02, -1.48, 0.21]} rotation={[0, 0, -0.04]}>
+      <mesh geometry={bridgeGeometry} castShadow receiveShadow>
+        <meshStandardMaterial color={hardwareColor} metalness={0.92} roughness={0.18} />
+      </mesh>
+      {[0, 1, 2, 3, 4, 5].map(i => (
+        <mesh key={i} position={[-0.25 + i * 0.1, 0.02, 0.07]}>
+          <boxGeometry args={[0.055, 0.12, 0.045]} />
+          <meshStandardMaterial color="#E4E8EF" metalness={0.9} roughness={0.16} />
+        </mesh>
+      ))}
+      {(isTrem || isBigsby) && (
+        <mesh position={[0.42, isBigsby ? -0.13 : -0.02, 0.08]} rotation={[0.1, 0.25, -0.92]}>
+          <cylinderGeometry args={[0.018, 0.018, isBigsby ? 0.78 : 0.58, 18]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.92} roughness={0.16} />
+        </mesh>
+      )}
+      {isBigsby && (
+        <mesh position={[0, -0.38, 0.05]}>
+          <torusGeometry args={[0.25, 0.035, 12, 56]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.92} roughness={0.18} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
+function ModernSInstrument({ view }: { view: 'standard' | 'detail' }) {
+  const store = useConfigStore()
+  const finish = FINISHES.find(f => f.id === store.finish)
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
+  const bodyGeometry = useMemo(createModernSBodyGeometry, [])
+  const pickguardGeometry = useMemo(createModernSPickguardGeometry, [])
+  const neckGeometry = useMemo(createModernSNeckGeometry, [])
+  const fretboardGeometry = useMemo(createModernSFretboardGeometry, [])
+  const headstockGeometry = useMemo(createModernSHeadstockGeometry, [])
+  const headstockFaceGeometry = useMemo(createModernSHeadstockFaceGeometry, [])
+  const nutGeometry = useMemo(createModernSNutGeometry, [])
+  const burstGeometry = useMemo(() => createRoundedPartGeometry(1.8, 2.2, 0.025, 0.8), [])
+  const bodyColor = finish?.id === 'sunburst' ? '#8A2F08' : colors.finish
+  const rotation: [number, number, number] = [0.05, view === 'detail' ? -0.2 : 0.16, -0.28]
+  const stringColor = colors.hardware === '#111116' ? '#2D2D34' : '#E7EBF2'
+  const stringXs = [-0.15, -0.09, -0.03, 0.03, 0.09, 0.15]
+
+  return (
+    <Center>
+      <group rotation={rotation} scale={1.22} position={[0.06, -0.08, 0]}>
+        <mesh name="body" geometry={bodyGeometry} position={[0, 0, -0.11]} castShadow receiveShadow>
+          <meshStandardMaterial color={bodyColor} metalness={0.04} roughness={Math.min(colors.finishRoughness, 0.24)} envMapIntensity={1.7} />
+        </mesh>
+        {finish?.id === 'sunburst' && (
+          <mesh name="body-burst-center" geometry={burstGeometry} position={[0, -0.74, 0.13]}>
+            <meshStandardMaterial color="#D98B32" transparent opacity={0.5} roughness={0.18} />
+          </mesh>
+        )}
+        <mesh name="body-gloss" geometry={bodyGeometry} position={[0, 0, 0.125]}>
+          <meshStandardMaterial color="#FFFFFF" transparent opacity={0.08} metalness={0} roughness={0.08} depthWrite={false} />
+        </mesh>
+        <mesh name="neck" geometry={neckGeometry} position={[0, 0.22, -0.03]} castShadow receiveShadow>
+          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.42} />
+        </mesh>
+        <mesh name="headstock" geometry={headstockGeometry} position={[0, 0.22, -0.035]} castShadow receiveShadow>
+          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.42} />
+        </mesh>
+        <mesh name="fretboard" geometry={fretboardGeometry} position={[0, 0.2, 0.08]} castShadow receiveShadow>
+          <meshStandardMaterial color={colors.board} metalness={0} roughness={0.58} />
+        </mesh>
+        <mesh name="headstock-face" geometry={headstockFaceGeometry} position={[0, 0.22, 0.09]}>
+          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.38} />
+        </mesh>
+        <mesh name="nut" geometry={nutGeometry} position={[0, 2.56, 0.15]}>
+          <meshStandardMaterial color="#F2EEE2" metalness={0.02} roughness={0.24} />
+        </mesh>
+        {Array.from({ length: 18 }).map((_, i) => (
+          <mesh key={i} name="fret" position={[0, 0.28 + i * 0.12, 0.145]}>
+            <boxGeometry args={[0.33 - i * 0.007, 0.012, 0.018]} />
+            <meshStandardMaterial color="#DDE2EA" metalness={0.85} roughness={0.2} />
+          </mesh>
+        ))}
+        {[0.72, 1.08, 1.44, 1.8, 2.16].map(y => (
+          <mesh key={y} name="inlay" position={[0, y, 0.155]}>
+            <cylinderGeometry args={[0.026, 0.026, 0.01, 18]} />
+            <meshStandardMaterial color="#EAE0C8" roughness={0.22} />
+          </mesh>
+        ))}
+        <mesh name="pickguard" geometry={pickguardGeometry} position={[-0.02, -0.42, 0.155]} castShadow receiveShadow>
+          <meshStandardMaterial color="#F2EEE2" metalness={0.02} roughness={0.3} />
+        </mesh>
+        <ModernSPickups type={store.pickups} />
+        <ModernSBridge type={store.bridge} hardwareColor={colors.hardware} />
+        <group name="knobs" position={[0.67, -1.33, 0.24]}>
+          {[0, 1, 2].map(i => (
+            <mesh key={i} position={[i * -0.21, i * 0.2, 0]}>
+              <cylinderGeometry args={[0.085, 0.085, 0.055, 32]} />
+              <meshStandardMaterial color={colors.hardware} metalness={0.82} roughness={0.2} />
+            </mesh>
+          ))}
+        </group>
+        <group name="switch" position={[0.72, -0.66, 0.23]} rotation={[0, 0, -0.58]}>
+          <mesh>
+            <cylinderGeometry args={[0.04, 0.04, 0.035, 20]} />
+            <meshStandardMaterial color={colors.hardware} metalness={0.85} roughness={0.18} />
+          </mesh>
+          <mesh position={[0, 0.08, 0.03]}>
+            <cylinderGeometry args={[0.012, 0.012, 0.18, 12]} />
+            <meshStandardMaterial color="#EDE7D5" roughness={0.26} />
+          </mesh>
+        </group>
+        <group name="tuners">
+          {[0, 1, 2, 3, 4, 5].map(i => (
+            <group key={i} position={[i < 3 ? -0.24 : 0.24, 2.86 + (i % 3) * 0.2, 0.13]}>
+              <mesh>
+                <cylinderGeometry args={[0.035, 0.035, 0.08, 18]} />
+                <meshStandardMaterial color={colors.hardware} metalness={0.92} roughness={0.18} />
+              </mesh>
+              <mesh position={[i < 3 ? -0.1 : 0.1, 0, 0]}>
+                <boxGeometry args={[0.13, 0.055, 0.035]} />
+                <meshStandardMaterial color={colors.hardware} metalness={0.92} roughness={0.18} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+        <group name="strings">
+          {stringXs.map((x, i) => (
+            <StringSegment key={x} start={[x, 2.62, 0.19]} end={[-0.25 + i * 0.1, -1.5, 0.3]} color={stringColor} />
+          ))}
+        </group>
+      </group>
+    </Center>
+  )
 }
 
 function isLikelyPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
@@ -287,6 +581,7 @@ function SingleCutFinishFallback() {
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
+  const shape = useConfigStore(s => s.shape)
   return (
     <>
       <ambientLight intensity={0.42} />
@@ -297,7 +592,7 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
       <Suspense fallback={<ModelLoading />}>
         <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
+          {shape === 'modern-s' ? <ModernSInstrument view={view} /> : <GlbInstrument view={view} />}
         </Bounds>
       </Suspense>
     </>
