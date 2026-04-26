@@ -1,6 +1,6 @@
 'use client'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, ThreeElements, useFrame, useThree } from '@react-three/fiber'
 import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
@@ -127,6 +127,129 @@ diffuseColor.rgb = mix(paintColor, uBindingColor, binding * 0.92);`
       )
   }
   mat.customProgramCacheKey = () => `single-cut-finish-${finish?.id ?? 'default'}-${finishMode}-${colors.finish}`
+}
+
+function useBodyFinishMaterial(finish: FinishOption | undefined, colors: ReturnType<typeof makeColors>) {
+  const isBurst = isBurstFinish(finish?.id)
+  const material = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      color: isBurst ? '#ffffff' : colors.finish,
+      metalness: 0.04,
+      roughness: Math.min(colors.finishRoughness, 0.24),
+      envMapIntensity: 1.55,
+    })
+
+    if (isBurst) {
+      mat.onBeforeCompile = shader => {
+        shader.uniforms.uFinishColor = { value: new THREE.Color(colors.finish) }
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vFinishPosition;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFinishPosition = position;')
+        shader.fragmentShader = shader.fragmentShader
+          .replace(
+            '#include <common>',
+            '#include <common>\nuniform vec3 uFinishColor;\nvarying vec3 vFinishPosition;'
+          )
+          .replace(
+            '#include <color_fragment>',
+            `#include <color_fragment>
+vec2 finishUv = vec2(vFinishPosition.x / 1.24, vFinishPosition.y / 1.78);
+float finishRadius = length(finishUv);
+vec3 centerColor = vec3(0.97, 0.64, 0.20);
+vec3 burstColor = mix(centerColor, uFinishColor, smoothstep(0.18, 0.58, finishRadius));
+burstColor = mix(burstColor, vec3(0.08, 0.03, 0.01), smoothstep(0.66, 0.98, finishRadius));
+diffuseColor.rgb = burstColor;`
+          )
+      }
+      mat.customProgramCacheKey = () => `s-style-burst-${finish?.id ?? 'default'}-${colors.finish}`
+    }
+
+    return mat
+  }, [colors.finish, colors.finishRoughness, finish?.id, isBurst])
+
+  useEffect(() => () => material.dispose(), [material])
+  return material
+}
+
+function SStylePreview({ view }: { view: 'standard' | 'detail' }) {
+  const store = useConfigStore()
+  const finish = FINISHES.find(f => f.id === store.finish)
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
+  const bodyMaterial = useBodyFinishMaterial(finish, colors)
+  const hardwareColor = colors.hardware
+  const groupProps: ThreeElements['group'] = {
+    rotation: [-0.04, view === 'detail' ? -0.2 : 0.08, -0.04],
+    scale: view === 'detail' ? 1.08 : 1,
+  }
+
+  return (
+    <Center>
+      <group {...groupProps}>
+        <mesh position={[-0.36, -0.58, 0]} rotation={[0, 0, -0.08]} material={bodyMaterial} castShadow receiveShadow>
+          <sphereGeometry args={[1.12, 64, 32]} />
+        </mesh>
+        <mesh position={[0.48, -0.3, 0.02]} rotation={[0, 0, 0.08]} material={bodyMaterial} castShadow receiveShadow>
+          <sphereGeometry args={[0.78, 64, 32]} />
+        </mesh>
+        <mesh position={[0.2, 0.32, 0.03]} rotation={[0, 0, -0.36]} material={bodyMaterial} castShadow receiveShadow>
+          <sphereGeometry args={[0.72, 48, 24]} />
+        </mesh>
+        <mesh position={[0.33, 0.36, 0.1]} rotation={[0, 0, -0.34]} scale={[0.54, 1.4, 0.08]} castShadow>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="#F2EEE2" metalness={0.02} roughness={0.34} envMapIntensity={1.25} />
+        </mesh>
+        <mesh position={[0.24, 1.88, 0.01]} rotation={[0, 0, -0.08]} castShadow receiveShadow>
+          <boxGeometry args={[0.34, 3.3, 0.12]} />
+          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.42} envMapIntensity={1.15} />
+        </mesh>
+        <mesh position={[0.24, 1.9, 0.1]} rotation={[0, 0, -0.08]} castShadow>
+          <boxGeometry args={[0.22, 3.16, 0.08]} />
+          <meshStandardMaterial color={colors.board} metalness={0} roughness={0.58} />
+        </mesh>
+        <mesh position={[0.04, 3.62, 0.03]} rotation={[0, 0, -0.2]} castShadow>
+          <boxGeometry args={[0.48, 0.78, 0.16]} />
+          <meshStandardMaterial color={colors.neck} metalness={0.02} roughness={0.42} />
+        </mesh>
+        {[-0.18, 0, 0.18].map((y, i) => (
+          <mesh key={`tuner-left-${i}`} position={[-0.22, 3.4 + y, 0.16]} rotation={[Math.PI / 2, 0, 0.1]} castShadow>
+            <cylinderGeometry args={[0.06, 0.06, 0.08, 20]} />
+            <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+          </mesh>
+        ))}
+        {[-0.18, 0, 0.18].map((y, i) => (
+          <mesh key={`tuner-right-${i}`} position={[0.28, 3.48 + y, 0.16]} rotation={[Math.PI / 2, 0, 0.1]} castShadow>
+            <cylinderGeometry args={[0.06, 0.06, 0.08, 20]} />
+            <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+          </mesh>
+        ))}
+        {[-0.22, 0.1, 0.42].map((x, i) => (
+          <mesh key={`pickup-${i}`} position={[x, -0.36 + i * 0.38, 0.24]} rotation={[0, 0, -0.16]} castShadow>
+            <boxGeometry args={[0.74, 0.16, 0.09]} />
+            <meshStandardMaterial color="#08080A" metalness={0.35} roughness={0.3} />
+          </mesh>
+        ))}
+        <mesh position={[-0.28, -0.94, 0.25]} rotation={[0, 0, -0.1]} castShadow>
+          <boxGeometry args={[0.88, 0.16, 0.1]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+        </mesh>
+        {[0, 1, 2].map(i => (
+          <mesh key={`knob-${i}`} position={[0.56 + i * 0.18, -0.72 - i * 0.2, 0.26]} castShadow>
+            <cylinderGeometry args={[0.09, 0.09, 0.08, 24]} />
+            <meshStandardMaterial color={hardwareColor} metalness={0.7} roughness={0.22} />
+          </mesh>
+        ))}
+        {[-0.15, -0.09, -0.03, 0.03, 0.09, 0.15].map((x, i) => (
+          <mesh key={`string-${i}`} position={[x + 0.2, 1.02, 0.28]} rotation={[0, 0, -0.08]}>
+            <boxGeometry args={[0.008, 3.75, 0.008]} />
+            <meshStandardMaterial color="#DDE2EA" metalness={0.85} roughness={0.18} />
+          </mesh>
+        ))}
+      </group>
+    </Center>
+  )
 }
 
 function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number, shapeId: string, finish?: FinishOption) {
@@ -296,6 +419,8 @@ function SingleCutFinishFallback() {
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
+  const shape = useConfigStore(s => s.shape)
+
   return (
     <>
       <ambientLight intensity={0.42} />
@@ -305,9 +430,13 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
       <Suspense fallback={<ModelLoading />}>
-        <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
-        </Bounds>
+        {shape === 'modern-s' ? (
+          <SStylePreview view={view} />
+        ) : (
+          <Bounds fit clip observe margin={1.28}>
+            <GlbInstrument view={view} />
+          </Bounds>
+        )}
       </Suspense>
     </>
   )

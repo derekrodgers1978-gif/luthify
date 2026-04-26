@@ -18,20 +18,21 @@ export const BODY_SHAPES: ConfigOption[] = [
 ]
 
 export const FINISHES: ConfigOption[] = [
-  { id: 'mint',      label: 'Surf Mint',   hex: '#7EC8B4', roughness: 0.12, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'ocean',     label: 'Ocean Blue',  hex: '#2E6EA6', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
-  { id: 'black',     label: 'Onyx Black',  hex: '#1a1a1a', roughness: 0.08, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'red',       label: 'Cherry Red',  hex: '#A51C30', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
-  { id: 'forest',    label: 'Forest',      hex: '#2D5A3D', roughness: 0.15, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'sunburst',  label: 'Sunburst',    hex: '#6B2200', roughness: 0.1,  priceAdj: 0, finishGroup: 'burst' },
-  { id: 'natural',   label: 'Natural Ash', hex: '#D4B896', roughness: 0.22, priceAdj: 0, finishGroup: 'natural' },
-  { id: 'aged',      label: 'Aged Honey',  hex: '#C8954A', roughness: 0.3,  priceAdj: 0, finishGroup: 'natural' },
+  { id: 'candy-apple-red', label: 'Candy Apple Red', hex: '#B51F2E', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
+  { id: 'ocean-blue',      label: 'Ocean Blue',      hex: '#2E6EA6', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
+  { id: 'olympic-white',   label: 'Olympic White',   hex: '#F1ECE0', roughness: 0.16, priceAdj: 0, finishGroup: 'solid' },
+  { id: 'onyx-black',      label: 'Onyx Black',      hex: '#1a1a1a', roughness: 0.08, priceAdj: 0, finishGroup: 'solid' },
+  { id: 'surf-mint',       label: 'Surf Mint',       hex: '#7EC8B4', roughness: 0.12, priceAdj: 0, finishGroup: 'solid' },
+  { id: '2-tone-burst',    label: '2-Tone Burst',    hex: '#5A2609', roughness: 0.12, priceAdj: 0, finishGroup: 'burst' },
+  { id: '3-tone-burst',    label: '3-Tone Burst',    hex: '#6B2200', roughness: 0.12, priceAdj: 0, finishGroup: 'burst' },
+  { id: 'tobacco-burst',   label: 'Tobacco Burst',   hex: '#4A1B08', roughness: 0.14, priceAdj: 0, finishGroup: 'burst' },
+  { id: 'cherry-burst',    label: 'Cherry Burst',    hex: '#8B1A1A', roughness: 0.12, priceAdj: 0, finishGroup: 'burst' },
+  { id: 'honey-burst',     label: 'Honey Burst',     hex: '#B87423', roughness: 0.14, priceAdj: 0, finishGroup: 'burst' },
 ]
 
 export const FINISH_GROUPS = [
   { id: 'solid',  label: 'Solid Colours' },
   { id: 'burst',  label: 'Burst Finishes' },
-  { id: 'natural', label: 'Natural / Wood Finishes' },
 ] as const
 
 export function isBurstFinish(id?: string) {
@@ -89,7 +90,7 @@ export const PICKUPS: ConfigOption[] = [
 
 export const DEFAULT_CONFIG = {
   shape:     'modern-s',
-  finish:    'natural',
+  finish:    'surf-mint',
   top:       'quilted',
   neck:      'maple',
   fretboard: 'rosewood',
