@@ -18,14 +18,17 @@ export const BODY_SHAPES: ConfigOption[] = [
 ]
 
 export const FINISHES: ConfigOption[] = [
-  { id: 'sunburst',  label: 'Sunburst',    hex: '#6B2200', roughness: 0.1,  priceAdj: 0 },
-  { id: 'mint',      label: 'Surf Mint',   hex: '#7EC8B4', roughness: 0.12, priceAdj: 0 },
-  { id: 'ocean',     label: 'Ocean Blue',  hex: '#2E6EA6', roughness: 0.1,  priceAdj: 0 },
-  { id: 'natural',   label: 'Natural Ash', hex: '#D4B896', roughness: 0.22, priceAdj: 0 },
-  { id: 'black',     label: 'Onyx Black',  hex: '#1a1a1a', roughness: 0.08, priceAdj: 0 },
-  { id: 'red',       label: 'Cherry Red',  hex: '#A51C30', roughness: 0.1,  priceAdj: 0 },
-  { id: 'aged',      label: 'Aged Honey',  hex: '#C8954A', roughness: 0.3,  priceAdj: 0 },
-  { id: 'forest',    label: 'Forest',      hex: '#2D5A3D', roughness: 0.15, priceAdj: 0 },
+  { id: 'mint',      label: 'Surf Mint',      hex: '#7EC8B4', roughness: 0.12, finishStyle: 'solid', priceAdj: 0 },
+  { id: 'ocean',     label: 'Ocean Blue',     hex: '#2E6EA6', roughness: 0.1,  finishStyle: 'solid', priceAdj: 0 },
+  { id: 'natural',   label: 'Natural Ash',    hex: '#D4B896', roughness: 0.22, finishStyle: 'solid', priceAdj: 0 },
+  { id: 'black',     label: 'Onyx Black',     hex: '#1a1a1a', roughness: 0.08, finishStyle: 'solid', priceAdj: 0 },
+  { id: 'red',       label: 'Cherry Red',     hex: '#A51C30', roughness: 0.1,  finishStyle: 'solid', priceAdj: 0 },
+  { id: 'aged',      label: 'Aged Honey',     hex: '#C8954A', roughness: 0.3,  finishStyle: 'solid', priceAdj: 0 },
+  { id: 'forest',    label: 'Forest Green',   hex: '#2D5A3D', roughness: 0.15, finishStyle: 'solid', priceAdj: 0 },
+  { id: 'burst-amber',   label: 'Amber Burst',   hex: '#C07A2E', burstEdgeHex: '#2A0F06', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
+  { id: 'burst-vintage', label: 'Vintage Burst', hex: '#9F5D2B', burstEdgeHex: '#1C0D06', roughness: 0.11, finishStyle: 'burst', priceAdj: 120 },
+  { id: 'burst-cherry',  label: 'Cherry Burst',  hex: '#8D2A2A', burstEdgeHex: '#150606', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
+  { id: 'sunburst',      label: 'Classic Sunburst', hex: '#6B2200', burstEdgeHex: '#120603', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
 ]
 
 export const TOPS: ConfigOption[] = [
@@ -75,7 +78,7 @@ export const PICKUPS: ConfigOption[] = [
 
 export const DEFAULT_CONFIG = {
   shape:     'modern-s',
-  finish:    'natural',
+  finish:    'burst-amber',
   top:       'quilted',
   neck:      'maple',
   fretboard: 'rosewood',

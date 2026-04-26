@@ -31,6 +31,8 @@ function GroupLabel({ children, value }: { children: React.ReactNode; value?: st
 export default function ConfigPanel() {
   const store = useConfigStore()
   const [tab, setTab] = useState<Tab>('body')
+  const solidFinishes = FINISHES.filter(f => (f.finishStyle ?? 'solid') === 'solid')
+  const burstFinishes = FINISHES.filter(f => f.finishStyle === 'burst')
 
   const getLabel = (opts: ConfigOption[], id: string) => opts.find(o => o.id === id)?.label ?? id
 
@@ -72,9 +74,16 @@ export default function ConfigPanel() {
             {/* Finish */}
             <div style={S.group}>
               <GroupLabel value={getLabel(FINISHES, store.finish)}>Finish</GroupLabel>
+              <div style={{ fontSize: '0.66rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,241,232,0.5)', marginBottom: 8 }}>Solid Colours</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
-                {FINISHES.map(o => (
+                {solidFinishes.map(o => (
                   <div key={o.id} title={o.label} style={S.swatch(store.finish === o.id, o.hex!)} onClick={() => store.setOption('finish', o.id)} />
+                ))}
+              </div>
+              <div style={{ fontSize: '0.66rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,241,232,0.5)', marginBottom: 8 }}>Burst Finishes</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
+                {burstFinishes.map(o => (
+                  <div key={o.id} title={o.label} style={S.swatch(store.finish === o.id, `radial-gradient(circle at 50% 50%, ${o.hex} 24%, ${o.burstEdgeHex ?? '#120603'} 80%)`)} onClick={() => store.setOption('finish', o.id)} />
                 ))}
               </div>
               <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)', marginTop: 4 }}>
