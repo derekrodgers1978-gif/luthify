@@ -309,7 +309,7 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
       : store.bridge === 'hardtail'
         ? 'hardtail'
         : 'tuneomatic'
-  const pickupXs = pickupLayout.length === 3 ? [214, 286, 358] : [250, 350]
+  const pickupXs = pickupLayout.length === 3 ? [226, 297, 368] : [268, 360]
 
   return (
     <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
@@ -338,24 +338,24 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
           </linearGradient>
         </defs>
 
-        <g transform="translate(26 8) rotate(-4 452 260)">
+        <g transform="translate(56 -4) rotate(-3 452 260)">
           <g data-part="body">
             <path
-              d="M391 227 C352 172 300 151 250 174 C221 187 207 212 213 239 C217 259 232 270 256 274 C212 287 180 321 171 367 C160 425 201 472 266 476 C319 479 363 450 383 405 C405 455 465 468 515 435 C562 404 578 350 551 306 C532 275 501 262 462 268 C501 247 515 211 492 185 C462 151 413 177 391 227 Z"
+              d="M388 237 C399 197 429 166 470 150 C467 190 441 224 402 245 C448 241 494 261 529 300 C493 329 443 322 399 287 C421 337 395 394 344 426 C290 460 236 439 212 394 C175 421 123 407 104 367 C83 322 114 288 170 278 C139 253 142 216 176 188 C217 155 270 165 310 209 C330 231 357 244 388 237 Z"
               fill={bodyFill}
               stroke="rgba(255,255,255,0.34)"
-              strokeWidth="4"
+              strokeWidth="3"
               strokeLinejoin="round"
             />
-            <path d="M230 390 C258 423 315 427 358 391" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" strokeLinecap="round" />
-            <path d="M412 237 C433 212 460 206 481 219" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="4" strokeLinecap="round" />
+            <path d="M145 360 C188 394 263 397 324 365" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="2.4" strokeLinecap="round" />
+            <path d="M404 250 C442 247 477 265 503 294" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="2.4" strokeLinecap="round" />
           </g>
 
           <g data-part="neck">
-            <path d="M350 240 L720 226 L724 276 L352 286 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1609" strokeWidth="4" />
+            <path d="M386 240 L722 229 L725 272 L386 278 Z" fill="url(#sStyleNeckGrain)" stroke="#2a1609" strokeWidth="3" />
           </g>
           <g data-part="fretboard">
-            <path d="M363 250 L718 238 L721 265 L364 276 Z" fill={colors.board} stroke="#110805" strokeWidth="3" />
+            <path d="M396 249 L718 240 L720 262 L396 270 Z" fill={colors.board} stroke="#110805" strokeWidth="2.4" />
             {[435, 470, 506, 542, 578, 614, 650, 686].map(x => (
               <line key={x} x1={x} x2={x + 2} y1="246" y2="268" stroke="#D5D8D8" strokeWidth="2" opacity="0.86" />
             ))}
@@ -379,21 +379,20 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
 
           <g data-part="pickguard">
             <path
-              d="M216 288 C260 255 326 252 373 280 C409 301 453 305 501 286 C530 314 532 363 501 396 C465 434 404 424 360 391 C323 363 286 360 246 389 C220 366 204 319 216 288 Z"
+              d="M194 306 C236 274 294 267 344 280 C371 287 397 289 425 284 L401 259 C431 255 462 269 482 293 C501 318 493 349 466 365 C438 382 400 374 366 353 C328 330 279 347 229 388 C209 368 195 338 194 306 Z"
               fill="#F2EEE2"
               stroke="#D7D0C2"
-              strokeWidth="5"
+              strokeWidth="4"
               strokeLinejoin="round"
             />
-            <rect x="342" y="248" width="60" height="38" rx="12" fill="#F2EEE2" stroke="#D7D0C2" strokeWidth="4" />
-            <path d="M236 296 C292 270 344 275 383 299 C422 322 464 322 503 301" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" />
+            <path d="M219 307 C274 281 333 282 377 302 C418 321 459 318 498 303" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.8" />
           </g>
 
           <g data-part="pickups">
             {pickupLayout.map((type, i) => {
               const x = pickupXs[i]
-              const width = type === 'single' ? 24 : type === 'p90' ? 34 : 38
-              const height = type === 'single' ? 86 : 102
+              const width = type === 'single' ? 20 : type === 'p90' ? 30 : 34
+              const height = type === 'single' ? 76 : 90
               const y = 287 - (height - 86) / 2
               return (
                 <g key={`${type}-${i}`} transform={`rotate(84 ${x + width / 2} ${y + height / 2})`}>
@@ -408,26 +407,26 @@ function SStyleIllustration({ view }: { view: 'standard' | 'detail' | 'reset' })
           </g>
 
           <g data-part="bridge">
-            <rect x="414" y="314" width="126" height="25" rx="7" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />
+            <rect x="418" y="314" width="112" height="20" rx="5" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="2.5" />
             {[0, 1, 2, 3, 4, 5].map(i => (
-              <rect key={i} x={423 + i * 18} y="309" width="12" height="35" rx="3" fill={colors.hardware} stroke="#25272d" strokeWidth="1.4" />
+              <rect key={i} x={427 + i * 16} y="309" width="10" height="30" rx="2.5" fill={colors.hardware} stroke="#25272d" strokeWidth="1.2" />
             ))}
-            {bridgeLabel === 'vibrato-tail' && <path d="M537 330 C584 353 590 389 558 413" fill="none" stroke="url(#sStyleMetal)" strokeWidth="8" strokeLinecap="round" />}
-            {bridgeLabel === 'locking-trem' && <rect x="408" y="346" width="139" height="18" rx="7" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
-            {bridgeLabel === 'hardtail' && <rect x="430" y="348" width="93" height="16" rx="6" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
-            {bridgeLabel === 'tuneomatic' && <rect x="407" y="355" width="140" height="17" rx="8" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3" />}
+            {bridgeLabel === 'vibrato-tail' && <path d="M532 326 C578 348 585 384 554 409" fill="none" stroke="url(#sStyleMetal)" strokeWidth="6" strokeLinecap="round" />}
+            {bridgeLabel === 'locking-trem' && <rect x="414" y="340" width="122" height="15" rx="5" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="2.5" />}
+            {bridgeLabel === 'hardtail' && <rect x="434" y="341" width="80" height="13" rx="5" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="2.5" />}
+            {bridgeLabel === 'tuneomatic' && <rect x="415" y="348" width="122" height="14" rx="7" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="2.5" />}
           </g>
 
-          <g data-part="knobs" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="3">
-            <circle cx="443" cy="380" r="16" />
-            <circle cx="483" cy="398" r="15" />
-            <circle cx="407" cy="411" r="14" />
+          <g data-part="knobs" fill="url(#sStyleMetal)" stroke="#20232A" strokeWidth="2.4">
+            <circle cx="436" cy="379" r="12" />
+            <circle cx="475" cy="395" r="11" />
+            <circle cx="401" cy="406" r="10" />
           </g>
 
           <g data-part="switch" transform="rotate(-16 473 294)">
-            <rect x="452" y="287" width="44" height="12" rx="6" fill="#EEE7D6" stroke="#20232A" strokeWidth="2.5" />
-            <line x1="474" x2="492" y1="293" y2="273" stroke="url(#sStyleMetal)" strokeWidth="4" strokeLinecap="round" />
-            <circle cx="495" cy="270" r="5" fill={colors.hardware} stroke="#20232A" strokeWidth="2" />
+            <rect x="453" y="288" width="38" height="9" rx="5" fill="#EEE7D6" stroke="#20232A" strokeWidth="2" />
+            <line x1="472" x2="488" y1="292" y2="274" stroke="url(#sStyleMetal)" strokeWidth="3" strokeLinecap="round" />
+            <circle cx="491" cy="271" r="4" fill={colors.hardware} stroke="#20232A" strokeWidth="1.8" />
           </g>
 
           <g data-part="strings" stroke="#DDE2EA" strokeLinecap="round" opacity="0.86">
