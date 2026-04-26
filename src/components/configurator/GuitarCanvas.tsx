@@ -19,6 +19,7 @@ const MODEL_ROTATION: Record<string, [number, number, number]> = {
 }
 
 const CAMERA_DISTANCE: Record<string, number> = {
+  'modern-s': 7.8,
   cello: 8.4,
   baritone: 7.6,
   banjo: 7.2,
@@ -182,7 +183,7 @@ function SStylePreview({ view }: { view: 'standard' | 'detail' }) {
   const hardwareColor = colors.hardware
   const groupProps: ThreeElements['group'] = {
     rotation: [-0.04, view === 'detail' ? -0.2 : 0.08, -0.04],
-    scale: view === 'detail' ? 1.08 : 1,
+    scale: view === 'detail' ? 0.92 : 0.78,
   }
 
   return (
