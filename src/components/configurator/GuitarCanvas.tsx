@@ -286,7 +286,7 @@ function SingleCutFinishFallback() {
   )
 }
 
-const BODY_PATH = 'M84 280 C45 267 26 229 39 187 C55 134 103 104 153 116 C174 78 220 57 266 69 C309 80 337 112 344 153 C384 136 430 146 459 180 C493 220 482 283 437 318 C404 344 360 354 323 338 C294 383 236 405 182 387 C141 373 114 340 114 305 C83 315 53 300 50 274 C47 253 63 243 84 280 Z'
+const BODY_PATH = 'M93 274 C58 259 38 225 45 185 C53 139 90 105 136 101 C160 99 181 105 198 119 C214 86 249 65 290 67 C334 69 368 98 381 143 C407 130 441 129 468 145 C498 163 512 194 504 228 C498 257 475 279 445 288 C461 319 454 351 428 374 C394 404 338 401 302 370 C272 408 219 424 172 406 C135 391 112 361 110 326 C78 331 50 316 44 289 C39 265 58 254 93 274 Z'
 
 function optionHex(options: { id: string; hex?: string }[], id: string, fallback: string) {
   return options.find(o => o.id === id)?.hex ?? fallback
@@ -422,7 +422,9 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
               <path d={BODY_PATH} fill="rgba(255,255,255,0.08)" opacity="0.45" />
             )}
             <path d={BODY_PATH} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="3" strokeLinejoin="round" transform="translate(-4 -4)" />
-            <path d="M116 286 C92 244 110 174 153 143 C190 116 240 126 270 161 C233 181 210 212 209 250 C207 291 236 328 278 341 C239 373 185 369 151 337 C133 321 123 304 116 286 Z" fill="rgba(0,0,0,0.28)" opacity="0.36" />
+            <path d={BODY_PATH} fill="none" stroke="rgba(0,0,0,0.42)" strokeWidth="12" strokeLinejoin="round" opacity="0.28" />
+            <path d="M62 255 C95 241 123 252 148 283 C174 315 214 338 269 333 C221 365 158 355 124 316 C103 292 82 278 58 282 Z" fill="rgba(0,0,0,0.24)" opacity="0.42" />
+            <path d="M302 120 C348 107 407 121 446 172 C416 151 376 151 343 171 C337 149 324 132 302 120 Z" fill="rgba(255,255,255,0.12)" opacity="0.5" />
             {isBurst && [...Array(18)].map((_, i) => (
               <path
                 key={i}
@@ -433,8 +435,8 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
               />
             ))}
 
-            <path d="M144 297 C140 252 161 187 209 164 C259 140 329 151 381 195 C360 217 356 249 373 276 C335 294 287 304 230 310 C185 315 153 309 144 297 Z" fill={pickguard} stroke="rgba(0,0,0,0.62)" strokeWidth="2.6" />
-            <path d="M157 290 C154 253 174 198 216 178 C260 157 316 166 358 200 C342 220 340 244 354 266 C322 282 280 290 232 295 C195 299 165 296 157 290 Z" fill="url(#sStyleGuardSheen)" opacity={store.pickguard === 'black' ? 0.14 : 0.42} />
+            <path d="M137 287 C135 242 158 180 208 156 C258 132 323 143 376 187 C358 210 356 240 373 266 C335 286 285 296 230 301 C184 306 151 299 137 287 Z" fill={pickguard} stroke="rgba(0,0,0,0.62)" strokeWidth="2.4" />
+            <path d="M154 281 C155 247 176 196 218 175 C260 154 315 163 353 195 C339 214 338 236 352 256 C320 272 279 280 233 285 C195 290 166 287 154 281 Z" fill="url(#sStyleGuardSheen)" opacity={store.pickguard === 'black' ? 0.14 : 0.38} />
             {store.pickguard === 'tortoise' && (
               <g opacity="0.45" fill="#C46B2D">
                 <ellipse cx="206" cy="190" rx="28" ry="13" transform="rotate(-24 206 190)" />
@@ -467,12 +469,12 @@ function SStyleConfiguratorPreview({ view }: { view: 'standard' | 'detail' | 're
             )}
 
             <g fill={knobs} stroke="#9E967D" strokeWidth="2.4">
-              <circle cx="367" cy="345" r="13" />
-              <circle cx="415" cy="318" r="13" />
-              <circle cx="423" cy="267" r="8" fill={switchTip} />
+              <circle cx="354" cy="333" r="12" />
+              <circle cx="400" cy="306" r="12" />
+              <circle cx="410" cy="258" r="7.5" fill={switchTip} />
             </g>
-            <path d="M404 289 L438 247" stroke={colors.hardware} strokeWidth="3.4" strokeLinecap="round" />
-            <ellipse cx="122" cy="338" rx="24" ry="15" transform="rotate(-42 122 338)" fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="3.2" />
+            <path d="M392 280 L426 239" stroke={colors.hardware} strokeWidth="3.4" strokeLinecap="round" />
+            <ellipse cx="118" cy="326" rx="22" ry="14" transform="rotate(-38 118 326)" fill="url(#sStyleMetal)" stroke="#2b2f35" strokeWidth="3.2" />
           </g>
         </g>
       </svg>
