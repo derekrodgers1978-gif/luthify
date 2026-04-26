@@ -285,6 +285,121 @@ function SingleCutFinishFallback() {
   )
 }
 
+function SStyleFinishFallback() {
+  const store = useConfigStore()
+  const finish = FINISHES.find(f => f.id === store.finish)
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const colors = makeColors(finish, neck, board, hw)
+  const bodyFill = finish?.id === 'sunburst' ? 'url(#sStyleBurst)' : colors.finish
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
+      <svg viewBox="0 0 760 520" role="img" aria-label="S-Style Electric finish preview" style={{ width: 'min(88%, 900px)', height: 'min(86%, 580px)', filter: 'drop-shadow(0 28px 60px rgba(0,0,0,0.46))' }}>
+        <defs>
+          <radialGradient id="sStyleBurst" cx="45%" cy="60%" r="68%">
+            <stop offset="0%" stopColor="#F1B75D" />
+            <stop offset="48%" stopColor={colors.finish} />
+            <stop offset="88%" stopColor="#120603" />
+          </radialGradient>
+          <linearGradient id="sStyleBodyGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.26)" />
+            <stop offset="46%" stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.24)" />
+          </linearGradient>
+          <linearGradient id="sStyleGuardTint" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#F8F4E8" />
+            <stop offset="100%" stopColor="#DCD4C1" />
+          </linearGradient>
+        </defs>
+        <g transform="translate(95 30) rotate(-12 315 245)">
+          <g id="s-style-neck">
+            <rect x="295" y="56" width="62" height="190" rx="9" fill={colors.neck} stroke="#3a1b0a" strokeWidth="4" />
+            <rect x="307" y="66" width="38" height="184" rx="8" fill={colors.board} />
+            <rect x="301" y="65" width="50" height="12" rx="3" fill="#EFE4C6" stroke="#1d120b" strokeWidth="2" />
+            {[88, 109, 130, 151, 172, 193, 214, 235].map(y => (
+              <line key={y} x1="308" x2="344" y1={y} y2={y} stroke="#D5D9E1" strokeWidth="1.8" opacity="0.85" />
+            ))}
+            {[120, 162, 204].map(y => (
+              <circle key={y} cx="326" cy={y} r="2.8" fill="#CFC8B3" opacity="0.85" />
+            ))}
+          </g>
+
+          <g id="s-style-headstock">
+            <path d="M286 52 C283 26 303 9 331 8 C354 7 369 20 369 39 C369 58 350 64 332 58 C319 54 306 54 286 52 Z" fill={colors.neck} stroke="#2B1408" strokeWidth="4" strokeLinejoin="round" />
+            {[303, 321, 339, 357].map((x, i) => (
+              <g key={x} transform={`translate(${x} ${22 + i * 7})`}>
+                <circle cx="0" cy="0" r="6" fill={colors.hardware} stroke="#1E2025" strokeWidth="2" />
+                <rect x="-17" y="-3" width="15" height="6" rx="2" fill={colors.hardware} stroke="#1E2025" strokeWidth="1.5" />
+              </g>
+            ))}
+            {[322, 344].map((x, i) => (
+              <g key={x} transform={`translate(${x} ${50 + i * 6})`}>
+                <circle cx="0" cy="0" r="5.5" fill={colors.hardware} stroke="#1E2025" strokeWidth="2" />
+                <rect x="4" y="-3" width="14" height="6" rx="2" fill={colors.hardware} stroke="#1E2025" strokeWidth="1.5" />
+              </g>
+            ))}
+          </g>
+
+          <g id="s-style-body">
+            <path
+              d="M309 174 C281 137 235 144 213 179 C197 205 190 224 158 231 C105 243 79 286 96 339 C116 402 183 435 253 417 C304 454 381 428 405 367 C424 318 410 289 377 272 C351 259 350 237 377 218 C410 195 418 164 392 144 C366 123 333 135 325 170 C321 187 314 186 309 174 Z"
+              fill={bodyFill}
+              stroke="#F0E7D6"
+              strokeWidth="7"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M309 174 C281 137 235 144 213 179 C197 205 190 224 158 231 C105 243 79 286 96 339 C116 402 183 435 253 417 C304 454 381 428 405 367 C424 318 410 289 377 272 C351 259 350 237 377 218 C410 195 418 164 392 144 C366 123 333 135 325 170 C321 187 314 186 309 174 Z"
+              fill="url(#sStyleBodyGloss)"
+              opacity="0.58"
+            />
+          </g>
+
+          <path id="s-style-pickguard" d="M305 187 L350 188 C358 205 351 223 331 230 C310 237 306 255 324 268 C343 281 370 283 387 305 C406 331 391 361 357 373 C321 386 286 369 278 335 C271 306 254 292 226 289 C194 286 180 259 195 231 C209 205 241 195 271 201 C288 204 297 198 305 187 Z" fill="url(#sStyleGuardTint)" stroke="#BEB5A1" strokeWidth="4" strokeLinejoin="round" />
+
+          <g id="s-style-pickups" fill="#F5F1E8" stroke="#25262A" strokeWidth="3">
+            {[
+              { x: 259, y: 225, r: -3 },
+              { x: 254, y: 267, r: -4 },
+              { x: 247, y: 309, r: -11 },
+            ].map(pickup => (
+              <g key={pickup.y} transform={`rotate(${pickup.r} ${pickup.x + 47} ${pickup.y + 10})`}>
+                <rect x={pickup.x} y={pickup.y} width="95" height="21" rx="5" />
+                {[0, 1, 2, 3, 4, 5].map(i => (
+                  <circle key={i} cx={pickup.x + 14 + i * 13.2} cy={pickup.y + 10.5} r="2.4" fill={colors.hardware} stroke="none" />
+                ))}
+              </g>
+            ))}
+          </g>
+
+          <g id="s-style-bridge" fill={colors.hardware} stroke="#1E2025" strokeWidth="2.4">
+            <rect x="241" y="349" width="122" height="26" rx="4" />
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <rect key={i} x={253 + i * 16} y="343" width="11" height="38" rx="2" fill="#D6DAE2" />
+            ))}
+          </g>
+
+          <g id="s-style-controls" fill={colors.hardware} stroke="#1E2025" strokeWidth="2.4">
+            <line x1="367" x2="397" y1="282" y2="260" stroke={colors.hardware} strokeWidth="5" strokeLinecap="round" />
+            <circle cx="397" cy="260" r="5" />
+            <circle cx="384" cy="331" r="13" />
+            <circle cx="395" cy="368" r="13" />
+            <circle cx="357" cy="395" r="7" />
+          </g>
+
+          <g id="s-style-strings" stroke="#E8ECF2" strokeLinecap="round" opacity="0.82">
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <line key={i} x1={311 + i * 6.2} x2={255 + i * 18.1} y1="66" y2="363" strokeWidth={1.1 + i * 0.08} />
+            ))}
+          </g>
+        </g>
+      </svg>
+    </div>
+  )
+}
+
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
   return (
@@ -325,11 +440,14 @@ export default function GuitarCanvas() {
   const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
   const [webglLost, setWebglLost] = useState(false)
   const shape = useConfigStore(s => s.shape)
+  const showSStyleFallback = shape === 'modern-s'
   const showSingleCutFallback = webglLost && shape === 'single-cut'
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
+      {showSStyleFallback ? (
+        <SStyleFinishFallback />
+      ) : showSingleCutFallback ? (
         <SingleCutFinishFallback />
       ) : (
         <Canvas
