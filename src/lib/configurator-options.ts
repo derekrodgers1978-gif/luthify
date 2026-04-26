@@ -18,29 +18,15 @@ export const BODY_SHAPES: ConfigOption[] = [
 ]
 
 export const FINISHES: ConfigOption[] = [
-  { id: 'mint',      label: 'Surf Mint',   hex: '#7EC8B4', roughness: 0.12, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'ocean',     label: 'Ocean Blue',  hex: '#2E6EA6', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
-  { id: 'black',     label: 'Onyx Black',  hex: '#1a1a1a', roughness: 0.08, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'red',       label: 'Cherry Red',  hex: '#A51C30', roughness: 0.1,  priceAdj: 0, finishGroup: 'solid' },
-  { id: 'forest',    label: 'Forest',      hex: '#2D5A3D', roughness: 0.15, priceAdj: 0, finishGroup: 'solid' },
-  { id: 'sunburst',  label: 'Sunburst',    hex: '#6B2200', roughness: 0.1,  priceAdj: 0, finishGroup: 'burst' },
-  { id: 'natural',   label: 'Natural Ash', hex: '#D4B896', roughness: 0.22, priceAdj: 0, finishGroup: 'natural' },
-  { id: 'aged',      label: 'Aged Honey',  hex: '#C8954A', roughness: 0.3,  priceAdj: 0, finishGroup: 'natural' },
+  { id: 'sunburst',  label: 'Sunburst',    hex: '#6B2200', roughness: 0.1,  priceAdj: 0 },
+  { id: 'mint',      label: 'Surf Mint',   hex: '#7EC8B4', roughness: 0.12, priceAdj: 0 },
+  { id: 'ocean',     label: 'Ocean Blue',  hex: '#2E6EA6', roughness: 0.1,  priceAdj: 0 },
+  { id: 'natural',   label: 'Natural Ash', hex: '#D4B896', roughness: 0.22, priceAdj: 0 },
+  { id: 'black',     label: 'Onyx Black',  hex: '#1a1a1a', roughness: 0.08, priceAdj: 0 },
+  { id: 'red',       label: 'Cherry Red',  hex: '#A51C30', roughness: 0.1,  priceAdj: 0 },
+  { id: 'aged',      label: 'Aged Honey',  hex: '#C8954A', roughness: 0.3,  priceAdj: 0 },
+  { id: 'forest',    label: 'Forest',      hex: '#2D5A3D', roughness: 0.15, priceAdj: 0 },
 ]
-
-export const FINISH_GROUPS = [
-  { id: 'solid',  label: 'Solid Colours' },
-  { id: 'burst',  label: 'Burst Finishes' },
-  { id: 'natural', label: 'Natural / Wood Finishes' },
-] as const
-
-export function isBurstFinish(id?: string) {
-  return FINISHES.find(f => f.id === id)?.finishGroup === 'burst'
-}
-
-export function isNaturalFinish(id?: string) {
-  return FINISHES.find(f => f.id === id)?.finishGroup === 'natural'
-}
 
 export const TOPS: ConfigOption[] = [
   { id: 'solid',   label: 'Solid',        sub: 'No carve cap',           texture: undefined,                priceAdj: 0   },
