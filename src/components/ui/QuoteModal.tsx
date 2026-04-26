@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import { BUILDERS } from '@/lib/builders-data'
-import { FINISHES, TOPS, HARDWARE_COLORS, FRETBOARDS, BODY_SHAPES, BRIDGES, PICKUPS, NECK_WOODS } from '@/lib/configurator-options'
+import { FINISHES, TOPS, HARDWARE_COLORS, FRETBOARDS, BODY_SHAPES, BRIDGES, PICKGUARDS, PICKUPS, NECK_WOODS } from '@/lib/configurator-options'
 
 interface Props { open: boolean; onClose: () => void; preselectedBuilderId?: string }
 
@@ -42,6 +42,7 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
   const neck   = NECK_WOODS.find(n => n.id === store.neck)
   const shape  = BODY_SHAPES.find(s => s.id === store.shape)
   const bridge = BRIDGES.find(b => b.id === store.bridge)
+  const pickguard = PICKGUARDS.find(p => p.id === store.pickguard)
   const pickups = PICKUPS.find(p => p.id === store.pickups)
 
   const specTags = [
@@ -51,6 +52,7 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
     { label: neck?.label ?? store.neck, key: 'neck' },
     { label: hw?.label + ' HW', key: 'hardware' },
     { label: fb?.label, key: 'fretboard' },
+    { label: pickguard?.label, key: 'pickguard' },
     { label: bridge?.label ?? store.bridge, key: 'bridge' },
     { label: pickups?.label ?? store.pickups, key: 'pickups' },
   ]
