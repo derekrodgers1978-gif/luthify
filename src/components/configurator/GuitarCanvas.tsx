@@ -36,7 +36,6 @@ MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
 const S_STYLE_BODY_MESH = {
   nodeName: 'Object_3',
-  geometryName: 'Object_1',
   materialName: 'BodyMaterial',
 } as const
 
@@ -95,7 +94,6 @@ function isSingleCutPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
 function isSStyleBodyMesh(mesh: THREE.Mesh, material: THREE.Material) {
   return (
     mesh.name === S_STYLE_BODY_MESH.nodeName &&
-    mesh.geometry?.name === S_STYLE_BODY_MESH.geometryName &&
     material.name === S_STYLE_BODY_MESH.materialName
   )
 }
