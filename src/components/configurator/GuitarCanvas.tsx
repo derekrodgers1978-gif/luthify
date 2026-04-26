@@ -163,6 +163,136 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   mat.needsUpdate = true
 }
 
+function SStylePickup({ kind, position, hardwareColor }: { kind: 'single' | 'hum' | 'p90' | 'active'; position: [number, number, number]; hardwareColor: string }) {
+  const isSingle = kind === 'single'
+  const isP90 = kind === 'p90'
+  const pickupColor = kind === 'active' ? '#060607' : isP90 ? '#E9DFC9' : isSingle ? '#F5F0E5' : '#111114'
+  const railColor = isSingle || isP90 ? hardwareColor : '#23232A'
+
+  return (
+    <group position={position}>
+      <mesh castShadow>
+        <boxGeometry args={isSingle ? [0.48, 0.105, 0.055] : isP90 ? [0.56, 0.16, 0.06] : [0.62, 0.2, 0.07]} />
+        <meshStandardMaterial color={pickupColor} metalness={kind === 'active' ? 0.5 : 0.08} roughness={0.28} />
+      </mesh>
+      {kind === 'hum' || kind === 'active' ? (
+        <>
+          <mesh position={[0, -0.045, 0.042]} castShadow>
+            <boxGeometry args={[0.56, 0.018, 0.018]} />
+            <meshStandardMaterial color={hardwareColor} metalness={0.82} roughness={0.24} />
+          </mesh>
+          <mesh position={[0, 0.045, 0.042]} castShadow>
+            <boxGeometry args={[0.56, 0.018, 0.018]} />
+            <meshStandardMaterial color={hardwareColor} metalness={0.82} roughness={0.24} />
+          </mesh>
+        </>
+      ) : (
+        <mesh position={[0, 0, 0.04]} castShadow>
+          <boxGeometry args={[isP90 ? 0.48 : 0.38, 0.02, 0.018]} />
+          <meshStandardMaterial color={railColor} metalness={0.74} roughness={0.24} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
+function SStyleBridge({ bridge, hardwareColor }: { bridge: string; hardwareColor: string }) {
+  if (bridge === 'bigsby') {
+    return (
+      <group position={[0.02, -1.63, 0.24]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.78, 0.14, 0.07]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, -0.25, 0.02]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <torusGeometry args={[0.26, 0.025, 10, 56]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.22} />
+        </mesh>
+        <mesh position={[0.33, -0.34, 0.03]} rotation={[0, 0, -0.78]} castShadow>
+          <boxGeometry args={[0.54, 0.035, 0.035]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+        </mesh>
+      </group>
+    )
+  }
+
+  if (bridge === 'trem') {
+    return (
+      <group position={[0.02, -1.62, 0.24]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.76, 0.2, 0.08]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+        </mesh>
+        <mesh position={[0.36, -0.2, 0.04]} rotation={[0, 0, -0.68]} castShadow>
+          <boxGeometry args={[0.62, 0.032, 0.032]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+        </mesh>
+        {[-0.24, 0, 0.24].map(x => (
+          <mesh key={x} position={[x, 0.01, 0.055]} castShadow>
+            <boxGeometry args={[0.12, 0.12, 0.026]} />
+            <meshStandardMaterial color="#2B2D33" metalness={0.75} roughness={0.26} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
+  if (bridge === 'hardtail') {
+    return (
+      <group position={[0.02, -1.62, 0.24]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.72, 0.16, 0.075]} />
+          <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+        </mesh>
+        {[-0.3, -0.18, -0.06, 0.06, 0.18, 0.3].map(x => (
+          <mesh key={x} position={[x, 0.01, 0.055]} castShadow>
+            <boxGeometry args={[0.055, 0.17, 0.026]} />
+            <meshStandardMaterial color="#272A30" metalness={0.8} roughness={0.25} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
+  return (
+    <group position={[0.02, -1.62, 0.24]}>
+      <mesh castShadow>
+        <boxGeometry args={[0.64, 0.12, 0.07]} />
+        <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, -0.22, 0]} castShadow>
+        <boxGeometry args={[0.72, 0.08, 0.065]} />
+        <meshStandardMaterial color={hardwareColor} metalness={0.9} roughness={0.22} />
+      </mesh>
+    </group>
+  )
+}
+
+function SStyleSelectorHardware({ bridge, pickups, hardwareColor }: { bridge: string; pickups: string; hardwareColor: string }) {
+  const pickupLayout: Record<string, ('single' | 'hum' | 'p90' | 'active')[]> = {
+    'dual-hum': ['hum', 'hum'],
+    hss: ['hum', 'single', 'single'],
+    p90: ['p90', 'p90'],
+    singlecoil: ['single', 'single', 'single'],
+    'active-hum': ['active', 'active'],
+  }
+  const layout = pickupLayout[pickups] ?? pickupLayout['dual-hum']
+  const positionsByCount: Record<number, [number, number, number][]> = {
+    2: [[0, -1.28, 0.25], [0, -0.86, 0.25]],
+    3: [[0, -1.32, 0.25], [0, -1.06, 0.25], [0, -0.8, 0.25]],
+  }
+  const positions = positionsByCount[layout.length] ?? positionsByCount[2]
+
+  return (
+    <group>
+      {layout.map((kind, index) => (
+        <SStylePickup key={`${kind}-${index}`} kind={kind} position={positions[index]} hardwareColor={hardwareColor} />
+      ))}
+      <SStyleBridge bridge={bridge} hardwareColor={hardwareColor} />
+    </group>
+  )
+}
+
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const store = useConfigStore()
   const shape = BODY_SHAPES.find(s => s.id === store.shape) ?? BODY_SHAPES[0]
@@ -182,6 +312,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     return { model: clone, center, scale: targetSize / maxDimension, maxDimension }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
+  const showSStyleSelectorHardware = shape.id === 'modern-s'
 
   useEffect(() => {
     model.traverse(obj => {
@@ -206,6 +337,9 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+        {showSStyleSelectorHardware && (
+          <SStyleSelectorHardware bridge={store.bridge} pickups={store.pickups} hardwareColor={colors.hardware} />
+        )}
       </group>
     </Center>
   )
