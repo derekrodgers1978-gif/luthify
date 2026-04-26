@@ -1,7 +1,7 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
@@ -219,6 +219,175 @@ function ModelLoading() {
   )
 }
 
+function makeSStyleBodyShape() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.34, 1.05)
+  shape.bezierCurveTo(-0.86, 1.02, -1.18, 0.72, -1.1, 0.34)
+  shape.bezierCurveTo(-1.02, -0.03, -0.72, -0.15, -0.43, -0.19)
+  shape.bezierCurveTo(-0.9, -0.42, -1.18, -0.82, -1.04, -1.26)
+  shape.bezierCurveTo(-0.87, -1.84, -0.12, -2.04, 0.47, -1.68)
+  shape.bezierCurveTo(0.86, -1.94, 1.52, -1.79, 1.7, -1.2)
+  shape.bezierCurveTo(1.86, -0.68, 1.46, -0.28, 0.98, -0.13)
+  shape.bezierCurveTo(1.42, 0.03, 1.62, 0.44, 1.44, 0.78)
+  shape.bezierCurveTo(1.24, 1.17, 0.72, 1.16, 0.35, 0.86)
+  shape.bezierCurveTo(0.13, 1.02, -0.08, 1.08, -0.34, 1.05)
+  return shape
+}
+
+function makeSStylePickguardShape() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.36, 0.8)
+  shape.bezierCurveTo(-0.69, 0.72, -0.88, 0.47, -0.78, 0.19)
+  shape.bezierCurveTo(-0.67, -0.11, -0.34, -0.13, -0.11, -0.19)
+  shape.bezierCurveTo(-0.46, -0.4, -0.55, -0.75, -0.35, -1.0)
+  shape.bezierCurveTo(-0.04, -1.38, 0.68, -1.23, 0.96, -0.82)
+  shape.bezierCurveTo(1.24, -0.4, 1.04, 0.2, 0.66, 0.46)
+  shape.bezierCurveTo(0.37, 0.66, 0.03, 0.83, -0.36, 0.8)
+  return shape
+}
+
+function makeSStyleHeadstockShape() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.22, 0)
+  shape.lineTo(-0.35, 0.76)
+  shape.bezierCurveTo(-0.31, 1.08, 0.12, 1.26, 0.34, 1.02)
+  shape.bezierCurveTo(0.48, 0.86, 0.35, 0.58, 0.16, 0.55)
+  shape.lineTo(0.22, 0)
+  shape.closePath()
+  return shape
+}
+
+function SStyleElectric({ view }: { view: 'standard' | 'detail' }) {
+  const store = useConfigStore()
+  const finish = FINISHES.find(f => f.id === store.finish)
+  const neck = NECK_WOODS.find(n => n.id === store.neck)
+  const board = FRETBOARDS.find(f => f.id === store.fretboard)
+  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const colors = makeColors(finish, neck, board, hw)
+  const bodyShape = useMemo(makeSStyleBodyShape, [])
+  const pickguardShape = useMemo(makeSStylePickguardShape, [])
+  const headstockShape = useMemo(makeSStyleHeadstockShape, [])
+  const bodyFill = finish?.id === 'sunburst' ? '#6B2200' : colors.finish
+  const pickupLayout = store.pickups === 'singlecoil'
+    ? ['single', 'single', 'single']
+    : store.pickups === 'hss'
+      ? ['single', 'single', 'hum']
+      : store.pickups === 'p90'
+        ? ['p90', 'p90']
+        : ['hum', 'hum']
+  const pickupYs = pickupLayout.length === 3 ? [0.36, -0.02, -0.4] : [0.24, -0.34]
+  const bridgeY = -0.82
+  const hardwareColor = colors.hardware
+  const viewRotation: [number, number, number] = view === 'detail' ? [-0.08, -0.22, -0.2] : [-0.04, 0.16, -0.22]
+
+  return (
+    <Center>
+      <group rotation={viewRotation} scale={1.18} position={[0.18, 0.02, 0]}>
+        <mesh position={[0, -0.38, -0.08]} castShadow receiveShadow>
+          <extrudeGeometry args={[bodyShape, { depth: 0.18, bevelEnabled: true, bevelSegments: 8, bevelSize: 0.045, bevelThickness: 0.045 }]} />
+          <meshStandardMaterial color={bodyFill} roughness={Math.min(colors.finishRoughness, 0.24)} metalness={0.04} envMapIntensity={1.65} />
+        </mesh>
+        {finish?.id === 'sunburst' && (
+          <mesh position={[0, -0.38, 0.012]} scale={[0.84, 0.83, 1]}>
+            <shapeGeometry args={[bodyShape]} />
+            <meshStandardMaterial color="#F2A33B" roughness={0.18} metalness={0.03} transparent opacity={0.88} />
+          </mesh>
+        )}
+        <mesh position={[0, -0.38, 0.026]} scale={[0.91, 0.91, 1]}>
+          <shapeGeometry args={[bodyShape]} />
+          <meshStandardMaterial color="#ffffff" transparent opacity={0.11} roughness={0.2} metalness={0.02} />
+        </mesh>
+
+        <group rotation={[0, 0, -0.05]} position={[0.06, 1.1, -0.03]}>
+          <mesh position={[0, -0.15, 0]} castShadow>
+            <boxGeometry args={[0.58, 3.1, 0.12]} />
+            <meshStandardMaterial color={colors.neck} roughness={0.42} metalness={0.02} />
+          </mesh>
+          <mesh position={[0, -0.13, 0.07]} castShadow>
+            <boxGeometry args={[0.36, 3.0, 0.055]} />
+            <meshStandardMaterial color={colors.board} roughness={0.58} metalness={0} />
+          </mesh>
+          {[-1.34, -1.02, -0.7, -0.38, -0.06, 0.26, 0.58, 0.9].map(y => (
+            <mesh key={y} position={[0, y, 0.105]}>
+              <boxGeometry args={[0.39, 0.012, 0.018]} />
+              <meshStandardMaterial color="#DDE2EA" roughness={0.18} metalness={0.65} />
+            </mesh>
+          ))}
+          <mesh position={[0, 1.48, 0.02]} castShadow>
+            <extrudeGeometry args={[headstockShape, { depth: 0.1, bevelEnabled: true, bevelSegments: 5, bevelSize: 0.02, bevelThickness: 0.02 }]} />
+            <meshStandardMaterial color={colors.neck} roughness={0.42} metalness={0.02} />
+          </mesh>
+          {[-0.22, 0, 0.22].map((x, i) => (
+            <group key={x}>
+              <mesh position={[x, 2.18 - i * 0.24, 0.13]}>
+                <cylinderGeometry args={[0.055, 0.055, 0.035, 18]} />
+                <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
+              </mesh>
+              <mesh position={[-x, 1.78 - i * 0.24, 0.13]}>
+                <cylinderGeometry args={[0.055, 0.055, 0.035, 18]} />
+                <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+
+        <mesh position={[0.15, -0.48, 0.055]} scale={[0.88, 0.9, 1]} castShadow>
+          <shapeGeometry args={[pickguardShape]} />
+          <meshStandardMaterial color="#F2EEE2" roughness={0.34} metalness={0.02} />
+        </mesh>
+
+        {pickupLayout.map((kind, i) => (
+          <group key={`${kind}-${i}`} position={[0.12, pickupYs[i] - 0.38, 0.11]} rotation={[0, 0, -0.08]}>
+            <mesh castShadow>
+              <boxGeometry args={[kind === 'single' ? 0.72 : kind === 'p90' ? 0.82 : 0.9, kind === 'single' ? 0.14 : 0.24, 0.08]} />
+              <meshStandardMaterial color={kind === 'single' || kind === 'p90' ? '#EFE9D7' : '#08080A'} roughness={0.3} metalness={kind === 'hum' ? 0.35 : 0.08} />
+            </mesh>
+            {kind === 'hum' && (
+              <lineSegments position={[0, 0, 0.047]}>
+                <edgesGeometry args={[new THREE.BoxGeometry(0.92, 0.25, 0.01)]} />
+                <lineBasicMaterial color={hardwareColor} />
+              </lineSegments>
+            )}
+          </group>
+        ))}
+
+        <group position={[0.02, bridgeY - 0.38, 0.13]} rotation={[0, 0, -0.08]}>
+          <mesh castShadow>
+            <boxGeometry args={[store.bridge === 'trem' || store.bridge === 'bigsby' ? 1.0 : 0.82, 0.2, 0.11]} />
+            <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
+          </mesh>
+          {(store.bridge === 'trem' || store.bridge === 'bigsby') && (
+            <mesh position={[0.52, -0.14, 0.02]} rotation={[0, 0, -0.55]}>
+              <boxGeometry args={[0.08, 0.72, 0.05]} />
+              <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
+            </mesh>
+          )}
+        </group>
+
+        <group>
+          {[0.7, 0.98, 1.18].map((x, i) => (
+            <mesh key={x} position={[x, -0.78 - i * 0.28, 0.14]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.085, 0.085, 0.055, 24]} />
+              <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
+            </mesh>
+          ))}
+        </group>
+        <mesh position={[1.28, -1.1, 0.12]} rotation={[0, 0, -0.58]}>
+          <boxGeometry args={[0.34, 0.12, 0.06]} />
+          <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
+        </mesh>
+
+        {[-0.15, -0.09, -0.03, 0.03, 0.09, 0.15].map((x, i) => (
+          <mesh key={x} position={[x - 0.04, 0.28, 0.19]} rotation={[0, 0, -0.055]}>
+            <boxGeometry args={[0.008, 3.62 + i * 0.018, 0.008]} />
+            <meshStandardMaterial color="#DDE2EA" roughness={0.2} metalness={0.78} />
+          </mesh>
+        ))}
+      </group>
+    </Center>
+  )
+}
+
 function SingleCutFinishFallback() {
   const store = useConfigStore()
   const finish = FINISHES.find(f => f.id === store.finish)
@@ -287,6 +456,8 @@ function SingleCutFinishFallback() {
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
+  const shape = useConfigStore(s => s.shape)
+
   return (
     <>
       <ambientLight intensity={0.42} />
@@ -296,9 +467,15 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
       <Suspense fallback={<ModelLoading />}>
-        <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
-        </Bounds>
+        {shape === 'modern-s' ? (
+          <Bounds fit clip observe margin={1.18}>
+            <SStyleElectric view={view} />
+          </Bounds>
+        ) : (
+          <Bounds fit clip observe margin={1.28}>
+            <GlbInstrument view={view} />
+          </Bounds>
+        )}
       </Suspense>
     </>
   )
