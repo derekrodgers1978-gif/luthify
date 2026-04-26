@@ -2,8 +2,8 @@
 import { useState } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import {
-  BODY_SHAPES, FINISHES, FINISH_GROUPS, TOPS, NECK_WOODS,
-  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS,
+  BODY_SHAPES, FINISHES, S_STYLE_FINISHES, FINISH_GROUPS, TOPS, NECK_WOODS,
+  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKGUARDS, PICKUPS,
   DEFAULT_CONFIG, type ConfigKey,
 } from '@/lib/configurator-options'
 import type { ConfigOption } from '@/types'
@@ -32,6 +32,7 @@ function GroupLabel({ children, value }: { children: React.ReactNode; value?: st
 export default function ConfigPanel() {
   const store = useConfigStore()
   const [tab, setTab] = useState<Tab>('body')
+  const finishes = store.shape === 'modern-s' ? S_STYLE_FINISHES : FINISHES
 
   const getLabel = (opts: ConfigOption[], id: string) => opts.find(o => o.id === id)?.label ?? id
 
@@ -72,9 +73,9 @@ export default function ConfigPanel() {
 
             {/* Finish */}
             <div style={S.group}>
-              <GroupLabel value={getLabel(FINISHES, store.finish)}>Finish</GroupLabel>
-              {FINISH_GROUPS.map(group => {
-                const options = FINISHES.filter(o => o.finishGroup === group.id)
+              <GroupLabel value={getLabel(finishes, store.finish)}>Finish</GroupLabel>
+              {FINISH_GROUPS.filter(group => finishes.some(o => o.finishGroup === group.id)).map(group => {
+                const options = finishes.filter(o => o.finishGroup === group.id)
                 return (
                   <div key={group.id} style={{ marginBottom: 12 }}>
                     <div style={S.finishGroupLabel}>{group.label}</div>
@@ -87,7 +88,7 @@ export default function ConfigPanel() {
                 )
               })}
               <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)', marginTop: 4 }}>
-                {FINISHES.find(f => f.id === store.finish)?.label} finish
+                {finishes.find(f => f.id === store.finish)?.label} finish
               </p>
             </div>
 
@@ -144,6 +145,16 @@ export default function ConfigPanel() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div style={S.group}>
+              <GroupLabel value={getLabel(PICKGUARDS, store.pickguard)}>Pickguard</GroupLabel>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                {PICKGUARDS.map(o => (
+                  <div key={o.id} title={o.label} style={S.swatch(store.pickguard === o.id, o.hex!)} onClick={() => store.setOption('pickguard', o.id)} />
+                ))}
+              </div>
+              <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)' }}>{PICKGUARDS.find(p => p.id === store.pickguard)?.label}</p>
             </div>
 
             <div style={S.group}>

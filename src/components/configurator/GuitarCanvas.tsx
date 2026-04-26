@@ -1,10 +1,10 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
-import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, isBurstFinish, isNaturalFinish } from '@/lib/configurator-options'
+import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS, PICKGUARDS, isBurstFinish, isNaturalFinish } from '@/lib/configurator-options'
 
 const MODEL_TARGET_SIZE: Record<string, number> = {
   cello: 4.8,
@@ -28,15 +28,30 @@ const CAMERA_DISTANCE: Record<string, number> = {
   default: 6.4,
 }
 
-type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
-type FinishOption = { id: string; hex?: string; roughness?: number; finishGroup?: 'solid' | 'burst' | 'natural' }
+type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'pickguard' | 'protected' | 'other'
+type FinishOption = { id: string; hex?: string; burstStops?: [string, string, string]; roughness?: number; finishGroup?: 'solid' | 'burst' | 'natural' }
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
-function materialRole(meshName: string, materialName: string): MaterialRole {
+const S_STYLE_ROLES: Record<string, MaterialRole> = {
+  Object_0: 'pickup',
+  Object_1: 'body',
+  Object_12: 'pickguard',
+  Object_22: 'bridge',
+  Object_23: 'pickup',
+  Object_24: 'bridge',
+  Object_25: 'pickup',
+  Object_28: 'fretboard',
+  Object_29: 'neck',
+  Object_30: 'neck',
+}
+
+function materialRole(meshName: string, materialName: string, shapeId: string): MaterialRole {
+  if (shapeId === 'modern-s') return S_STYLE_ROLES[meshName] ?? 'hardware'
   const key = `${meshName} ${materialName}`.toLowerCase()
-  if (/(pickguard|scratchplate|guard|binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
+  if (/(pickguard|scratchplate|guard)/.test(key)) return 'pickguard'
+  if (/(binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
   if (/(fretboard|fingerboard|finger board|fret|board)/.test(key)) return 'fretboard'
   if (/(neck|headstock|head stock|headstock|peghead)/.test(key)) return 'neck'
   if (/(pickup|pick up|humbucker|single coil|p90|p-90)/.test(key)) return 'pickup'
@@ -46,13 +61,18 @@ function materialRole(meshName: string, materialName: string): MaterialRole {
   return 'other'
 }
 
-function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: string }, board?: { hex?: string }, hw?: { id: string }) {
+function makeColors(finish?: FinishOption, neck?: { id: string }, board?: { hex?: string }, hw?: { id: string }, pickguard?: { hex?: string }) {
+  const burstStops = finish?.burstStops
   return {
     finish: finish?.hex ?? '#D4B896',
+    burstInner: burstStops?.[0] ?? '#F4B24F',
+    burstMiddle: burstStops?.[1] ?? finish?.hex ?? '#8A2D0A',
+    burstOuter: burstStops?.[2] ?? '#140703',
     finishRoughness: finish?.roughness ?? 0.18,
     neck: neck?.id === 'maple' ? '#C8A05A' : neck?.id === 'roasted' ? '#8B4A20' : neck?.id === 'walnut' ? '#4A2411' : '#5C2F17',
     board: board?.hex ?? '#1A0A00',
     hardware: hw?.id === 'gold' || hw?.id === 'aged-brass' ? '#C9A45C' : hw?.id === 'black' ? '#111116' : '#C9CED6',
+    pickguard: pickguard?.hex ?? '#F2EEE2',
   }
 }
 
@@ -129,12 +149,52 @@ diffuseColor.rgb = mix(paintColor, uBindingColor, binding * 0.92);`
   mat.customProgramCacheKey = () => `single-cut-finish-${finish?.id ?? 'default'}-${finishMode}-${colors.finish}`
 }
 
+function applyBurstBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh) {
+  mesh.geometry.computeBoundingBox()
+  const box = mesh.geometry.boundingBox
+  const center = box?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3()
+  const size = box?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(1, 1, 1)
+  const halfSize = new THREE.Vector2(Math.max(size.x * 0.5, 0.001), Math.max(size.z * 0.5, 0.001))
+
+  mat.color = new THREE.Color('#ffffff')
+  mat.map = null
+  mat.metalness = 0.04
+  mat.roughness = Math.min(colors.finishRoughness, 0.24)
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uBurstInner = { value: new THREE.Color(colors.burstInner) }
+    shader.uniforms.uBurstMiddle = { value: new THREE.Color(colors.burstMiddle) }
+    shader.uniforms.uBurstOuter = { value: new THREE.Color(colors.burstOuter) }
+    shader.uniforms.uBodyCenter = { value: new THREE.Vector2(center.x, center.z) }
+    shader.uniforms.uBodyHalfSize = { value: halfSize }
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vBurstPosition;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBurstPosition = position;')
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nuniform vec3 uBurstInner;\nuniform vec3 uBurstMiddle;\nuniform vec3 uBurstOuter;\nuniform vec2 uBodyCenter;\nuniform vec2 uBodyHalfSize;\nvarying vec3 vBurstPosition;'
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+vec2 burstUv = (vBurstPosition.xz - uBodyCenter) / uBodyHalfSize;
+float burstRadius = length(burstUv);
+vec3 burstColor = mix(uBurstInner, uBurstMiddle, smoothstep(0.18, 0.58, burstRadius));
+burstColor = mix(burstColor, uBurstOuter, smoothstep(0.62, 0.96, burstRadius));
+diffuseColor.rgb = burstColor;`
+      )
+  }
+  mat.customProgramCacheKey = () => `s-style-burst-${finish?.id ?? 'default'}-${colors.burstInner}-${colors.burstMiddle}-${colors.burstOuter}`
+}
+
 function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number, shapeId: string, finish?: FinishOption) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
   if (shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
     applySingleCutBodyFinish(mat, finish, colors, mesh)
+  } else if (shapeId === 'modern-s' && role === 'body' && isBurstFinish(finish?.id)) {
+    applyBurstBodyFinish(mat, finish, colors, mesh)
   } else if (role === 'hardware' || role === 'bridge') {
     mat.color = new THREE.Color(colors.hardware)
     mat.metalness = 0.9
@@ -151,6 +211,10 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.color = new THREE.Color(colors.board)
     mat.metalness = 0
     mat.roughness = 0.58
+  } else if (role === 'pickguard') {
+    mat.color = new THREE.Color(colors.pickguard)
+    mat.metalness = 0.02
+    mat.roughness = 0.34
   } else if (role === 'protected') {
     mat.color = new THREE.Color('#F2EEE2')
     mat.metalness = 0.02
@@ -170,6 +234,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
+  const pickguard = PICKGUARDS.find(p => p.id === store.pickguard)
   const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
   const { model, center, scale, maxDimension } = useMemo(() => {
@@ -181,7 +246,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
     return { model: clone, center, scale: targetSize / maxDimension, maxDimension }
   }, [scene, shape.id])
-  const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
+  const colors = useMemo(() => makeColors(finish, neck, board, hw, pickguard), [board, finish, hw, neck, pickguard])
 
   useEffect(() => {
     model.traverse(obj => {
@@ -195,7 +260,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         mesh.material = mesh.material.clone()
       }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish))
+      materials.forEach(mat => enhanceMaterial(materialRole(mesh.name, mat.name, shape.id), mat, colors, mesh, maxDimension, shape.id, finish))
     })
   }, [colors, finish, maxDimension, model, shape.id])
 
@@ -228,7 +293,8 @@ function SingleCutFinishFallback() {
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const colors = makeColors(finish, neck, board, hw)
+  const pickguard = PICKGUARDS.find(p => p.id === store.pickguard)
+  const colors = makeColors(finish, neck, board, hw, pickguard)
   const bodyFill = isBurstFinish(finish?.id) ? 'url(#singleCutBurst)' : isNaturalFinish(finish?.id) ? 'url(#singleCutNatural)' : colors.finish
 
   return (
