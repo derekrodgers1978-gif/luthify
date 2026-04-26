@@ -130,6 +130,10 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
+  const isPaintSurface = role === 'body' || (role === 'other' && isLikelyPaintSurface(mesh, modelMaxDimension))
+  if (shapeId === 'modern-s' && isPaintSurface) {
+    return
+  }
   if (shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
     applySingleCutBodyFinish(mat, finish, colors, mesh)
   } else if (role === 'hardware' || role === 'bridge') {
@@ -152,7 +156,7 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.color = new THREE.Color('#F2EEE2')
     mat.metalness = 0.02
     mat.roughness = 0.34
-  } else if (role === 'body' || (role === 'other' && isLikelyPaintSurface(mesh, modelMaxDimension))) {
+  } else if (isPaintSurface) {
     mat.color = new THREE.Color(colors.finish)
     mat.metalness = 0.04
     mat.roughness = Math.min(colors.finishRoughness, 0.24)
