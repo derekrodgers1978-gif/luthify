@@ -219,55 +219,14 @@ function ModelLoading() {
   )
 }
 
-function makeSStyleBodyShape() {
-  const shape = new THREE.Shape()
-  shape.moveTo(-0.34, 1.05)
-  shape.bezierCurveTo(-0.86, 1.02, -1.18, 0.72, -1.1, 0.34)
-  shape.bezierCurveTo(-1.02, -0.03, -0.72, -0.15, -0.43, -0.19)
-  shape.bezierCurveTo(-0.9, -0.42, -1.18, -0.82, -1.04, -1.26)
-  shape.bezierCurveTo(-0.87, -1.84, -0.12, -2.04, 0.47, -1.68)
-  shape.bezierCurveTo(0.86, -1.94, 1.52, -1.79, 1.7, -1.2)
-  shape.bezierCurveTo(1.86, -0.68, 1.46, -0.28, 0.98, -0.13)
-  shape.bezierCurveTo(1.42, 0.03, 1.62, 0.44, 1.44, 0.78)
-  shape.bezierCurveTo(1.24, 1.17, 0.72, 1.16, 0.35, 0.86)
-  shape.bezierCurveTo(0.13, 1.02, -0.08, 1.08, -0.34, 1.05)
-  return shape
-}
-
-function makeSStylePickguardShape() {
-  const shape = new THREE.Shape()
-  shape.moveTo(-0.36, 0.8)
-  shape.bezierCurveTo(-0.69, 0.72, -0.88, 0.47, -0.78, 0.19)
-  shape.bezierCurveTo(-0.67, -0.11, -0.34, -0.13, -0.11, -0.19)
-  shape.bezierCurveTo(-0.46, -0.4, -0.55, -0.75, -0.35, -1.0)
-  shape.bezierCurveTo(-0.04, -1.38, 0.68, -1.23, 0.96, -0.82)
-  shape.bezierCurveTo(1.24, -0.4, 1.04, 0.2, 0.66, 0.46)
-  shape.bezierCurveTo(0.37, 0.66, 0.03, 0.83, -0.36, 0.8)
-  return shape
-}
-
-function makeSStyleHeadstockShape() {
-  const shape = new THREE.Shape()
-  shape.moveTo(-0.22, 0)
-  shape.lineTo(-0.35, 0.76)
-  shape.bezierCurveTo(-0.31, 1.08, 0.12, 1.26, 0.34, 1.02)
-  shape.bezierCurveTo(0.48, 0.86, 0.35, 0.58, 0.16, 0.55)
-  shape.lineTo(0.22, 0)
-  shape.closePath()
-  return shape
-}
-
-function SStyleElectric({ view }: { view: 'standard' | 'detail' }) {
+function SStyleVectorPreview({ view }: { view: 'standard' | 'detail' | 'reset' }) {
   const store = useConfigStore()
   const finish = FINISHES.find(f => f.id === store.finish)
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const colors = makeColors(finish, neck, board, hw)
-  const bodyShape = useMemo(makeSStyleBodyShape, [])
-  const pickguardShape = useMemo(makeSStylePickguardShape, [])
-  const headstockShape = useMemo(makeSStyleHeadstockShape, [])
-  const bodyFill = finish?.id === 'sunburst' ? '#6B2200' : colors.finish
+  const bodyFill = finish?.id === 'sunburst' ? 'url(#sStyleBurst)' : colors.finish
   const pickupLayout = store.pickups === 'singlecoil'
     ? ['single', 'single', 'single']
     : store.pickups === 'hss'
@@ -275,116 +234,72 @@ function SStyleElectric({ view }: { view: 'standard' | 'detail' }) {
       : store.pickups === 'p90'
         ? ['p90', 'p90']
         : ['hum', 'hum']
-  const pickupYs = pickupLayout.length === 3 ? [0.36, -0.02, -0.4] : [0.24, -0.34]
-  const bridgeY = -0.82
+  const pickupYs = pickupLayout.length === 3 ? [202, 248, 294] : [220, 286]
   const hardwareColor = colors.hardware
-  const viewRotation: [number, number, number] = view === 'detail' ? [-0.08, -0.22, -0.2] : [-0.04, 0.16, -0.22]
+  const guitarTransform = view === 'detail'
+    ? 'translate(136 12) rotate(-12 276 268) scale(1.08)'
+    : 'translate(96 28) rotate(-12 276 268)'
+  const pickupWidth = (kind: string) => kind === 'single' ? 86 : kind === 'p90' ? 98 : 108
+  const pickupHeight = (kind: string) => kind === 'single' ? 16 : kind === 'p90' ? 29 : 31
 
   return (
-    <Center>
-      <group rotation={viewRotation} scale={1.18} position={[0.18, 0.02, 0]}>
-        <mesh position={[0, -0.38, -0.08]} castShadow receiveShadow>
-          <extrudeGeometry args={[bodyShape, { depth: 0.18, bevelEnabled: true, bevelSegments: 8, bevelSize: 0.045, bevelThickness: 0.045 }]} />
-          <meshStandardMaterial color={bodyFill} roughness={Math.min(colors.finishRoughness, 0.24)} metalness={0.04} envMapIntensity={1.65} />
-        </mesh>
-        {finish?.id === 'sunburst' && (
-          <mesh position={[0, -0.38, 0.012]} scale={[0.84, 0.83, 1]}>
-            <shapeGeometry args={[bodyShape]} />
-            <meshStandardMaterial color="#F2A33B" roughness={0.18} metalness={0.03} transparent opacity={0.88} />
-          </mesh>
-        )}
-        <mesh position={[0, -0.38, 0.026]} scale={[0.91, 0.91, 1]}>
-          <shapeGeometry args={[bodyShape]} />
-          <meshStandardMaterial color="#ffffff" transparent opacity={0.11} roughness={0.2} metalness={0.02} />
-        </mesh>
+    <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
+      <svg viewBox="0 0 760 520" role="img" aria-label="S-Style Electric separated parts preview" style={{ width: 'min(88%, 900px)', height: 'min(84%, 580px)', filter: 'drop-shadow(0 28px 60px rgba(0,0,0,0.5))' }}>
+        <defs>
+          <radialGradient id="sStyleBurst" cx="45%" cy="55%" r="66%">
+            <stop offset="0%" stopColor="#F2A33B" />
+            <stop offset="48%" stopColor={colors.finish} />
+            <stop offset="89%" stopColor="#120603" />
+          </radialGradient>
+          <linearGradient id="sStyleGloss" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.36)" />
+            <stop offset="44%" stopColor="rgba(255,255,255,0.07)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
+          </linearGradient>
+        </defs>
+        <g transform={guitarTransform}>
+          <g transform="rotate(-2 330 230)">
+            <rect x="314" y="30" width="58" height="318" rx="18" fill={colors.neck} stroke="#1a0d07" strokeWidth="4" />
+            <rect x="326" y="39" width="34" height="304" rx="11" fill={colors.board} />
+            <path d="M313 21 L374 21 L386 -35 C405 -48 445 -31 437 1 C433 16 416 26 398 26 L382 92 L307 92 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="5" strokeLinejoin="round" />
+            {[58, 91, 124, 157, 190, 223, 256, 289, 322].map(y => (
+              <line key={y} x1="326" x2="360" y1={y} y2={y} stroke="#DDE2EA" strokeWidth="2" opacity="0.86" />
+            ))}
+            {[0, 1, 2].map(i => (
+              <g key={i} fill={hardwareColor} stroke="#1E2025" strokeWidth="2">
+                <circle cx={398 + i * 12} cy={-10 + i * 18} r="8" />
+                <circle cx={315 - i * 10} cy={-2 + i * 22} r="8" />
+              </g>
+            ))}
+          </g>
 
-        <group rotation={[0, 0, -0.05]} position={[0.06, 1.1, -0.03]}>
-          <mesh position={[0, -0.15, 0]} castShadow>
-            <boxGeometry args={[0.58, 3.1, 0.12]} />
-            <meshStandardMaterial color={colors.neck} roughness={0.42} metalness={0.02} />
-          </mesh>
-          <mesh position={[0, -0.13, 0.07]} castShadow>
-            <boxGeometry args={[0.36, 3.0, 0.055]} />
-            <meshStandardMaterial color={colors.board} roughness={0.58} metalness={0} />
-          </mesh>
-          {[-1.34, -1.02, -0.7, -0.38, -0.06, 0.26, 0.58, 0.9].map(y => (
-            <mesh key={y} position={[0, y, 0.105]}>
-              <boxGeometry args={[0.39, 0.012, 0.018]} />
-              <meshStandardMaterial color="#DDE2EA" roughness={0.18} metalness={0.65} />
-            </mesh>
+          <path d="M252 318 C205 308 165 272 169 226 C173 184 211 159 251 171 C267 116 321 93 368 122 C386 94 424 78 458 96 C484 109 490 140 469 158 C445 179 413 179 391 164 C382 189 365 208 338 219 C382 226 414 254 415 296 C416 345 369 381 316 370 C296 419 234 438 190 402 C145 431 91 404 86 353 C82 310 121 282 166 297 C188 306 216 322 252 318 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="13" strokeLinejoin="round" />
+          <path d="M252 318 C205 308 165 272 169 226 C173 184 211 159 251 171 C267 116 321 93 368 122 C386 94 424 78 458 96 C484 109 490 140 469 158 C445 179 413 179 391 164 C382 189 365 208 338 219 C382 226 414 254 415 296 C416 345 369 381 316 370 C296 419 234 438 190 402 C145 431 91 404 86 353 C82 310 121 282 166 297 C188 306 216 322 252 318 Z" fill={bodyFill} stroke="#F2EEE2" strokeWidth="7" strokeLinejoin="round" />
+          <path d="M233 299 C198 286 181 256 190 225 C199 193 230 184 259 192 C279 155 330 142 365 169 C393 190 397 238 377 273 C358 306 318 329 278 331 C264 331 250 318 233 299 Z" fill="url(#sStyleGloss)" opacity="0.58" />
+          <path d="M247 179 C278 143 342 139 375 172 C402 199 399 262 369 292 C344 318 300 337 254 325 C208 313 186 280 196 239 C204 205 225 195 247 179 Z" fill="#F2EEE2" stroke="#D9CBA4" strokeWidth="4" strokeLinejoin="round" />
+
+          {pickupLayout.map((kind, i) => (
+            <g key={`${kind}-${i}`} transform={`rotate(-5 300 ${pickupYs[i]})`}>
+              <rect x={300 - pickupWidth(kind) / 2} y={pickupYs[i] - pickupHeight(kind) / 2} width={pickupWidth(kind)} height={pickupHeight(kind)} rx={kind === 'single' ? 8 : 6} fill={kind === 'hum' ? '#08080A' : '#EFE9D7'} stroke={kind === 'hum' ? hardwareColor : '#CFC3A4'} strokeWidth="3" />
+              {kind === 'hum' && <line x1="300" x2="300" y1={pickupYs[i] - 14} y2={pickupYs[i] + 14} stroke={hardwareColor} strokeWidth="2" />}
+              {kind !== 'hum' && <line x1={300 - pickupWidth(kind) / 2 + 13} x2={300 + pickupWidth(kind) / 2 - 13} y1={pickupYs[i]} y2={pickupYs[i]} stroke="#B8AA87" strokeWidth="2" />}
+            </g>
           ))}
-          <mesh position={[0, 1.48, 0.02]} castShadow>
-            <extrudeGeometry args={[headstockShape, { depth: 0.1, bevelEnabled: true, bevelSegments: 5, bevelSize: 0.02, bevelThickness: 0.02 }]} />
-            <meshStandardMaterial color={colors.neck} roughness={0.42} metalness={0.02} />
-          </mesh>
-          {[-0.22, 0, 0.22].map((x, i) => (
-            <group key={x}>
-              <mesh position={[x, 2.18 - i * 0.24, 0.13]}>
-                <cylinderGeometry args={[0.055, 0.055, 0.035, 18]} />
-                <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
-              </mesh>
-              <mesh position={[-x, 1.78 - i * 0.24, 0.13]}>
-                <cylinderGeometry args={[0.055, 0.055, 0.035, 18]} />
-                <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
-              </mesh>
-            </group>
-          ))}
-        </group>
 
-        <mesh position={[0.15, -0.48, 0.055]} scale={[0.88, 0.9, 1]} castShadow>
-          <shapeGeometry args={[pickguardShape]} />
-          <meshStandardMaterial color="#F2EEE2" roughness={0.34} metalness={0.02} />
-        </mesh>
-
-        {pickupLayout.map((kind, i) => (
-          <group key={`${kind}-${i}`} position={[0.12, pickupYs[i] - 0.38, 0.11]} rotation={[0, 0, -0.08]}>
-            <mesh castShadow>
-              <boxGeometry args={[kind === 'single' ? 0.72 : kind === 'p90' ? 0.82 : 0.9, kind === 'single' ? 0.14 : 0.24, 0.08]} />
-              <meshStandardMaterial color={kind === 'single' || kind === 'p90' ? '#EFE9D7' : '#08080A'} roughness={0.3} metalness={kind === 'hum' ? 0.35 : 0.08} />
-            </mesh>
-            {kind === 'hum' && (
-              <lineSegments position={[0, 0, 0.047]}>
-                <edgesGeometry args={[new THREE.BoxGeometry(0.92, 0.25, 0.01)]} />
-                <lineBasicMaterial color={hardwareColor} />
-              </lineSegments>
-            )}
-          </group>
-        ))}
-
-        <group position={[0.02, bridgeY - 0.38, 0.13]} rotation={[0, 0, -0.08]}>
-          <mesh castShadow>
-            <boxGeometry args={[store.bridge === 'trem' || store.bridge === 'bigsby' ? 1.0 : 0.82, 0.2, 0.11]} />
-            <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
-          </mesh>
-          {(store.bridge === 'trem' || store.bridge === 'bigsby') && (
-            <mesh position={[0.52, -0.14, 0.02]} rotation={[0, 0, -0.55]}>
-              <boxGeometry args={[0.08, 0.72, 0.05]} />
-              <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
-            </mesh>
-          )}
-        </group>
-
-        <group>
-          {[0.7, 0.98, 1.18].map((x, i) => (
-            <mesh key={x} position={[x, -0.78 - i * 0.28, 0.14]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.085, 0.085, 0.055, 24]} />
-              <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
-            </mesh>
-          ))}
-        </group>
-        <mesh position={[1.28, -1.1, 0.12]} rotation={[0, 0, -0.58]}>
-          <boxGeometry args={[0.34, 0.12, 0.06]} />
-          <meshStandardMaterial color={hardwareColor} roughness={0.2} metalness={0.9} />
-        </mesh>
-
-        {[-0.15, -0.09, -0.03, 0.03, 0.09, 0.15].map((x, i) => (
-          <mesh key={x} position={[x - 0.04, 0.28, 0.19]} rotation={[0, 0, -0.055]}>
-            <boxGeometry args={[0.008, 3.62 + i * 0.018, 0.008]} />
-            <meshStandardMaterial color="#DDE2EA" roughness={0.2} metalness={0.78} />
-          </mesh>
-        ))}
-      </group>
-    </Center>
+          <g transform="rotate(-5 298 345)" fill={hardwareColor} stroke="#1E2025" strokeWidth="3">
+            <rect x={store.bridge === 'trem' || store.bridge === 'bigsby' ? 238 : 254} y="334" width={store.bridge === 'trem' || store.bridge === 'bigsby' ? 124 : 94} height="24" rx="8" />
+            {(store.bridge === 'trem' || store.bridge === 'bigsby') && <rect x="354" y="351" width="10" height="72" rx="5" transform="rotate(-31 359 387)" />}
+          </g>
+          <g fill={hardwareColor} stroke="#1E2025" strokeWidth="3">
+            {[0, 1, 2].map(i => <circle key={i} cx={401 + i * 28} cy={315 + i * 26} r="12" />)}
+            <rect x="452" y="384" width="40" height="13" rx="6" transform="rotate(-36 472 390)" />
+          </g>
+          <g stroke="#DDE2EA" strokeWidth="1.4" opacity="0.82">
+            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={329 + i * 5} x2={255 + i * 15} y1="22" y2="354" />)}
+          </g>
+        </g>
+      </svg>
+    </div>
   )
 }
 
@@ -456,8 +371,6 @@ function SingleCutFinishFallback() {
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
-  const shape = useConfigStore(s => s.shape)
-
   return (
     <>
       <ambientLight intensity={0.42} />
@@ -467,15 +380,9 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
       <Suspense fallback={<ModelLoading />}>
-        {shape === 'modern-s' ? (
-          <Bounds fit clip observe margin={1.18}>
-            <SStyleElectric view={view} />
-          </Bounds>
-        ) : (
-          <Bounds fit clip observe margin={1.28}>
-            <GlbInstrument view={view} />
-          </Bounds>
-        )}
+        <Bounds fit clip observe margin={1.28}>
+          <GlbInstrument view={view} />
+        </Bounds>
       </Suspense>
     </>
   )
@@ -502,11 +409,14 @@ export default function GuitarCanvas() {
   const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
   const [webglLost, setWebglLost] = useState(false)
   const shape = useConfigStore(s => s.shape)
+  const showSStyleVector = shape === 'modern-s'
   const showSingleCutFallback = webglLost && shape === 'single-cut'
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
+      {showSStyleVector ? (
+        <SStyleVectorPreview view={view} />
+      ) : showSingleCutFallback ? (
         <SingleCutFinishFallback />
       ) : (
         <Canvas
