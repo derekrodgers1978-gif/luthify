@@ -34,6 +34,12 @@ type FinishOption = { id: string; hex?: string; roughness?: number; finishGroup?
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
+const S_STYLE_BODY_MESH = {
+  nodeName: 'Object_3',
+  geometryName: 'Object_1',
+  materialName: 'BodyMaterial',
+} as const
+
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const key = `${meshName} ${materialName}`.toLowerCase()
   if (/(pickguard|scratchplate|guard|binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
@@ -86,6 +92,64 @@ function isSingleCutPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
   )
 }
 
+function isSStyleBodyMesh(mesh: THREE.Mesh, material: THREE.Material) {
+  return (
+    mesh.name === S_STYLE_BODY_MESH.nodeName &&
+    mesh.geometry?.name === S_STYLE_BODY_MESH.geometryName &&
+    material.name === S_STYLE_BODY_MESH.materialName
+  )
+}
+
+function applySStyleBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh) {
+  mat.map = null
+  mat.metalness = 0.04
+  mat.roughness = Math.min(colors.finishRoughness, 0.24)
+
+  if (!isBurstFinish(finish?.id)) {
+    mat.color = new THREE.Color(colors.finish)
+    mat.onBeforeCompile = () => {}
+    mat.customProgramCacheKey = () => `s-style-solid-${finish?.id ?? 'default'}-${colors.finish}`
+    mat.needsUpdate = true
+    return
+  }
+
+  mesh.geometry.computeBoundingBox()
+  const box = mesh.geometry.boundingBox
+  const center = box?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3()
+  const size = box?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(1, 1, 1)
+  const halfSize = new THREE.Vector2(Math.max(size.x * 0.5, 0.001), Math.max(size.z * 0.5, 0.001))
+  const edgeColor = finish?.id?.includes('tobacco') ? '#1A0902' : '#120503'
+  const centerColor = finish?.id?.includes('two-tone') ? '#E0A13A' : '#F0BC62'
+
+  mat.color = new THREE.Color('#ffffff')
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uFinishColor = { value: new THREE.Color(colors.finish) }
+    shader.uniforms.uBurstCenterColor = { value: new THREE.Color(centerColor) }
+    shader.uniforms.uBurstEdgeColor = { value: new THREE.Color(edgeColor) }
+    shader.uniforms.uBodyCenter = { value: new THREE.Vector2(center.x, center.z) }
+    shader.uniforms.uBodyHalfSize = { value: halfSize }
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vFinishPosition;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFinishPosition = position;')
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nuniform vec3 uFinishColor;\nuniform vec3 uBurstCenterColor;\nuniform vec3 uBurstEdgeColor;\nuniform vec2 uBodyCenter;\nuniform vec2 uBodyHalfSize;\nvarying vec3 vFinishPosition;'
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+vec2 finishUv = (vFinishPosition.xz - uBodyCenter) / uBodyHalfSize;
+float finishRadius = length(finishUv);
+vec3 burstColor = mix(uBurstCenterColor, uFinishColor, smoothstep(0.18, 0.58, finishRadius));
+burstColor = mix(burstColor, uBurstEdgeColor, smoothstep(0.62, 0.94, finishRadius));
+diffuseColor.rgb = burstColor;`
+      )
+  }
+  mat.customProgramCacheKey = () => `s-style-burst-${finish?.id ?? 'default'}-${colors.finish}-${centerColor}-${edgeColor}`
+  mat.needsUpdate = true
+}
+
 function applySingleCutBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh) {
   mesh.geometry.computeBoundingBox()
   const box = mesh.geometry.boundingBox
@@ -133,7 +197,9 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
-  if (shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
+  if (shapeId === 'modern-s' && isSStyleBodyMesh(mesh, material)) {
+    applySStyleBodyFinish(mat, finish, colors, mesh)
+  } else if (shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
     applySingleCutBodyFinish(mat, finish, colors, mesh)
   } else if (role === 'hardware' || role === 'bridge') {
     mat.color = new THREE.Color(colors.hardware)
