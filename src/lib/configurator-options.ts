@@ -1,111 +1,81 @@
-import type { ConfigOption } from '@/types'
+import instrumentsData from '@/config/instruments.json'
+import optionsData from '@/config/options.json'
+import type { ConfigOption, ConfigState, InstrumentConfig, InstrumentRendererConfig, MaterialPreset, OptionGroup, OverlayPreset } from '@/types'
 
-export const BASE_PRICE = 2800
+export const BASE_PRICE = optionsData.basePrice
+export const MODEL_ROOT = instrumentsData.modelRoot
+export const DEFAULT_INSTRUMENT_ID = instrumentsData.defaultInstrumentId
 
-export const BODY_SHAPES: ConfigOption[] = [
-  { id: 'modern-s',   label: 'S-Style Electric',      modelPath: '/models/s-style-electric.glb',      priceAdj: 0 },
-  { id: 'single-cut', label: 'Single Cut Electric',   modelPath: '/models/single-cut-electric.glb',   priceAdj: 0 },
-  { id: 'double-cut', label: 'Double Cut Electric',   modelPath: '/models/double-cut-electric.glb',   priceAdj: 180 },
-  { id: 'semi-hollow',label: 'Semi-Hollow Electric',  modelPath: '/models/semi-hollow-electric.glb',  priceAdj: 400 },
-  { id: 'offset',     label: 'Offset Electric',       modelPath: '/models/offset-electric.glb',       priceAdj: 0 },
-  { id: 't-style',    label: 'V-Style Electric',      modelPath: '/models/v-style-electric.glb',      priceAdj: 0 },
-  { id: 'jazz-hollow',label: 'Dreadnought Acoustic',  modelPath: '/models/dreadnought-acoustic.glb',  priceAdj: 520 },
-  { id: 'baritone',   label: 'Electric Bass',         modelPath: '/models/electric-bass.glb',         priceAdj: 260 },
-  { id: 'banjo',      label: 'Banjo',                 modelPath: '/models/banjo.glb',                 priceAdj: 120 },
-  { id: 'cello',      label: 'Cello',                 modelPath: '/models/cello.glb',                 priceAdj: 680 },
-  { id: 'resonator',  label: 'Resonator',             modelPath: '/models/resonator.glb',             priceAdj: 320 },
-  { id: 'classical',  label: 'Classical Guitar',      modelPath: '/models/classical-guitar.glb',      priceAdj: 160 },
-]
-
-export const FINISHES: ConfigOption[] = [
-  { id: 'mint',      label: 'Surf Mint',      hex: '#7EC8B4', roughness: 0.12, finishStyle: 'solid', priceAdj: 0 },
-  { id: 'ocean',     label: 'Ocean Blue',     hex: '#2E6EA6', roughness: 0.1,  finishStyle: 'solid', priceAdj: 0 },
-  { id: 'natural',   label: 'Natural Ash',    hex: '#D4B896', roughness: 0.22, finishStyle: 'solid', priceAdj: 0 },
-  { id: 'black',     label: 'Onyx Black',     hex: '#1a1a1a', roughness: 0.08, finishStyle: 'solid', priceAdj: 0 },
-  { id: 'red',       label: 'Cherry Red',     hex: '#A51C30', roughness: 0.1,  finishStyle: 'solid', priceAdj: 0 },
-  { id: 'aged',      label: 'Aged Honey',     hex: '#C8954A', roughness: 0.3,  finishStyle: 'solid', priceAdj: 0 },
-  { id: 'forest',    label: 'Forest Green',   hex: '#2D5A3D', roughness: 0.15, finishStyle: 'solid', priceAdj: 0 },
-  { id: 'burst-amber',   label: 'Amber Burst',   hex: '#C07A2E', burstEdgeHex: '#2A0F06', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
-  { id: 'burst-vintage', label: 'Vintage Burst', hex: '#9F5D2B', burstEdgeHex: '#1C0D06', roughness: 0.11, finishStyle: 'burst', priceAdj: 120 },
-  { id: 'burst-cherry',  label: 'Cherry Burst',  hex: '#8D2A2A', burstEdgeHex: '#150606', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
-  { id: 'sunburst',      label: 'Classic Sunburst', hex: '#6B2200', burstEdgeHex: '#120603', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
-]
-
-export const TOPS: ConfigOption[] = [
-  { id: 'solid',   label: 'Solid',        sub: 'No carve cap',           texture: undefined,                priceAdj: 0   },
-  { id: 'flame',   label: 'Flame Maple',  sub: 'Figured hand-selected',  texture: '/textures/flame.jpg',    priceAdj: 380 },
-  { id: 'quilted', label: 'Quilted Maple',sub: 'Figured hand-selected',  texture: '/textures/quilted.jpg',  priceAdj: 520 },
-  { id: 'burl',    label: 'Burl Walnut',  sub: 'Figured hand-selected',  texture: '/textures/burl.jpg',     priceAdj: 680 },
-  { id: 'spalted', label: 'Spalted Maple',sub: 'High-contrast grain',    texture: '/textures/spalted.jpg',  priceAdj: 740 },
-]
-
-export const NECK_WOODS: ConfigOption[] = [
-  { id: 'maple',    label: 'Hard Maple',    priceAdj: 0   },
-  { id: 'mahogany', label: 'Mahogany',       priceAdj: 0   },
-  { id: 'roasted',  label: 'Roasted Maple',  priceAdj: 120 },
-  { id: 'walnut',   label: 'Walnut',         priceAdj: 150 },
-]
-
-export const FRETBOARDS: ConfigOption[] = [
-  { id: 'rosewood', label: 'Indian Rosewood', hex: '#1A0A00', priceAdj: 0  },
-  { id: 'ebony',    label: 'Ebony',           hex: '#0a0a0a', priceAdj: 80 },
-  { id: 'maple',    label: 'Maple',           hex: '#C8A05A', priceAdj: 0  },
-  { id: 'pau',      label: 'Pau Ferro',       hex: '#3A1800', priceAdj: 40 },
-]
-
-export const HARDWARE_COLORS: ConfigOption[] = [
-  { id: 'nickel', label: 'Nickel', priceAdj: 0   },
-  { id: 'gold',   label: 'Gold',   priceAdj: 120 },
-  { id: 'chrome', label: 'Chrome', priceAdj: 0   },
-  { id: 'black',  label: 'Black',  priceAdj: 80  },
-  { id: 'aged-brass', label: 'Aged Brass', priceAdj: 160 },
-]
-
-export const BRIDGES: ConfigOption[] = [
-  { id: 'tuneomatic', label: 'Fixed Stop Tail', sub: 'Classic stop bar',  priceAdj: 0   },
-  { id: 'bigsby',     label: 'Vintage Vibrato', sub: 'Expressive vibrato', priceAdj: 280 },
-  { id: 'hardtail',   label: 'Hardtail',     sub: 'Fixed string-thru', priceAdj: 0   },
-  { id: 'trem',       label: 'Locking Tremolo', sub: 'High-stability tremolo', priceAdj: 380 },
-]
-
-export const PICKUPS: ConfigOption[] = [
-  { id: 'dual-hum', label: 'Dual Humbuckers', priceAdj: 0   },
-  { id: 'hss',      label: 'HSS',              priceAdj: 0   },
-  { id: 'p90',      label: 'P-90s',            priceAdj: 120 },
-  { id: 'singlecoil',label: 'Single Coils',    priceAdj: 0   },
-  { id: 'active-hum', label: 'Active Humbuckers', priceAdj: 220 },
-]
-
-export const DEFAULT_CONFIG = {
-  shape:     'modern-s',
-  finish:    'burst-amber',
-  top:       'quilted',
-  neck:      'maple',
-  fretboard: 'rosewood',
-  hardware:  'nickel',
-  bridge:    'tuneomatic',
-  pickups:   'dual-hum',
+function normalizeRenderer(renderer: Partial<InstrumentRendererConfig>): InstrumentRendererConfig {
+  const rotation = renderer.rotation ?? [0, 0, 0]
+  return {
+    targetSize: renderer.targetSize ?? 4.25,
+    cameraDistance: renderer.cameraDistance ?? 6.4,
+    rotation: [rotation[0] ?? 0, rotation[1] ?? 0, rotation[2] ?? 0],
+    materialPreset: (renderer.materialPreset ?? 'universal') as MaterialPreset,
+    overlayPreset: renderer.overlayPreset as OverlayPreset | undefined,
+  }
 }
 
-export type ConfigKey = keyof typeof DEFAULT_CONFIG
+export const INSTRUMENTS: InstrumentConfig[] = instrumentsData.instruments.map(instrument => ({
+  ...instrument,
+  modelPath: `${instrumentsData.modelRoot}/${instrument.model}`,
+  renderer: normalizeRenderer(instrument.renderer as Partial<InstrumentRendererConfig>),
+}))
 
-export const CONFIG_OPTION_GROUPS: [ConfigKey, string, ConfigOption[]][] = [
-  ['shape',     'Body Shape', BODY_SHAPES],
-  ['finish',    'Body Finish', FINISHES],
-  ['top',       'Top', TOPS],
-  ['neck',      'Neck Wood', NECK_WOODS],
-  ['fretboard', 'Fretboard', FRETBOARDS],
-  ['hardware',  'Hardware', HARDWARE_COLORS],
-  ['bridge',    'Bridge', BRIDGES],
-  ['pickups',   'Pickups', PICKUPS],
-]
+export const BODY_SHAPES: ConfigOption[] = INSTRUMENTS.map(({ id, label, modelPath, priceAdj }) => ({
+  id,
+  label,
+  modelPath,
+  priceAdj,
+}))
+
+export const OPTION_GROUPS: OptionGroup[] = optionsData.groups.map(group => ({
+  ...group,
+  options: group.source === 'instruments' ? BODY_SHAPES : group.options ?? [],
+})) as OptionGroup[]
+
+export const FINISHES = getOptions('finish')
+export const TOPS = getOptions('top')
+export const NECK_WOODS = getOptions('neck')
+export const FRETBOARDS = getOptions('fretboard')
+export const HARDWARE_COLORS = getOptions('hardware')
+export const BRIDGES = getOptions('bridge')
+export const PICKUPS = getOptions('pickups')
+
+export const DEFAULT_CONFIG = optionsData.defaults
+export type ConfigKey = keyof typeof DEFAULT_CONFIG
+export type ConfigValues = Record<ConfigKey, string>
+
+export const CONFIG_OPTION_GROUPS: [ConfigKey, string, ConfigOption[]][] = OPTION_GROUPS.map(group => [
+  group.key,
+  group.label,
+  group.options,
+])
+
+export function getInstrument(id: string): InstrumentConfig {
+  return INSTRUMENTS.find(instrument => instrument.id === id) ?? INSTRUMENTS[0]
+}
 
 export function getOptionLabel(key: ConfigKey, id: string): string {
   const group = CONFIG_OPTION_GROUPS.find(([groupKey]) => groupKey === key)
   return group?.[2].find(o => o.id === id)?.label ?? id
 }
 
-export function calcPrice(config: Partial<typeof DEFAULT_CONFIG>): number {
+export function getOptions(key: ConfigKey): ConfigOption[] {
+  return OPTION_GROUPS.find(group => group.key === key)?.options ?? []
+}
+
+export function sanitizeConfig(config: Partial<ConfigValues>): ConfigValues {
+  return (Object.keys(DEFAULT_CONFIG) as ConfigKey[]).reduce((next, key) => {
+    const options = getOptions(key)
+    const value = config[key]
+    next[key] = value && options.some(option => option.id === value) ? value : DEFAULT_CONFIG[key]
+    return next
+  }, {} as ConfigValues)
+}
+
+export function calcPrice(config: Partial<ConfigValues>): number {
   return BASE_PRICE + CONFIG_OPTION_GROUPS.reduce((sum, [key, , options]) => {
     const id = config[key]
     const opt = options.find(o => o.id === id)
@@ -113,7 +83,7 @@ export function calcPrice(config: Partial<typeof DEFAULT_CONFIG>): number {
   }, 0)
 }
 
-export function getPriceBreakdown(config: Partial<typeof DEFAULT_CONFIG>) {
+export function getPriceBreakdown(config: Partial<ConfigValues>) {
   const lines: { label: string; amount: number }[] = [
     { label: 'Base build', amount: BASE_PRICE },
   ]
@@ -125,4 +95,12 @@ export function getPriceBreakdown(config: Partial<typeof DEFAULT_CONFIG>) {
     }
   }
   return lines
+}
+
+export function configWithPrice(config: Partial<ConfigValues>): ConfigState {
+  const sanitized = sanitizeConfig(config)
+  return {
+    ...sanitized,
+    livePrice: calcPrice(sanitized),
+  }
 }

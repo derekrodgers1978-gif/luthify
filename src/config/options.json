@@ -1,0 +1,116 @@
+{
+  "basePrice": 2800,
+  "defaults": {
+    "shape": "modern-s",
+    "finish": "burst-amber",
+    "top": "quilted",
+    "neck": "maple",
+    "fretboard": "rosewood",
+    "hardware": "nickel",
+    "bridge": "tuneomatic",
+    "pickups": "dual-hum"
+  },
+  "groups": [
+    {
+      "key": "shape",
+      "label": "Body Shape",
+      "tab": "body",
+      "control": "pill",
+      "source": "instruments"
+    },
+    {
+      "key": "finish",
+      "label": "Body Finish",
+      "tab": "body",
+      "control": "finish-swatch",
+      "options": [
+        { "id": "mint", "label": "Surf Mint", "hex": "#7EC8B4", "roughness": 0.12, "finishStyle": "solid", "priceAdj": 0 },
+        { "id": "ocean", "label": "Ocean Blue", "hex": "#2E6EA6", "roughness": 0.1, "finishStyle": "solid", "priceAdj": 0 },
+        { "id": "natural", "label": "Natural Ash", "hex": "#D4B896", "roughness": 0.22, "finishStyle": "solid", "priceAdj": 0 },
+        { "id": "black", "label": "Onyx Black", "hex": "#1a1a1a", "roughness": 0.08, "finishStyle": "solid", "priceAdj": 0 },
+        { "id": "red", "label": "Cherry Red", "hex": "#A51C30", "roughness": 0.1, "finishStyle": "solid", "priceAdj": 0 },
+        { "id": "aged", "label": "Aged Honey", "hex": "#C8954A", "roughness": 0.3, "finishStyle": "solid", "priceAdj": 0 },
+        { "id": "forest", "label": "Forest Green", "hex": "#2D5A3D", "roughness": 0.15, "finishStyle": "solid", "priceAdj": 0 },
+        { "id": "burst-amber", "label": "Amber Burst", "hex": "#C07A2E", "burstEdgeHex": "#2A0F06", "roughness": 0.1, "finishStyle": "burst", "priceAdj": 120 },
+        { "id": "burst-vintage", "label": "Vintage Burst", "hex": "#9F5D2B", "burstEdgeHex": "#1C0D06", "roughness": 0.11, "finishStyle": "burst", "priceAdj": 120 },
+        { "id": "burst-cherry", "label": "Cherry Burst", "hex": "#8D2A2A", "burstEdgeHex": "#150606", "roughness": 0.1, "finishStyle": "burst", "priceAdj": 120 },
+        { "id": "sunburst", "label": "Classic Sunburst", "hex": "#6B2200", "burstEdgeHex": "#120603", "roughness": 0.1, "finishStyle": "burst", "priceAdj": 120 }
+      ]
+    },
+    {
+      "key": "top",
+      "label": "Top",
+      "tab": "body",
+      "control": "card-grid",
+      "options": [
+        { "id": "solid", "label": "Solid", "sub": "No carve cap", "priceAdj": 0 },
+        { "id": "flame", "label": "Flame Maple", "sub": "Figured hand-selected", "texture": "/textures/flame.jpg", "priceAdj": 380 },
+        { "id": "quilted", "label": "Quilted Maple", "sub": "Figured hand-selected", "texture": "/textures/quilted.jpg", "priceAdj": 520 },
+        { "id": "burl", "label": "Burl Walnut", "sub": "Figured hand-selected", "texture": "/textures/burl.jpg", "priceAdj": 680 },
+        { "id": "spalted", "label": "Spalted Maple", "sub": "High-contrast grain", "texture": "/textures/spalted.jpg", "priceAdj": 740 }
+      ]
+    },
+    {
+      "key": "neck",
+      "label": "Neck Wood",
+      "tab": "neck",
+      "control": "pill",
+      "options": [
+        { "id": "maple", "label": "Hard Maple", "priceAdj": 0 },
+        { "id": "mahogany", "label": "Mahogany", "priceAdj": 0 },
+        { "id": "roasted", "label": "Roasted Maple", "priceAdj": 120 },
+        { "id": "walnut", "label": "Walnut", "priceAdj": 150 }
+      ]
+    },
+    {
+      "key": "fretboard",
+      "label": "Fretboard",
+      "tab": "neck",
+      "control": "wood-swatch",
+      "options": [
+        { "id": "rosewood", "label": "Indian Rosewood", "hex": "#1A0A00", "priceAdj": 0 },
+        { "id": "ebony", "label": "Ebony", "hex": "#0a0a0a", "priceAdj": 80 },
+        { "id": "maple", "label": "Maple", "hex": "#C8A05A", "priceAdj": 0 },
+        { "id": "pau", "label": "Pau Ferro", "hex": "#3A1800", "priceAdj": 40 }
+      ]
+    },
+    {
+      "key": "hardware",
+      "label": "Hardware",
+      "tab": "hardware",
+      "control": "pill",
+      "options": [
+        { "id": "nickel", "label": "Nickel", "priceAdj": 0 },
+        { "id": "gold", "label": "Gold", "priceAdj": 120 },
+        { "id": "chrome", "label": "Chrome", "priceAdj": 0 },
+        { "id": "black", "label": "Black", "priceAdj": 80 },
+        { "id": "aged-brass", "label": "Aged Brass", "priceAdj": 160 }
+      ]
+    },
+    {
+      "key": "bridge",
+      "label": "Bridge",
+      "tab": "hardware",
+      "control": "stacked-card",
+      "options": [
+        { "id": "tuneomatic", "label": "Fixed Stop Tail", "sub": "Classic stop bar", "priceAdj": 0 },
+        { "id": "bigsby", "label": "Vintage Vibrato", "sub": "Expressive vibrato", "priceAdj": 280 },
+        { "id": "hardtail", "label": "Hardtail", "sub": "Fixed string-thru", "priceAdj": 0 },
+        { "id": "trem", "label": "Locking Tremolo", "sub": "High-stability tremolo", "priceAdj": 380 }
+      ]
+    },
+    {
+      "key": "pickups",
+      "label": "Pickups",
+      "tab": "hardware",
+      "control": "pill",
+      "options": [
+        { "id": "dual-hum", "label": "Dual Humbuckers", "priceAdj": 0 },
+        { "id": "hss", "label": "HSS", "priceAdj": 0 },
+        { "id": "p90", "label": "P-90s", "priceAdj": 120 },
+        { "id": "singlecoil", "label": "Single Coils", "priceAdj": 0 },
+        { "id": "active-hum", "label": "Active Humbuckers", "priceAdj": 220 }
+      ]
+    }
+  ]
+}

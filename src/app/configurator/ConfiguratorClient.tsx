@@ -29,14 +29,15 @@ const TRUST_ITEMS = [
 
 export default function ConfiguratorClient() {
   const store = useConfigStore()
+  const setOption = useConfigStore(s => s.setOption)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     ;(Object.keys(DEFAULT_CONFIG) as ConfigKey[]).forEach(key => {
       const value = params.get(key)
-      if (value) store.setOption(key, value)
+      if (value) setOption(key, value)
     })
-  }, [])
+  }, [setOption])
 
   return (
     <div className="designer-shell">
