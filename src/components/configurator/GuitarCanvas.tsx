@@ -1,10 +1,13 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, Suspense, useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
+
+const MODERN_S_MODEL_PATH = '/models/s-style-electric.glb'
 
 const MODEL_TARGET_SIZE: Record<string, number> = {
   cello: 4.8,
@@ -34,6 +37,70 @@ type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
+
+function requiredModelPath(shape: { id: string; label: string; modelPath?: string }) {
+  if (shape.id === 'modern-s') return MODERN_S_MODEL_PATH
+  if (!shape.modelPath) {
+    throw new Error(`Missing GLB model path for ${shape.label}`)
+  }
+  return shape.modelPath
+}
+
+class ModelErrorBoundary extends Component<{ resetKey: string; fallback: ReactNode; children: ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  componentDidUpdate(prevProps: { resetKey: string }) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null })
+    }
+  }
+
+  render() {
+    if (this.state.error) return this.props.fallback
+    return this.props.children
+  }
+}
+
+function useModernSModelError(shapeId: string, modelPath: string) {
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setError(null)
+    if (shapeId !== 'modern-s') return
+
+    fetch(modelPath, { method: 'HEAD', cache: 'no-store' })
+      .then(response => {
+        if (!cancelled && !response.ok) {
+          setError(`Missing GLB model at ${modelPath}.`)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(`Unable to load GLB model at ${modelPath}.`)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [modelPath, shapeId])
+
+  return error
+}
+
+function ModelLoadError({ label, modelPath }: { label: string; modelPath: string }) {
+  return (
+    <Html center>
+      <div style={{ width: 280, border: '1px solid rgba(201,164,92,0.32)', borderRadius: 18, background: 'rgba(9,9,11,0.92)', color: '#F5F1E8', padding: '18px 20px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.35)' }}>
+        <div style={{ color: '#C9A45C', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>Model unavailable</div>
+        <div style={{ fontSize: '0.9rem', lineHeight: 1.45 }}>{label} requires a valid GLB at {modelPath}.</div>
+      </div>
+    </Html>
+  )
+}
 
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const key = `${meshName} ${materialName}`.toLowerCase()
@@ -297,7 +364,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
+  const modelPath = requiredModelPath(shape)
   const { scene } = useGLTF(modelPath)
   const { model, center, scale, maxDimension } = useMemo(() => {
     const clone = scene.clone(true)
@@ -424,6 +491,11 @@ function SingleCutFinishFallback() {
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
+  const shapeId = useConfigStore(s => s.shape)
+  const shape = BODY_SHAPES.find(s => s.id === shapeId) ?? BODY_SHAPES[0]
+  const modelPath = requiredModelPath(shape)
+  const modernSModelError = useModernSModelError(shape.id, modelPath)
+
   return (
     <>
       <ambientLight intensity={0.42} />
@@ -432,11 +504,17 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
-      <Suspense fallback={<ModelLoading />}>
-        <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
-        </Bounds>
-      </Suspense>
+      <ModelErrorBoundary resetKey={`${shape.id}:${modelPath}`} fallback={<ModelLoadError label={shape.label} modelPath={modelPath} />}>
+        {modernSModelError ? (
+          <ModelLoadError label={shape.label} modelPath={modelPath} />
+        ) : (
+          <Suspense fallback={<ModelLoading />}>
+            <Bounds fit clip observe margin={1.28}>
+              <GlbInstrument view={view} />
+            </Bounds>
+          </Suspense>
+        )}
+      </ModelErrorBoundary>
     </>
   )
 }
