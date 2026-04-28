@@ -13,6 +13,8 @@ type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
 const MODEL_PATHS = INSTRUMENTS.map(instrument => instrument.modelPath).filter(Boolean)
 
+type ModelAvailability = 'checking' | 'available' | 'missing'
+
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const normalizedMesh = meshName.toUpperCase().replace(/[^A-Z0-9]+/g, '_')
   const canonical = normalizedMesh.split('_').find(part => ['BODY', 'NECK', 'FRETBOARD', 'PICKGUARD', 'PICKUPS', 'BRIDGE', 'HARDWARE'].includes(part))
@@ -343,6 +345,27 @@ function ModelLoading() {
   )
 }
 
+function useModelAvailability(path: string) {
+  const [available, setAvailable] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setAvailable(null)
+    fetch(path, { method: 'HEAD' })
+      .then(response => {
+        if (!cancelled) setAvailable(response.ok)
+      })
+      .catch(() => {
+        if (!cancelled) setAvailable(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [path])
+
+  return available
+}
+
 function ModelUnavailable({ instrument }: { instrument: InstrumentConfig }) {
   return (
     <Html center>
@@ -443,6 +466,7 @@ function SingleCutFinishFallback() {
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
   const instrument = useConfigStore(s => getInstrument(s.shape))
+  const modelAvailable = useModelAvailability(instrument.modelPath)
   return (
     <>
       <ambientLight intensity={0.42} />
@@ -451,13 +475,17 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
-      <ModelBoundary instrument={instrument}>
-        <Suspense fallback={<ModelLoading />}>
-          <Bounds fit clip observe margin={1.28}>
-            <GlbInstrument view={view} />
-          </Bounds>
-        </Suspense>
-      </ModelBoundary>
+      {modelAvailable === false ? (
+        <ModelUnavailable instrument={instrument} />
+      ) : (
+        <ModelBoundary instrument={instrument}>
+          <Suspense fallback={<ModelLoading />}>
+            <Bounds fit clip observe margin={1.28}>
+              <GlbInstrument view={view} />
+            </Bounds>
+          </Suspense>
+        </ModelBoundary>
+      )}
     </>
   )
 }
