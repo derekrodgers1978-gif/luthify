@@ -11,8 +11,6 @@ type MaterialRole = 'body' | 'neck' | 'fretboard' | 'pickguard' | 'hardware' | '
 type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?: 'solid' | 'burst'; burstEdgeHex?: string }
 type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
-const MODEL_PATHS = INSTRUMENTS.map(instrument => instrument.modelPath).filter(Boolean)
-
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const normalizedMesh = meshName.toUpperCase().replace(/[^A-Z0-9]+/g, '_')
   const canonical = normalizedMesh.split('_').find(part => ['BODY', 'NECK', 'FRETBOARD', 'PICKGUARD', 'PICKUPS', 'BRIDGE', 'HARDWARE'].includes(part))
