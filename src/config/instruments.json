@@ -1,0 +1,151 @@
+{
+  "modelRoot": "/models",
+  "defaultInstrumentId": "modern-s",
+  "instruments": [
+    {
+      "id": "modern-s",
+      "label": "S-Style Electric",
+      "model": "s-style-electric.glb",
+      "priceAdj": 0,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 6.4,
+        "rotation": [0, 0, 0],
+        "materialPreset": "modern-s",
+        "overlayPreset": "modern-s-options"
+      }
+    },
+    {
+      "id": "single-cut",
+      "label": "Single Cut Electric",
+      "model": "single-cut-electric.glb",
+      "priceAdj": 0,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 6.4,
+        "rotation": [0, 0, 0],
+        "materialPreset": "single-cut"
+      }
+    },
+    {
+      "id": "double-cut",
+      "label": "Double Cut Electric",
+      "model": "double-cut-electric.glb",
+      "priceAdj": 180,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 6.4,
+        "rotation": [0, 0, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "semi-hollow",
+      "label": "Semi-Hollow Electric",
+      "model": "semi-hollow-electric.glb",
+      "priceAdj": 400,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 6.4,
+        "rotation": [0, 1.5707963268, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "offset",
+      "label": "Offset Electric",
+      "model": "offset-electric.glb",
+      "priceAdj": 0,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 6.4,
+        "rotation": [0, 0, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "t-style",
+      "label": "V-Style Electric",
+      "model": "v-style-electric.glb",
+      "priceAdj": 0,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 6.4,
+        "rotation": [0, 0, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "jazz-hollow",
+      "label": "Dreadnought Acoustic",
+      "model": "dreadnought-acoustic.glb",
+      "priceAdj": 520,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 7.1,
+        "rotation": [0, 0, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "baritone",
+      "label": "Electric Bass",
+      "model": "electric-bass.glb",
+      "priceAdj": 260,
+      "renderer": {
+        "targetSize": 4.6,
+        "cameraDistance": 7.6,
+        "rotation": [0, 0, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "banjo",
+      "label": "Banjo",
+      "model": "banjo.glb",
+      "priceAdj": 120,
+      "renderer": {
+        "targetSize": 4.4,
+        "cameraDistance": 7.2,
+        "rotation": [0, 0, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "cello",
+      "label": "Cello",
+      "model": "cello.glb",
+      "priceAdj": 680,
+      "renderer": {
+        "targetSize": 4.8,
+        "cameraDistance": 8.4,
+        "rotation": [0, 0, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "resonator",
+      "label": "Resonator",
+      "model": "resonator.glb",
+      "priceAdj": 320,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 7.2,
+        "rotation": [1.5707963268, 0, 0],
+        "materialPreset": "universal"
+      }
+    },
+    {
+      "id": "classical",
+      "label": "Classical Guitar",
+      "model": "classical-guitar.glb",
+      "priceAdj": 160,
+      "renderer": {
+        "targetSize": 4.25,
+        "cameraDistance": 7.1,
+        "rotation": [0, 0, 0],
+        "materialPreset": "universal"
+      }
+    }
+  ]
+}

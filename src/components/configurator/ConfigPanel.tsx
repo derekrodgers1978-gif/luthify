@@ -2,13 +2,11 @@
 import { useState } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import {
-  BODY_SHAPES, FINISHES, TOPS, NECK_WOODS,
-  FRETBOARDS, HARDWARE_COLORS, BRIDGES, PICKUPS,
-  DEFAULT_CONFIG, type ConfigKey,
+  DEFAULT_CONFIG, OPTION_GROUPS, type ConfigKey,
 } from '@/lib/configurator-options'
-import type { ConfigOption } from '@/types'
+import type { ConfigOption, ConfigTab, OptionGroup } from '@/types'
 
-type Tab = 'body' | 'neck' | 'hardware'
+type Tab = ConfigTab
 
 const S = {
   label:    { fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: '#C9A45C', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
@@ -31,10 +29,102 @@ function GroupLabel({ children, value }: { children: React.ReactNode; value?: st
 export default function ConfigPanel() {
   const store = useConfigStore()
   const [tab, setTab] = useState<Tab>('body')
-  const solidFinishes = FINISHES.filter(f => (f.finishStyle ?? 'solid') === 'solid')
-  const burstFinishes = FINISHES.filter(f => f.finishStyle === 'burst')
 
   const getLabel = (opts: ConfigOption[], id: string) => opts.find(o => o.id === id)?.label ?? id
+  const renderGroup = (group: OptionGroup) => {
+    const selected = store[group.key]
+
+    if (group.control === 'finish-swatch') {
+      const solidFinishes = group.options.filter(f => (f.finishStyle ?? 'solid') === 'solid')
+      const burstFinishes = group.options.filter(f => f.finishStyle === 'burst')
+      return (
+        <div key={group.key} style={S.group}>
+          <GroupLabel value={getLabel(group.options, selected)}>{group.label}</GroupLabel>
+          <div style={{ fontSize: '0.66rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,241,232,0.5)', marginBottom: 8 }}>Solid Colours</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
+            {solidFinishes.map(o => (
+              <div key={o.id} title={o.label} style={S.swatch(selected === o.id, o.hex!)} onClick={() => store.setOption(group.key, o.id)} />
+            ))}
+          </div>
+          <div style={{ fontSize: '0.66rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,241,232,0.5)', marginBottom: 8 }}>Burst Finishes</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
+            {burstFinishes.map(o => (
+              <div key={o.id} title={o.label} style={S.swatch(selected === o.id, `radial-gradient(circle at 50% 50%, ${o.hex} 24%, ${o.burstEdgeHex ?? '#120603'} 80%)`)} onClick={() => store.setOption(group.key, o.id)} />
+            ))}
+          </div>
+          <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)', marginTop: 4 }}>
+            {group.options.find(f => f.id === selected)?.label} finish
+          </p>
+        </div>
+      )
+    }
+
+    if (group.control === 'wood-swatch') {
+      return (
+        <div key={group.key} style={S.group}>
+          <GroupLabel value={getLabel(group.options, selected)}>{group.label}</GroupLabel>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+            {group.options.map(o => (
+              <div key={o.id} title={o.label} style={{ width: 36, height: 36, borderRadius: 9, background: o.hex, border: `2px solid ${selected === o.id ? '#C9A45C' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s', transform: selected === o.id ? 'scale(1.12)' : 'scale(1)' }} onClick={() => store.setOption(group.key, o.id)} />
+            ))}
+          </div>
+          <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)' }}>{group.options.find(f => f.id === selected)?.label}</p>
+        </div>
+      )
+    }
+
+    if (group.control === 'card-grid') {
+      return (
+        <div key={group.key} style={S.group}>
+          <GroupLabel value={getLabel(group.options, selected)}>{group.label}</GroupLabel>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {group.options.map(o => (
+              <div key={o.id} style={S.topCard(selected === o.id)} onClick={() => store.setOption(group.key, o.id)}>
+                <div style={{ fontWeight: 600, fontSize: '0.82rem', marginBottom: 2 }}>{o.label}</div>
+                {o.sub && <div style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.45)', marginBottom: 4 }}>{o.sub}</div>}
+                {o.priceAdj > 0 && <div style={{ fontSize: '0.72rem', color: '#C9A45C', fontWeight: 600 }}>+${o.priceAdj}</div>}
+                {o.priceAdj === 0 && <div style={{ fontSize: '0.72rem', color: '#5fb87a' }}>Included</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    if (group.control === 'stacked-card') {
+      return (
+        <div key={group.key} style={S.group}>
+          <GroupLabel value={getLabel(group.options, selected)}>{group.label}</GroupLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {group.options.map(o => (
+              <div key={o.id} style={S.topCard(selected === o.id)} onClick={() => store.setOption(group.key, o.id)}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.84rem' }}>{o.label}</div>
+                    {o.sub && <div style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.45)' }}>{o.sub}</div>}
+                  </div>
+                  {o.priceAdj > 0 && <span style={{ fontSize: '0.76rem', color: '#C9A45C', fontWeight: 600 }}>+${o.priceAdj}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div key={group.key} style={S.group}>
+        <GroupLabel value={getLabel(group.options, selected)}>{group.label}</GroupLabel>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {group.options.map(o => (
+            <button key={o.id} style={S.pill(selected === o.id)} onClick={() => store.setOption(group.key, o.id)}>
+              {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -56,125 +146,7 @@ export default function ConfigPanel() {
 
       {/* Options — scrollable */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '22px 30px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-        {tab === 'body' && (
-          <>
-            {/* Body shape */}
-            <div style={S.group}>
-              <GroupLabel value={getLabel(BODY_SHAPES, store.shape)}>Body Shape</GroupLabel>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                {BODY_SHAPES.map(o => (
-                  <button key={o.id} style={S.pill(store.shape === o.id)} onClick={() => store.setOption('shape', o.id)}>
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Finish */}
-            <div style={S.group}>
-              <GroupLabel value={getLabel(FINISHES, store.finish)}>Finish</GroupLabel>
-              <div style={{ fontSize: '0.66rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,241,232,0.5)', marginBottom: 8 }}>Solid Colours</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
-                {solidFinishes.map(o => (
-                  <div key={o.id} title={o.label} style={S.swatch(store.finish === o.id, o.hex!)} onClick={() => store.setOption('finish', o.id)} />
-                ))}
-              </div>
-              <div style={{ fontSize: '0.66rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,241,232,0.5)', marginBottom: 8 }}>Burst Finishes</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
-                {burstFinishes.map(o => (
-                  <div key={o.id} title={o.label} style={S.swatch(store.finish === o.id, `radial-gradient(circle at 50% 50%, ${o.hex} 24%, ${o.burstEdgeHex ?? '#120603'} 80%)`)} onClick={() => store.setOption('finish', o.id)} />
-                ))}
-              </div>
-              <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)', marginTop: 4 }}>
-                {FINISHES.find(f => f.id === store.finish)?.label} finish
-              </p>
-            </div>
-
-            {/* Top wood */}
-            <div style={S.group}>
-              <GroupLabel value={getLabel(TOPS, store.top)}>Top</GroupLabel>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {TOPS.map(o => (
-                  <div key={o.id} style={S.topCard(store.top === o.id)} onClick={() => store.setOption('top', o.id)}>
-                    <div style={{ fontWeight: 600, fontSize: '0.82rem', marginBottom: 2 }}>{o.label}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.45)', marginBottom: 4 }}>{o.sub}</div>
-                    {o.priceAdj > 0 && <div style={{ fontSize: '0.72rem', color: '#C9A45C', fontWeight: 600 }}>+${o.priceAdj}</div>}
-                    {o.priceAdj === 0 && <div style={{ fontSize: '0.72rem', color: '#5fb87a' }}>Included</div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        {tab === 'neck' && (
-          <>
-            <div style={S.group}>
-              <GroupLabel value={getLabel(NECK_WOODS, store.neck)}>Neck Wood</GroupLabel>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                {NECK_WOODS.map(o => (
-                  <button key={o.id} style={S.pill(store.neck === o.id)} onClick={() => store.setOption('neck', o.id)}>
-                    {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={S.group}>
-              <GroupLabel value={getLabel(FRETBOARDS, store.fretboard)}>Fretboard</GroupLabel>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-                {FRETBOARDS.map(o => (
-                  <div key={o.id} title={o.label} style={{ width: 36, height: 36, borderRadius: 9, background: o.hex, border: `2px solid ${store.fretboard === o.id ? '#C9A45C' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s', transform: store.fretboard === o.id ? 'scale(1.12)' : 'scale(1)' }} onClick={() => store.setOption('fretboard', o.id)} />
-                ))}
-              </div>
-              <p style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.4)' }}>{FRETBOARDS.find(f => f.id === store.fretboard)?.label}</p>
-            </div>
-          </>
-        )}
-
-        {tab === 'hardware' && (
-          <>
-            <div style={S.group}>
-              <GroupLabel value={getLabel(HARDWARE_COLORS, store.hardware)}>Hardware</GroupLabel>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                {HARDWARE_COLORS.map(o => (
-                  <button key={o.id} style={S.pill(store.hardware === o.id)} onClick={() => store.setOption('hardware', o.id)}>
-                    {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={S.group}>
-              <GroupLabel value={getLabel(BRIDGES, store.bridge)}>Bridge</GroupLabel>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {BRIDGES.map(o => (
-                  <div key={o.id} style={S.topCard(store.bridge === o.id)} onClick={() => store.setOption('bridge', o.id)}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.84rem' }}>{o.label}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'rgba(245,241,232,0.45)' }}>{o.sub}</div>
-                      </div>
-                      {o.priceAdj > 0 && <span style={{ fontSize: '0.76rem', color: '#C9A45C', fontWeight: 600 }}>+${o.priceAdj}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={S.group}>
-              <GroupLabel value={getLabel(PICKUPS, store.pickups)}>Pickups</GroupLabel>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                {PICKUPS.map(o => (
-                  <button key={o.id} style={S.pill(store.pickups === o.id)} onClick={() => store.setOption('pickups', o.id)}>
-                    {o.label}{o.priceAdj > 0 && <span style={{ color: '#C9A45C', marginLeft: 4 }}>+${o.priceAdj}</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
+        {OPTION_GROUPS.filter(group => group.tab === tab).map(renderGroup)}
       </div>
 
       {/* Live price + actions — sticky */}

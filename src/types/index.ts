@@ -28,6 +28,37 @@ export interface ConfigOption {
   modelPath?: string
 }
 
+export type ConfigTab = 'body' | 'neck' | 'hardware'
+export type OptionControl = 'pill' | 'finish-swatch' | 'wood-swatch' | 'card-grid' | 'stacked-card'
+export type MaterialPreset = 'universal' | 'modern-s' | 'single-cut'
+export type OverlayPreset = 'modern-s-options'
+
+export interface OptionGroup {
+  key: keyof Omit<ConfigState, 'livePrice'>
+  label: string
+  tab: ConfigTab
+  control: OptionControl
+  source?: 'instruments'
+  options: ConfigOption[]
+}
+
+export interface InstrumentRendererConfig {
+  targetSize: number
+  cameraDistance: number
+  rotation: [number, number, number]
+  materialPreset: MaterialPreset
+  overlayPreset?: OverlayPreset
+}
+
+export interface InstrumentConfig {
+  id: string
+  label: string
+  model: string
+  modelPath: string
+  priceAdj: number
+  renderer: InstrumentRendererConfig
+}
+
 export interface ConfigState {
   shape:     string
   finish:    string

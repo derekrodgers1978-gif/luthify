@@ -1,14 +1,14 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
-  DEFAULT_CONFIG, calcPrice, getPriceBreakdown, BASE_PRICE
+  DEFAULT_CONFIG, calcPrice, getPriceBreakdown, sanitizeConfig, type ConfigKey, type ConfigValues
 } from '@/lib/configurator-options'
 import type { ConfigState } from '@/types'
 
 export interface SavedBuild {
   id:        string
   name:      string
-  config:    typeof DEFAULT_CONFIG
+  config:    ConfigValues
   price:     number
   createdAt: string
 }
@@ -44,7 +44,7 @@ interface ConfigStore {
   quoteSubmissions: QuoteSubmission[]
 
   // Actions
-  setOption:   (key: keyof typeof DEFAULT_CONFIG, value: string) => void
+  setOption:   (key: ConfigKey, value: string) => void
   saveBuild:   (name: string) => string
   saveBuildToAccount: (name: string) => string
   saveQuoteSubmission: (submission: Omit<QuoteSubmission, 'id' | 'createdAt' | 'config' | 'price'>) => string
@@ -67,7 +67,7 @@ export const useConfigStore = create<ConfigStore>()(
       quoteSubmissions: [],
 
       setOption: (key, value) => {
-        const config = { ...get().currentConfig(), [key]: value }
+        const config = sanitizeConfig({ ...get().currentConfig(), [key]: value })
         set({ ...config, livePrice: calcPrice(config) })
       },
 
@@ -133,7 +133,8 @@ export const useConfigStore = create<ConfigStore>()(
         const state = get()
         const build = [...state.savedBuilds, ...state.accountBuilds].find(b => b.id === id)
         if (!build) return
-        set({ ...build.config, livePrice: calcPrice(build.config) })
+        const config = sanitizeConfig(build.config)
+        set({ ...config, livePrice: calcPrice(config) })
       },
 
       deleteBuild: (id) => {

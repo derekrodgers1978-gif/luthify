@@ -1,43 +1,32 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
-import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
+import { FINISHES, FRETBOARDS, HARDWARE_COLORS, INSTRUMENTS, NECK_WOODS, getInstrument } from '@/lib/configurator-options'
+import type { InstrumentConfig } from '@/types'
 
-const MODEL_TARGET_SIZE: Record<string, number> = {
-  cello: 4.8,
-  banjo: 4.4,
-  baritone: 4.6,
-  default: 4.25,
-}
-
-const MODEL_ROTATION: Record<string, [number, number, number]> = {
-  'semi-hollow': [0, Math.PI / 2, 0],
-  resonator: [Math.PI / 2, 0, 0],
-}
-
-const CAMERA_DISTANCE: Record<string, number> = {
-  cello: 8.4,
-  baritone: 7.6,
-  banjo: 7.2,
-  'jazz-hollow': 7.1,
-  classical: 7.1,
-  resonator: 7.2,
-  default: 6.4,
-}
-
-type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
+type MaterialRole = 'body' | 'neck' | 'fretboard' | 'pickguard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?: 'solid' | 'burst'; burstEdgeHex?: string }
 type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
-const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
-MODEL_PATHS.forEach(path => useGLTF.preload(path))
+const MODEL_PATHS = INSTRUMENTS.map(instrument => instrument.modelPath).filter(Boolean)
 
 function materialRole(meshName: string, materialName: string): MaterialRole {
+  const normalizedMesh = meshName.toUpperCase().replace(/[^A-Z0-9]+/g, '_')
+  const canonical = normalizedMesh.split('_').find(part => ['BODY', 'NECK', 'FRETBOARD', 'PICKGUARD', 'PICKUPS', 'BRIDGE', 'HARDWARE'].includes(part))
+  if (canonical === 'BODY') return 'body'
+  if (canonical === 'NECK') return 'neck'
+  if (canonical === 'FRETBOARD') return 'fretboard'
+  if (canonical === 'PICKGUARD') return 'pickguard'
+  if (canonical === 'PICKUPS') return 'pickup'
+  if (canonical === 'BRIDGE') return 'bridge'
+  if (canonical === 'HARDWARE') return 'hardware'
+
   const key = `${meshName} ${materialName}`.toLowerCase()
-  if (/(pickguard|scratchplate|guard|binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
+  if (/(pickguard|scratchplate|guard)/.test(key)) return 'pickguard'
+  if (/(binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
   if (/(fretboard|fingerboard|finger board|fret|board)/.test(key)) return 'fretboard'
   if (/(neck|headstock|head stock|headstock|peghead)/.test(key)) return 'neck'
   if (/(pickup|pick up|humbucker|single coil|p90|p-90)/.test(key)) return 'pickup'
@@ -149,7 +138,7 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.color = new THREE.Color(colors.board)
     mat.metalness = 0
     mat.roughness = 0.58
-  } else if (role === 'protected') {
+  } else if (role === 'pickguard' || role === 'protected') {
     mat.color = new THREE.Color('#F2EEE2')
     mat.metalness = 0.02
     mat.roughness = 0.34
@@ -292,22 +281,20 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
 
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const store = useConfigStore()
-  const shape = BODY_SHAPES.find(s => s.id === store.shape) ?? BODY_SHAPES[0]
+  const instrument = getInstrument(store.shape)
   const finish = FINISHES.find(f => f.id === store.finish)
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
-  const { scene } = useGLTF(modelPath)
+  const { scene } = useGLTF(instrument.modelPath)
   const { model, center, scale, maxDimension } = useMemo(() => {
     const clone = scene.clone(true)
     const box = new THREE.Box3().setFromObject(clone)
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
-    const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
-    return { model: clone, center, scale: targetSize / maxDimension, maxDimension }
-  }, [scene, shape.id])
+    return { model: clone, center, scale: instrument.renderer.targetSize / maxDimension, maxDimension }
+  }, [scene, instrument.renderer.targetSize])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
@@ -323,23 +310,23 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach(mat => {
-        if (shape.id === 'modern-s') {
+        if (instrument.renderer.materialPreset === 'modern-s') {
           enhanceModernSMaterial(mesh, mat, colors, finish)
           return
         }
-        enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
+        enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, instrument.id, finish)
       })
     })
-  }, [colors, finish, maxDimension, model, shape.id])
+  }, [colors, finish, instrument.id, instrument.renderer.materialPreset, maxDimension, model])
 
-  const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
+  const baseRotation = instrument.renderer.rotation
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
 
   return (
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && <group scale={0.74}><StratOptionOverlays colors={colors} /></group>}
+        {instrument.renderer.overlayPreset === 'modern-s-options' && <group scale={0.74}><StratOptionOverlays colors={colors} /></group>}
       </group>
     </Center>
   )
@@ -354,6 +341,37 @@ function ModelLoading() {
       </mesh>
     </group>
   )
+}
+
+function ModelUnavailable({ instrument }: { instrument: InstrumentConfig }) {
+  return (
+    <Html center>
+      <div style={{ width: 280, textAlign: 'center', padding: '18px 20px', borderRadius: 18, background: 'rgba(9,9,11,0.84)', border: '1px solid rgba(201,164,92,0.24)', color: '#F5F1E8', boxShadow: '0 18px 48px rgba(0,0,0,0.32)' }}>
+        <div style={{ color: '#C9A45C', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8 }}>Model pending</div>
+        <div style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.15rem', lineHeight: 1.1, marginBottom: 8 }}>{instrument.label}</div>
+        <p style={{ fontSize: '0.76rem', lineHeight: 1.5, color: 'rgba(245,241,232,0.58)' }}>Drop the GLB at <code>{instrument.modelPath}</code> with meshes named BODY, NECK, FRETBOARD, PICKGUARD, PICKUPS, BRIDGE, and HARDWARE.</p>
+      </div>
+    </Html>
+  )
+}
+
+class ModelBoundary extends Component<{ instrument: InstrumentConfig; children: ReactNode }, { failedInstrumentId?: string }> {
+  state: { failedInstrumentId?: string } = {}
+
+  static getDerivedStateFromError(_: Error) {
+    return { failedInstrumentId: 'failed' }
+  }
+
+  componentDidUpdate(prevProps: { instrument: InstrumentConfig }) {
+    if (prevProps.instrument.id !== this.props.instrument.id && this.state.failedInstrumentId) {
+      this.setState({ failedInstrumentId: undefined })
+    }
+  }
+
+  render() {
+    if (this.state.failedInstrumentId) return <ModelUnavailable instrument={this.props.instrument} />
+    return this.props.children
+  }
 }
 
 function SingleCutFinishFallback() {
@@ -424,6 +442,7 @@ function SingleCutFinishFallback() {
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
+  const instrument = useConfigStore(s => getInstrument(s.shape))
   return (
     <>
       <ambientLight intensity={0.42} />
@@ -432,20 +451,22 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
-      <Suspense fallback={<ModelLoading />}>
-        <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
-        </Bounds>
-      </Suspense>
+      <ModelBoundary instrument={instrument}>
+        <Suspense fallback={<ModelLoading />}>
+          <Bounds fit clip observe margin={1.28}>
+            <GlbInstrument view={view} />
+          </Bounds>
+        </Suspense>
+      </ModelBoundary>
     </>
   )
 }
 
 function CameraControls({ view }: { view: 'standard' | 'detail' | 'reset' }) {
   const { camera } = useThree()
-  const shape = useConfigStore(s => s.shape)
+  const cameraDistance = useConfigStore(s => getInstrument(s.shape).renderer.cameraDistance)
   useFrame(() => {
-    const distance = CAMERA_DISTANCE[shape] ?? CAMERA_DISTANCE.default
+    const distance = cameraDistance
     const target = view === 'detail'
       ? new THREE.Vector3(0.12, 0.08, Math.max(4.6, distance * 0.72))
       : view === 'reset'

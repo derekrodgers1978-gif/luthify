@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useConfigStore } from '@/store/configStore'
 import { BUILDERS } from '@/lib/builders-data'
-import { FINISHES, TOPS, HARDWARE_COLORS, FRETBOARDS, BODY_SHAPES, BRIDGES, PICKUPS, NECK_WOODS } from '@/lib/configurator-options'
+import { getOptionLabel } from '@/lib/configurator-options'
 
 interface Props { open: boolean; onClose: () => void; preselectedBuilderId?: string }
 
@@ -35,24 +35,15 @@ export default function QuoteModal({ open, onClose, preselectedBuilderId }: Prop
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  const finish = FINISHES.find(f => f.id === store.finish)
-  const top    = TOPS.find(t => t.id === store.top)
-  const hw     = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const fb     = FRETBOARDS.find(f => f.id === store.fretboard)
-  const neck   = NECK_WOODS.find(n => n.id === store.neck)
-  const shape  = BODY_SHAPES.find(s => s.id === store.shape)
-  const bridge = BRIDGES.find(b => b.id === store.bridge)
-  const pickups = PICKUPS.find(p => p.id === store.pickups)
-
   const specTags = [
-    { label: shape?.label ?? store.shape, key: 'shape' },
-    { label: finish?.label ?? store.finish, key: 'finish' },
-    { label: top?.label ?? store.top, key: 'top' },
-    { label: neck?.label ?? store.neck, key: 'neck' },
-    { label: hw?.label + ' HW', key: 'hardware' },
-    { label: fb?.label, key: 'fretboard' },
-    { label: bridge?.label ?? store.bridge, key: 'bridge' },
-    { label: pickups?.label ?? store.pickups, key: 'pickups' },
+    { label: getOptionLabel('shape', store.shape), key: 'shape' },
+    { label: getOptionLabel('finish', store.finish), key: 'finish' },
+    { label: getOptionLabel('top', store.top), key: 'top' },
+    { label: getOptionLabel('neck', store.neck), key: 'neck' },
+    { label: `${getOptionLabel('hardware', store.hardware)} HW`, key: 'hardware' },
+    { label: getOptionLabel('fretboard', store.fretboard), key: 'fretboard' },
+    { label: getOptionLabel('bridge', store.bridge), key: 'bridge' },
+    { label: getOptionLabel('pickups', store.pickups), key: 'pickups' },
   ]
 
   const toggleBuilder = (id: string) => {

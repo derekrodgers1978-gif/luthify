@@ -36,7 +36,7 @@ export default function ConfiguratorClient() {
       const value = params.get(key)
       if (value) store.setOption(key, value)
     })
-  }, [])
+  }, [store])
 
   return (
     <div className="designer-shell">
