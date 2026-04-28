@@ -65,6 +65,32 @@ class ModelErrorBoundary extends Component<{ resetKey: string; fallback: ReactNo
   }
 }
 
+function useModernSModelError(shapeId: string, modelPath: string) {
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setError(null)
+    if (shapeId !== 'modern-s') return
+
+    fetch(modelPath, { method: 'HEAD', cache: 'no-store' })
+      .then(response => {
+        if (!cancelled && !response.ok) {
+          setError(`Missing GLB model at ${modelPath}.`)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(`Unable to load GLB model at ${modelPath}.`)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [modelPath, shapeId])
+
+  return error
+}
+
 function ModelLoadError({ label, modelPath }: { label: string; modelPath: string }) {
   return (
     <Html center>
@@ -468,6 +494,7 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
   const shapeId = useConfigStore(s => s.shape)
   const shape = BODY_SHAPES.find(s => s.id === shapeId) ?? BODY_SHAPES[0]
   const modelPath = requiredModelPath(shape)
+  const modernSModelError = useModernSModelError(shape.id, modelPath)
 
   return (
     <>
@@ -477,13 +504,17 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
-      <Suspense fallback={<ModelLoading />}>
-        <ModelErrorBoundary resetKey={`${shape.id}:${modelPath}`} fallback={<ModelLoadError label={shape.label} modelPath={modelPath} />}>
-          <Bounds fit clip observe margin={1.28}>
-            <GlbInstrument view={view} />
-          </Bounds>
-        </ModelErrorBoundary>
-      </Suspense>
+      <ModelErrorBoundary resetKey={`${shape.id}:${modelPath}`} fallback={<ModelLoadError label={shape.label} modelPath={modelPath} />}>
+        {modernSModelError ? (
+          <ModelLoadError label={shape.label} modelPath={modelPath} />
+        ) : (
+          <Suspense fallback={<ModelLoading />}>
+            <Bounds fit clip observe margin={1.28}>
+              <GlbInstrument view={view} />
+            </Bounds>
+          </Suspense>
+        )}
+      </ModelErrorBoundary>
     </>
   )
 }
