@@ -13,8 +13,6 @@ type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
 const MODEL_PATHS = INSTRUMENTS.map(instrument => instrument.modelPath).filter(Boolean)
 
-type ModelAvailability = 'checking' | 'available' | 'missing'
-
 function materialRole(meshName: string, materialName: string): MaterialRole {
   const normalizedMesh = meshName.toUpperCase().replace(/[^A-Z0-9]+/g, '_')
   const canonical = normalizedMesh.split('_').find(part => ['BODY', 'NECK', 'FRETBOARD', 'PICKGUARD', 'PICKUPS', 'BRIDGE', 'HARDWARE'].includes(part))
@@ -326,8 +324,8 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
 
   return (
     <Center>
-      <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
-        <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+      <group rotation={[baseRotation[0], yRotation, baseRotation[2]]} scale={scale}>
+        <primitive object={model} position={[-center.x, -center.y, -center.z]} />
         {instrument.renderer.overlayPreset === 'modern-s-options' && <group scale={0.74}><StratOptionOverlays colors={colors} /></group>}
       </group>
     </Center>
@@ -336,12 +334,9 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
 
 function ModelLoading() {
   return (
-    <group>
-      <mesh>
-        <torusGeometry args={[0.8, 0.025, 12, 72]} />
-        <meshStandardMaterial color="#C9A45C" transparent opacity={0.28} />
-      </mesh>
-    </group>
+    <Html center>
+      <div style={{ color: '#C9A45C', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Loading model</div>
+    </Html>
   )
 }
 
@@ -397,8 +392,9 @@ class ModelBoundary extends Component<{ instrument: InstrumentConfig; children: 
   }
 }
 
-function SingleCutFinishFallback() {
+function InstrumentFallbackPreview() {
   const store = useConfigStore()
+  const instrument = getInstrument(store.shape)
   const finish = FINISHES.find(f => f.id === store.finish)
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
@@ -408,7 +404,7 @@ function SingleCutFinishFallback() {
 
   return (
     <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
-      <svg viewBox="0 0 760 520" role="img" aria-label="Single Cut Electric finish preview" style={{ width: 'min(86%, 860px)', height: 'min(82%, 560px)', filter: 'drop-shadow(0 28px 60px rgba(0,0,0,0.46))' }}>
+      <svg viewBox="0 0 760 520" role="img" aria-label={`${instrument.label} finish preview`} style={{ width: 'min(86%, 860px)', height: 'min(82%, 560px)', filter: 'drop-shadow(0 28px 60px rgba(0,0,0,0.46))' }}>
         <defs>
           <radialGradient id="singleCutBurst" cx="46%" cy="54%" r="62%">
             <stop offset="0%" stopColor="#F2A33B" />
@@ -453,12 +449,19 @@ function SingleCutFinishFallback() {
             <rect x="181" y="289" width="140" height="18" rx="9" />
             <circle cx="367" cy="236" r="13" />
             <circle cx="400" cy="207" r="13" />
+            <circle cx="377" cy="274" r="10" />
+            <circle cx="405" cy="261" r="10" />
+            <circle cx="421" cy="232" r="10" />
           </g>
           <g stroke="#DDE2EA" strokeWidth="1.2" opacity="0.75">
             {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={324 + i * 5} x2={180 + i * 17} y1="46" y2="298" />)}
           </g>
         </g>
       </svg>
+      <div style={{ position: 'absolute', top: 96, left: 20, zIndex: 11, width: 260, padding: '14px 16px', borderRadius: 16, background: 'rgba(9,9,11,0.78)', border: '1px solid rgba(201,164,92,0.18)', color: 'rgba(245,241,232,0.68)', backdropFilter: 'blur(12px)' }}>
+        <div style={{ color: '#C9A45C', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Preview mode</div>
+        <div style={{ fontSize: '0.78rem', lineHeight: 1.5 }}>WebGL is unavailable in this browser session. Your {instrument.label} spec, materials, and pricing still update live.</div>
+      </div>
     </div>
   )
 }
@@ -510,13 +513,11 @@ function CameraControls({ view }: { view: 'standard' | 'detail' | 'reset' }) {
 export default function GuitarCanvas() {
   const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
   const [webglLost, setWebglLost] = useState(false)
-  const shape = useConfigStore(s => s.shape)
-  const showSingleCutFallback = webglLost && shape === 'single-cut'
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
-        <SingleCutFinishFallback />
+      {webglLost ? (
+        <InstrumentFallbackPreview />
       ) : (
         <Canvas
           camera={{ position: [0.35, 0.25, 5.35], fov: 37 }}
