@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, OrbitControls, Preload } from '@react-three/drei'
 import * as THREE from 'three'
-import type { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useConfigStore } from '@/store/configStore'
 import { loadInstrumentModel, ModelNotFoundError, InvalidGLBError } from '@/lib/modelLoader'
 import type { LoadedInstrumentModel } from '@/lib/modelLoader'
@@ -155,6 +155,27 @@ function ErrorOverlay() {
   )
 }
 
+function WebGLFallback() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 9, display: 'grid', placeItems: 'center', background: DARK_BACKGROUND }}>
+      <div style={{ maxWidth: 460, padding: '24px 28px', borderRadius: 18, background: 'rgba(9,9,11,0.86)', border: '1px solid rgba(201,164,92,0.22)', boxShadow: '0 18px 56px rgba(0,0,0,0.38)', textAlign: 'center' }}>
+        <div style={{ fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A45C', fontWeight: 700, marginBottom: 8 }}>3D Preview</div>
+        <h3 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.45rem', marginBottom: 10 }}>WebGL is unavailable</h3>
+        <p style={{ color: 'rgba(245,241,232,0.58)', fontSize: '0.82rem', lineHeight: 1.55 }}>Enable hardware acceleration or run Chrome with software WebGL enabled to view the instrument preview.</p>
+      </div>
+    </div>
+  )
+}
+
+function canCreateWebGLContext() {
+  try {
+    const canvas = document.createElement('canvas')
+    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+  } catch {
+    return false
+  }
+}
+
 function ViewButtons({ view, setView }: { view: ViewId; setView: (view: ViewId) => void }) {
   const buttons: [ViewId, string][] = [['front', 'Front'], ['side', 'Side'], ['top', 'Top'], ['reset', 'Reset']]
   return (
@@ -206,6 +227,7 @@ function MeshDebugPanel() {
 export default function GuitarCanvas() {
   const [view, setView] = useState<ViewId>('reset')
   const [loadedModel, setLoadedModel] = useState<LoadedInstrumentModel | null>(null)
+  const [webglAvailable, setWebglAvailable] = useState<boolean | null>(null)
   const instrumentConfig = useConfigStore(s => s.instrumentConfig)
   const modelStatus = useConfigStore(s => s.modelStatus)
   const setModelStatus = useConfigStore(s => s.setModelStatus)
@@ -213,6 +235,19 @@ export default function GuitarCanvas() {
   const setMeshAudit = useConfigStore(s => s.setMeshAudit)
 
   useEffect(() => {
+    setWebglAvailable(canCreateWebGLContext())
+  }, [])
+
+  useEffect(() => {
+    if (webglAvailable === false) {
+      setLoadedModel(null)
+      setMeshAudit(null)
+      setError(null)
+      setModelStatus('idle')
+      return
+    }
+    if (webglAvailable === null) return
+
     let cancelled = false
     setLoadedModel(null)
     setMeshAudit(null)
@@ -242,23 +277,27 @@ export default function GuitarCanvas() {
     return () => {
       cancelled = true
     }
-  }, [instrumentConfig, setError, setMeshAudit, setModelStatus])
+  }, [instrumentConfig, setError, setMeshAudit, setModelStatus, webglAvailable])
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', background: DARK_BACKGROUND }}>
-      <Canvas
-        camera={{ position: instrumentConfig.camera.reset, fov: instrumentConfig.camera.fov }}
-        gl={{ antialias: true, alpha: false }}
-        style={{ background: DARK_BACKGROUND, width: '100%', height: '100%' }}
-        shadows
-        onCreated={({ gl }) => {
-          gl.toneMapping = THREE.ACESFilmicToneMapping
-          gl.toneMappingExposure = 1
-        }}
-      >
-        <Scene loadedModel={modelStatus === 'ready' ? loadedModel : null} view={view} />
-      </Canvas>
-      {modelStatus === 'loading' && <LoadingOverlay />}
+      {webglAvailable === false ? (
+        <WebGLFallback />
+      ) : (
+        <Canvas
+          camera={{ position: instrumentConfig.camera.reset, fov: instrumentConfig.camera.fov }}
+          gl={{ antialias: true, alpha: false }}
+          style={{ background: DARK_BACKGROUND, width: '100%', height: '100%' }}
+          shadows
+          onCreated={({ gl }) => {
+            gl.toneMapping = THREE.ACESFilmicToneMapping
+            gl.toneMappingExposure = 1
+          }}
+        >
+          <Scene loadedModel={modelStatus === 'ready' ? loadedModel : null} view={view} />
+        </Canvas>
+      )}
+      {webglAvailable !== false && modelStatus === 'loading' && <LoadingOverlay />}
       {modelStatus === 'error' && <ErrorOverlay />}
       <ViewButtons view={view} setView={setView} />
       <MeshDebugPanel />
