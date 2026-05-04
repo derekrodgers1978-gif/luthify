@@ -299,6 +299,18 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
+  const meshMap = useMemo(() => {
+    const meshes: Record<string, THREE.Mesh> = {}
+    scene.traverse(obj => {
+      if ((obj as THREE.Mesh).isMesh) meshes[obj.name] = obj as THREE.Mesh
+    })
+    return meshes
+  }, [scene])
+  useEffect(() => {
+    if (modelPath === '/models/s-style-electric.glb') {
+      console.log(Object.keys(meshMap))
+    }
+  }, [meshMap, modelPath])
   const { model, center, scale, maxDimension } = useMemo(() => {
     const clone = scene.clone(true)
     const box = new THREE.Box3().setFromObject(clone)
