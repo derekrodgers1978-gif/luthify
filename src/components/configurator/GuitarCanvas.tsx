@@ -27,19 +27,6 @@ useGLTF.preload(S_STYLE_MODEL)
 type ViewerState = 'checking' | 'ready' | 'error'
 type ModelErrorBoundaryState = { error: Error | null }
 
-class ModelErrorBoundary extends Component<{ children: React.ReactNode }, { message: string | null }> {
-  state = { message: null }
-
-  static getDerivedStateFromError(error: unknown) {
-    return { message: getModelErrorMessage(error) }
-  }
-
-  render() {
-    if (this.state.message) return <ErrorMessage message={this.state.message} />
-    return this.props.children
-  }
-}
-
 function hardwareColor(id: string) {
   if (id === 'gold' || id === 'aged-brass') return '#C9A45C'
   if (id === 'black') return '#111116'
@@ -147,7 +134,9 @@ function ErrorMessage({ message }: { message: string }) {
   )
 }
 
-class ModelErrorBoundary extends Component<{ children: React.ReactNode; onError: (error: Error) => void }, ModelErrorBoundaryState> {
+type ModelErrorBoundaryProps = { children: React.ReactNode; onError: (error: Error) => void; resetKey: string }
+
+class ModelErrorBoundary extends Component<ModelErrorBoundaryProps, ModelErrorBoundaryState> {
   state: ModelErrorBoundaryState = { error: null }
 
   static getDerivedStateFromError(error: Error) {
@@ -158,7 +147,7 @@ class ModelErrorBoundary extends Component<{ children: React.ReactNode; onError:
     this.props.onError(error)
   }
 
-  componentDidUpdate(previousProps: { resetKey: string }) {
+  componentDidUpdate(previousProps: ModelErrorBoundaryProps) {
     if (previousProps.resetKey !== this.props.resetKey && this.state.error) {
       this.setState({ error: null })
     }
@@ -282,7 +271,7 @@ export default function GuitarCanvas() {
       {viewerState === 'checking' ? (
         <ErrorMessage message="Loading GLB model" />
       ) : (
-        <ModelErrorBoundary key={modelPath} onError={error => {
+        <ModelErrorBoundary key={modelPath} resetKey={modelPath} onError={error => {
           setErrorMessage(getModelErrorMessage(error))
           setViewerState('error')
         }}>
