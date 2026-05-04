@@ -178,31 +178,41 @@ function stratPartRole(mesh: THREE.Mesh, materialName: string): StratPartRole {
   return 'other'
 }
 
-function applyModernSBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined) {
+function applyModernSBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined, mesh: THREE.Mesh) {
+  mesh.geometry.computeBoundingBox()
+  const box = mesh.geometry.boundingBox
+  const center = box?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3()
+  const size = box?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(1, 1, 1)
+  const halfSize = new THREE.Vector2(Math.max(size.x * 0.5, 0.001), Math.max(size.z * 0.5, 0.001))
+
   mat.color = new THREE.Color(finish?.hex ?? '#D4B896')
   mat.metalness = 0.12
   mat.roughness = Math.min(finish?.roughness ?? 0.18, 0.24)
   if (finish?.finishStyle !== 'burst') {
+    mat.onBeforeCompile = () => {}
     mat.customProgramCacheKey = () => `modern-s-solid-${finish?.id ?? 'default'}`
     return
   }
   mat.onBeforeCompile = shader => {
     shader.uniforms.uBurstCenter = { value: new THREE.Color(finish.hex ?? '#A35E28') }
     shader.uniforms.uBurstEdge = { value: new THREE.Color(finish.burstEdgeHex ?? '#150706') }
+    shader.uniforms.uBurstOrigin = { value: new THREE.Vector2(center.x, center.z) }
+    shader.uniforms.uBurstHalfSize = { value: halfSize }
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec2 vBurstUv;')
-      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvBurstUv = uv;')
+      .replace('#include <common>', '#include <common>\nvarying vec2 vBurstPosition;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBurstPosition = position.xz;')
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uBurstCenter;\nuniform vec3 uBurstEdge;\nvarying vec2 vBurstUv;')
+      .replace('#include <common>', '#include <common>\nuniform vec3 uBurstCenter;\nuniform vec3 uBurstEdge;\nuniform vec2 uBurstOrigin;\nuniform vec2 uBurstHalfSize;\nvarying vec2 vBurstPosition;')
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-float d = distance(vBurstUv, vec2(0.52, 0.5));
+vec2 burstUv = (vBurstPosition - uBurstOrigin) / uBurstHalfSize;
+float d = length(burstUv);
 vec3 burstMix = mix(uBurstCenter, uBurstEdge, smoothstep(0.28, 0.82, d));
 diffuseColor.rgb *= burstMix;`
       )
   }
-  mat.customProgramCacheKey = () => `modern-s-burst-${finish?.id ?? 'default'}-${finish?.hex ?? ''}-${finish?.burstEdgeHex ?? ''}`
+  mat.customProgramCacheKey = () => `modern-s-burst-${finish?.id ?? 'default'}-${finish?.hex ?? ''}-${finish?.burstEdgeHex ?? ''}-${halfSize.x}-${halfSize.y}`
 }
 
 function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>, finish?: FinishOption) {
@@ -211,7 +221,7 @@ function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colo
   const role = stratPartRole(mesh, mat.name)
   mat.envMapIntensity = 1.8
   if (role === 'body') {
-    applyModernSBodyFinish(mat, finish)
+    applyModernSBodyFinish(mat, finish, mesh)
   } else if (role === 'neck') {
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.03
