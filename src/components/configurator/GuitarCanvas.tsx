@@ -366,72 +366,6 @@ function ModelLoading() {
   )
 }
 
-function SingleCutFinishFallback() {
-  const store = useConfigStore()
-  const finish = FINISHES.find(f => f.id === store.finish)
-  const neck = NECK_WOODS.find(n => n.id === store.neck)
-  const board = FRETBOARDS.find(f => f.id === store.fretboard)
-  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const colors = makeColors(finish, neck, board, hw)
-  const bodyFill = finish?.id === 'sunburst' ? 'url(#singleCutBurst)' : colors.finish
-
-  return (
-    <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
-      <svg viewBox="0 0 760 520" role="img" aria-label="Single Cut Electric finish preview" style={{ width: 'min(86%, 860px)', height: 'min(82%, 560px)', filter: 'drop-shadow(0 28px 60px rgba(0,0,0,0.46))' }}>
-        <defs>
-          <radialGradient id="singleCutBurst" cx="46%" cy="54%" r="62%">
-            <stop offset="0%" stopColor="#F2A33B" />
-            <stop offset="45%" stopColor={colors.finish} />
-            <stop offset="86%" stopColor="#140703" />
-          </radialGradient>
-          <linearGradient id="singleCutTopGloss" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
-            <stop offset="42%" stopColor="rgba(255,255,255,0.06)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.16)" />
-          </linearGradient>
-        </defs>
-        <g transform="translate(68 36) rotate(-12 330 230)">
-          <rect x="295" y="58" width="78" height="318" rx="21" fill={colors.neck} />
-          <rect x="315" y="68" width="38" height="298" rx="13" fill={colors.board} />
-          <path d="M286 42 L379 42 L398 8 Q334 -20 267 8 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="6" />
-          {[86, 122, 158, 194, 230, 266, 302, 338].map(y => (
-            <line key={y} x1="316" x2="352" y1={y} y2={y} stroke="#C9CED6" strokeWidth="2.4" opacity="0.9" />
-          ))}
-          <path
-            d="M213 254 C164 241 123 198 126 148 C128 95 179 66 233 83 C261 31 341 39 365 92 C410 98 449 132 449 184 C449 244 399 286 337 288 C321 333 270 354 226 333 C178 360 108 331 105 274 C103 234 157 220 213 254 Z"
-            fill="#F2EEE2"
-            stroke="#D9CBA4"
-            strokeWidth="14"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M213 254 C164 241 123 198 126 148 C128 95 179 66 233 83 C261 31 341 39 365 92 C410 98 449 132 449 184 C449 244 399 286 337 288 C321 333 270 354 226 333 C178 360 108 331 105 274 C103 234 157 220 213 254 Z"
-            fill={bodyFill}
-            stroke="#F2EEE2"
-            strokeWidth="8"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M190 246 C151 229 128 191 134 151 C142 102 188 77 234 92 C262 49 329 54 355 101 C396 106 431 137 431 183 C431 235 386 269 328 270 C312 306 268 326 229 304 C184 329 130 305 122 267 C116 235 151 222 190 246 Z"
-            fill="url(#singleCutTopGloss)"
-            opacity="0.55"
-          />
-          <g fill={colors.hardware} stroke="#1E2025" strokeWidth="3">
-            <rect x="232" y="168" width="92" height="32" rx="8" />
-            <rect x="229" y="221" width="96" height="32" rx="8" />
-            <rect x="181" y="289" width="140" height="18" rx="9" />
-            <circle cx="367" cy="236" r="13" />
-            <circle cx="400" cy="207" r="13" />
-          </g>
-          <g stroke="#DDE2EA" strokeWidth="1.2" opacity="0.75">
-            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={324 + i * 5} x2={180 + i * 17} y1="46" y2="298" />)}
-          </g>
-        </g>
-      </svg>
-    </div>
-  )
-}
-
 // ── Scene ─────────────────────────────────────────────────────────────────────
 function Scene({ view }: { view: 'standard' | 'detail' }) {
   return (
@@ -467,46 +401,63 @@ function CameraControls({ view }: { view: 'standard' | 'detail' | 'reset' }) {
   return null
 }
 
+function WebGLContextRecovery({ onRecover }: { onRecover: () => void }) {
+  const { gl } = useThree()
+  const restoreFrame = useRef<number | null>(null)
+
+  useEffect(() => {
+    const canvas = gl.domElement
+    const handleContextLost = (event: Event) => {
+      event.preventDefault()
+      if (restoreFrame.current !== null) cancelAnimationFrame(restoreFrame.current)
+      restoreFrame.current = requestAnimationFrame(() => {
+        restoreFrame.current = null
+        gl.forceContextRestore()
+        onRecover()
+      })
+    }
+    const handleContextRestored = () => onRecover()
+
+    canvas.addEventListener('webglcontextlost', handleContextLost)
+    canvas.addEventListener('webglcontextrestored', handleContextRestored)
+    return () => {
+      if (restoreFrame.current !== null) cancelAnimationFrame(restoreFrame.current)
+      canvas.removeEventListener('webglcontextlost', handleContextLost)
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored)
+    }
+  }, [gl, onRecover])
+
+  return null
+}
+
 // ── Canvas wrapper ─────────────────────────────────────────────────────────────
 export default function GuitarCanvas() {
   const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
-  const [webglLost, setWebglLost] = useState(false)
-  const shape = useConfigStore(s => s.shape)
-  const showSingleCutFallback = webglLost && shape === 'single-cut'
+  const [sceneRevision, setSceneRevision] = useState(0)
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
-        <SingleCutFinishFallback />
-      ) : (
-        <Canvas
-          camera={{ position: [0.35, 0.25, 5.35], fov: 37 }}
-          gl={{ antialias: true, alpha: false }}
-          style={{ background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', width: '100%', height: '100%' }}
-          shadows
-          onCreated={({ gl }) => {
-            gl.domElement.addEventListener('webglcontextlost', event => {
-              event.preventDefault()
-              setWebglLost(true)
-            })
-            gl.domElement.addEventListener('webglcontextrestored', () => setWebglLost(false))
-          }}
-        >
-          <CameraControls view={view} />
-          <Scene view={view === 'reset' ? 'standard' : view} />
-          <OrbitControls
-            enablePan={false}
-            target={[0, 0, 0]}
-            minDistance={3.2}
-            maxDistance={10}
-            enableDamping
-            dampingFactor={0.08}
-            autoRotate={false}
-            maxPolarAngle={Math.PI * 0.75}
-            minPolarAngle={Math.PI * 0.2}
-          />
-        </Canvas>
-      )}
+      <Canvas
+        camera={{ position: [0.35, 0.25, 5.35], fov: 37 }}
+        gl={{ antialias: true, alpha: false, powerPreference: 'default' }}
+        style={{ background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', width: '100%', height: '100%' }}
+        shadows
+      >
+        <WebGLContextRecovery onRecover={() => setSceneRevision(revision => revision + 1)} />
+        <CameraControls view={view} />
+        <Scene key={sceneRevision} view={view === 'reset' ? 'standard' : view} />
+        <OrbitControls
+          enablePan={false}
+          target={[0, 0, 0]}
+          minDistance={3.2}
+          maxDistance={10}
+          enableDamping
+          dampingFactor={0.08}
+          autoRotate={false}
+          maxPolarAngle={Math.PI * 0.75}
+          minPolarAngle={Math.PI * 0.2}
+        />
+      </Canvas>
       <div style={{ position: 'absolute', left: 20, top: 64, zIndex: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {[
           ['standard', 'Reset'],
