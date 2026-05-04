@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
+import { getInstrumentPart, type InstrumentPart } from '@/lib/instrumentConfig'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
 
 const MODEL_TARGET_SIZE: Record<string, number> = {
@@ -30,7 +31,6 @@ const CAMERA_DISTANCE: Record<string, number> = {
 
 type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?: 'solid' | 'burst'; burstEdgeHex?: string }
-type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -161,23 +161,6 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   mat.needsUpdate = true
 }
 
-function parseObjectIndex(name: string) {
-  const match = /Object_(\d+)/i.exec(name)
-  return match ? Number(match[1]) : -1
-}
-
-function stratPartRole(mesh: THREE.Mesh, materialName: string): StratPartRole {
-  const objectIndex = parseObjectIndex(mesh.name)
-  const key = `${mesh.name} ${materialName}`.toLowerCase()
-  if (key.includes('bodymaterial')) return 'body'
-  if (key.includes('stringmaterial') || key.includes('metalpartsmaterial')) return 'hardware'
-  if (key.includes('neckmaterial')) {
-    if (objectIndex === 32) return 'fretboard'
-    return 'neck'
-  }
-  return 'other'
-}
-
 function applyModernSBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined) {
   mat.color = new THREE.Color(finish?.hex ?? '#D4B896')
   mat.metalness = 0.12
@@ -208,24 +191,40 @@ diffuseColor.rgb *= burstMix;`
 function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>, finish?: FinishOption) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
-  const role = stratPartRole(mesh, mat.name)
+  const part = getInstrumentPart('modern-s', mesh.name)
   mat.envMapIntensity = 1.8
-  if (role === 'body') {
+  if (part === 'BODY') {
     applyModernSBodyFinish(mat, finish)
-  } else if (role === 'neck') {
+  } else if (part === 'NECK') {
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.03
     mat.roughness = 0.45
-  } else if (role === 'fretboard') {
+  } else if (part === 'FRETBOARD') {
     mat.color = new THREE.Color(colors.board)
     mat.metalness = 0
     mat.roughness = 0.62
-  } else if (role === 'hardware') {
+  } else if (part === 'PICKGUARD') {
+    mat.color = new THREE.Color('#F2EEE2')
+    mat.metalness = 0.02
+    mat.roughness = 0.34
+  } else if (isHardwarePart(part)) {
     mat.color = new THREE.Color(colors.hardware)
     mat.metalness = 0.95
     mat.roughness = 0.2
+  } else if (part === 'PICKUPS') {
+    mat.color = new THREE.Color('#08080A')
+    mat.metalness = 0.35
+    mat.roughness = 0.3
+  } else if (part === 'STRINGS') {
+    mat.color = new THREE.Color('#DDE2EA')
+    mat.metalness = 0.95
+    mat.roughness = 0.18
   }
   mat.needsUpdate = true
+}
+
+function isHardwarePart(part: InstrumentPart | undefined) {
+  return part === 'FRETS' || part === 'BRIDGE' || part === 'TUNERS' || part === 'KNOBS' || part === 'SWITCH'
 }
 
 function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
