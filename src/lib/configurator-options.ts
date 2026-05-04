@@ -1,21 +1,14 @@
 import type { ConfigOption } from '@/types'
+import { INSTRUMENT_CONFIGS } from '@/config/instrumentConfig'
 
 export const BASE_PRICE = 2800
 
-export const BODY_SHAPES: ConfigOption[] = [
-  { id: 'modern-s',   label: 'S-Style Electric',      modelPath: '/models/s-style-electric.glb',      priceAdj: 0 },
-  { id: 'single-cut', label: 'Single Cut Electric',   modelPath: '/models/single-cut-electric.glb',   priceAdj: 0 },
-  { id: 'double-cut', label: 'Double Cut Electric',   modelPath: '/models/double-cut-electric.glb',   priceAdj: 180 },
-  { id: 'semi-hollow',label: 'Semi-Hollow Electric',  modelPath: '/models/semi-hollow-electric.glb',  priceAdj: 400 },
-  { id: 'offset',     label: 'Offset Electric',       modelPath: '/models/offset-electric.glb',       priceAdj: 0 },
-  { id: 't-style',    label: 'V-Style Electric',      modelPath: '/models/v-style-electric.glb',      priceAdj: 0 },
-  { id: 'jazz-hollow',label: 'Dreadnought Acoustic',  modelPath: '/models/dreadnought-acoustic.glb',  priceAdj: 520 },
-  { id: 'baritone',   label: 'Electric Bass',         modelPath: '/models/electric-bass.glb',         priceAdj: 260 },
-  { id: 'banjo',      label: 'Banjo',                 modelPath: '/models/banjo.glb',                 priceAdj: 120 },
-  { id: 'cello',      label: 'Cello',                 modelPath: '/models/cello.glb',                 priceAdj: 680 },
-  { id: 'resonator',  label: 'Resonator',             modelPath: '/models/resonator.glb',             priceAdj: 320 },
-  { id: 'classical',  label: 'Classical Guitar',      modelPath: '/models/classical-guitar.glb',      priceAdj: 160 },
-]
+export const BODY_SHAPES: ConfigOption[] = Object.values(INSTRUMENT_CONFIGS).map(instrument => ({
+  id: instrument.id,
+  label: instrument.label,
+  modelPath: instrument.modelPath,
+  priceAdj: instrument.basePrice - BASE_PRICE,
+}))
 
 export const FINISHES: ConfigOption[] = [
   { id: 'mint',      label: 'Surf Mint',      hex: '#7EC8B4', roughness: 0.12, finishStyle: 'solid', priceAdj: 0 },

@@ -1,512 +1,267 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Environment, OrbitControls, Preload } from '@react-three/drei'
 import * as THREE from 'three'
+import type { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js'
 import { useConfigStore } from '@/store/configStore'
-import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
+import { loadInstrumentModel, ModelNotFoundError, InvalidGLBError } from '@/lib/modelLoader'
+import type { LoadedInstrumentModel } from '@/lib/modelLoader'
+import { applyMaterialsByPartMap } from '@/lib/materialSystem'
+import { normalizeMeshName } from '@/lib/modelLoader'
 
-const MODEL_TARGET_SIZE: Record<string, number> = {
-  cello: 4.8,
-  banjo: 4.4,
-  baritone: 4.6,
-  default: 4.25,
+type ViewId = 'front' | 'side' | 'top' | 'reset'
+
+const DARK_BACKGROUND = 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)'
+
+function cloneMaterial(material: THREE.Material | THREE.Material[]) {
+  return Array.isArray(material)
+    ? material.map(item => item.clone())
+    : material.clone()
 }
 
-const MODEL_ROTATION: Record<string, [number, number, number]> = {
-  'semi-hollow': [0, Math.PI / 2, 0],
-  resonator: [Math.PI / 2, 0, 0],
-}
+function PreparedInstrument({ loadedModel }: { loadedModel: LoadedInstrumentModel }) {
+  const instrumentConfig = useConfigStore(s => s.instrumentConfig)
+  const finishId = useConfigStore(s => s.finishId)
+  const hardwareId = useConfigStore(s => s.hardwareId)
+  const fretboardId = useConfigStore(s => s.fretboardId)
+  const pickupId = useConfigStore(s => s.pickupId)
+  const neckWoodId = useConfigStore(s => s.neck)
 
-const CAMERA_DISTANCE: Record<string, number> = {
-  cello: 8.4,
-  baritone: 7.6,
-  banjo: 7.2,
-  'jazz-hollow': 7.1,
-  classical: 7.1,
-  resonator: 7.2,
-  default: 6.4,
-}
-
-type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
-type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?: 'solid' | 'burst'; burstEdgeHex?: string }
-type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
-
-const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
-MODEL_PATHS.forEach(path => useGLTF.preload(path))
-
-function materialRole(meshName: string, materialName: string): MaterialRole {
-  const key = `${meshName} ${materialName}`.toLowerCase()
-  if (/(pickguard|scratchplate|guard|binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
-  if (/(fretboard|fingerboard|finger board|fret|board)/.test(key)) return 'fretboard'
-  if (/(neck|headstock|head stock|headstock|peghead)/.test(key)) return 'neck'
-  if (/(pickup|pick up|humbucker|single coil|p90|p-90)/.test(key)) return 'pickup'
-  if (/(bridge|tailpiece|tail piece|tremolo|vibrato|saddle)/.test(key)) return 'bridge'
-  if (/(hardware|metal|chrome|tuner|tuning|knob|control|pot|string|ferrule|strap|jack|pickguard|scratchplate|guard)/.test(key)) return 'hardware'
-  if (/(body|top|paint|finish|soundboard|sound board|back|side)/.test(key)) return 'body'
-  return 'other'
-}
-
-function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: string }, board?: { hex?: string }, hw?: { id: string }) {
-  return {
-    finish: finish?.hex ?? '#D4B896',
-    finishRoughness: finish?.roughness ?? 0.18,
-    neck: neck?.id === 'maple' ? '#C8A05A' : neck?.id === 'roasted' ? '#8B4A20' : neck?.id === 'walnut' ? '#4A2411' : '#5C2F17',
-    board: board?.hex ?? '#1A0A00',
-    hardware: hw?.id === 'gold' || hw?.id === 'aged-brass' ? '#C9A45C' : hw?.id === 'black' ? '#111116' : '#C9CED6',
-  }
-}
-
-function isLikelyPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
-  if (!mesh.geometry) return false
-  mesh.geometry.computeBoundingBox()
-  const box = mesh.geometry.boundingBox
-  if (!box) return false
-  const size = box.getSize(new THREE.Vector3()).multiply(mesh.scale)
-  const dims = [Math.abs(size.x), Math.abs(size.y), Math.abs(size.z)].sort((a, b) => b - a)
-  const largest = dims[0] || 0
-  const middle = dims[1] || 0
-  const ratio = middle > 0 ? largest / middle : Infinity
-  return largest > modelMaxDimension * 0.3 && middle > modelMaxDimension * 0.16 && ratio < 2.4
-}
-
-function isSingleCutPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
-  if (!mesh.geometry) return false
-  mesh.geometry.computeBoundingBox()
-  const box = mesh.geometry.boundingBox
-  if (!box) return false
-  const size = box.getSize(new THREE.Vector3()).multiply(mesh.scale)
-  const center = box.getCenter(new THREE.Vector3())
-  const dims = [Math.abs(size.x), Math.abs(size.y), Math.abs(size.z)].sort((a, b) => b - a)
-  return (
-    dims[0] > modelMaxDimension * 0.4 &&
-    dims[1] > modelMaxDimension * 0.28 &&
-    dims[2] < modelMaxDimension * 0.08 &&
-    center.y > 0.15 &&
-    center.y < 1.9
-  )
-}
-
-function applySingleCutBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh) {
-  mesh.geometry.computeBoundingBox()
-  const box = mesh.geometry.boundingBox
-  const center = box?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3()
-  const size = box?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(1, 1, 1)
-  const halfSize = new THREE.Vector2(Math.max(size.x * 0.5, 0.001), Math.max(size.y * 0.5, 0.001))
-
-  mat.color = new THREE.Color('#ffffff')
-  mat.map = null
-  mat.metalness = 0.04
-  mat.roughness = Math.min(colors.finishRoughness, 0.24)
-  mat.onBeforeCompile = shader => {
-    shader.uniforms.uFinishColor = { value: new THREE.Color(colors.finish) }
-    shader.uniforms.uBindingColor = { value: new THREE.Color('#F2EEE2') }
-    shader.uniforms.uBodyCenter = { value: new THREE.Vector2(center.x, center.y) }
-    shader.uniforms.uBodyHalfSize = { value: halfSize }
-    shader.uniforms.uIsBurst = { value: finish?.id === 'sunburst' ? 1 : 0 }
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vFinishPosition;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFinishPosition = position;')
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        '#include <common>',
-        '#include <common>\nuniform vec3 uFinishColor;\nuniform vec3 uBindingColor;\nuniform vec2 uBodyCenter;\nuniform vec2 uBodyHalfSize;\nuniform int uIsBurst;\nvarying vec3 vFinishPosition;'
-      )
-      .replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-vec2 finishUv = (vFinishPosition.xy - uBodyCenter) / uBodyHalfSize;
-float finishRadius = length(finishUv);
-vec3 burstColor = mix(vec3(0.95, 0.58, 0.16), uFinishColor, smoothstep(0.18, 0.56, finishRadius));
-burstColor = mix(burstColor, vec3(0.07, 0.025, 0.008), smoothstep(0.62, 0.92, finishRadius));
-vec3 paintColor = uIsBurst == 1 ? burstColor : uFinishColor;
-float binding = smoothstep(0.82, 0.91, finishRadius);
-diffuseColor.rgb = mix(paintColor, uBindingColor, binding * 0.92);`
-      )
-  }
-  mat.customProgramCacheKey = () => `single-cut-finish-${finish?.id ?? 'default'}-${colors.finish}`
-}
-
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number, shapeId: string, finish?: FinishOption) {
-  const mat = material as THREE.MeshStandardMaterial
-  if (!mat.isMeshStandardMaterial) return
-  mat.envMapIntensity = 1.55
-  if (shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
-    applySingleCutBodyFinish(mat, finish, colors, mesh)
-  } else if (role === 'hardware' || role === 'bridge') {
-    mat.color = new THREE.Color(colors.hardware)
-    mat.metalness = 0.9
-    mat.roughness = 0.2
-  } else if (role === 'pickup') {
-    mat.color = new THREE.Color('#08080A')
-    mat.metalness = 0.35
-    mat.roughness = 0.3
-  } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.02
-    mat.roughness = 0.42
-  } else if (role === 'fretboard') {
-    mat.color = new THREE.Color(colors.board)
-    mat.metalness = 0
-    mat.roughness = 0.58
-  } else if (role === 'protected') {
-    mat.color = new THREE.Color('#F2EEE2')
-    mat.metalness = 0.02
-    mat.roughness = 0.34
-  } else if (role === 'body' || (role === 'other' && isLikelyPaintSurface(mesh, modelMaxDimension))) {
-    mat.color = new THREE.Color(colors.finish)
-    mat.metalness = 0.04
-    mat.roughness = Math.min(colors.finishRoughness, 0.24)
-  }
-  mat.needsUpdate = true
-}
-
-function parseObjectIndex(name: string) {
-  const match = /Object_(\d+)/i.exec(name)
-  return match ? Number(match[1]) : -1
-}
-
-function stratPartRole(mesh: THREE.Mesh, materialName: string): StratPartRole {
-  const objectIndex = parseObjectIndex(mesh.name)
-  const key = `${mesh.name} ${materialName}`.toLowerCase()
-  if (key.includes('bodymaterial')) return 'body'
-  if (key.includes('stringmaterial') || key.includes('metalpartsmaterial')) return 'hardware'
-  if (key.includes('neckmaterial')) {
-    if (objectIndex === 32) return 'fretboard'
-    return 'neck'
-  }
-  return 'other'
-}
-
-function applyModernSBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined) {
-  mat.color = new THREE.Color(finish?.hex ?? '#D4B896')
-  mat.metalness = 0.12
-  mat.roughness = Math.min(finish?.roughness ?? 0.18, 0.24)
-  if (finish?.finishStyle !== 'burst') {
-    mat.customProgramCacheKey = () => `modern-s-solid-${finish?.id ?? 'default'}`
-    return
-  }
-  mat.onBeforeCompile = shader => {
-    shader.uniforms.uBurstCenter = { value: new THREE.Color(finish.hex ?? '#A35E28') }
-    shader.uniforms.uBurstEdge = { value: new THREE.Color(finish.burstEdgeHex ?? '#150706') }
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec2 vBurstUv;')
-      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvBurstUv = uv;')
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uBurstCenter;\nuniform vec3 uBurstEdge;\nvarying vec2 vBurstUv;')
-      .replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-float d = distance(vBurstUv, vec2(0.52, 0.5));
-vec3 burstMix = mix(uBurstCenter, uBurstEdge, smoothstep(0.28, 0.82, d));
-diffuseColor.rgb *= burstMix;`
-      )
-  }
-  mat.customProgramCacheKey = () => `modern-s-burst-${finish?.id ?? 'default'}-${finish?.hex ?? ''}-${finish?.burstEdgeHex ?? ''}`
-}
-
-function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>, finish?: FinishOption) {
-  const mat = material as THREE.MeshStandardMaterial
-  if (!mat.isMeshStandardMaterial) return
-  const role = stratPartRole(mesh, mat.name)
-  mat.envMapIntensity = 1.8
-  if (role === 'body') {
-    applyModernSBodyFinish(mat, finish)
-  } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.03
-    mat.roughness = 0.45
-  } else if (role === 'fretboard') {
-    mat.color = new THREE.Color(colors.board)
-    mat.metalness = 0
-    mat.roughness = 0.62
-  } else if (role === 'hardware') {
-    mat.color = new THREE.Color(colors.hardware)
-    mat.metalness = 0.95
-    mat.roughness = 0.2
-  }
-  mat.needsUpdate = true
-}
-
-function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
-  const pickups = useConfigStore(s => s.pickups)
-  const bridge = useConfigStore(s => s.bridge)
-  const pickupZ = [-0.17, -0.05, 0.08]
-  const singleCoils = (
-    <group>
-      {pickupZ.map(z => (
-        <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-          <boxGeometry args={[0.095, 0.017, 0.032]} />
-          <meshStandardMaterial color="#f5f0e6" metalness={0.02} roughness={0.35} />
-        </mesh>
-      ))}
-    </group>
-  )
-  const humbucker = (z: number) => (
-    <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-      <boxGeometry args={[0.11, 0.017, 0.048]} />
-      <meshStandardMaterial color="#101014" metalness={0.22} roughness={0.32} />
-    </mesh>
-  )
-
-  return (
-    <group>
-      {(pickups === 'singlecoil' || pickups === 'hss') && singleCoils}
-      {(pickups === 'dual-hum' || pickups === 'active-hum') && <group>{humbucker(-0.15)}{humbucker(0.04)}</group>}
-      {pickups === 'p90' && <group>{pickupZ.map(z => humbucker(z))}</group>}
-      {pickups === 'hss' && humbucker(-0.17)}
-
-      {bridge === 'trem' && (
-        <mesh position={[-0.03, 0.01, -0.24]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.15, 0.012, 0.06]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
-        </mesh>
-      )}
-      {bridge === 'hardtail' && (
-        <mesh position={[-0.03, 0.01, -0.24]}>
-          <boxGeometry args={[0.13, 0.014, 0.045]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.25} />
-        </mesh>
-      )}
-      {bridge === 'tuneomatic' && (
-        <group>
-          <mesh position={[-0.03, 0.012, -0.22]}>
-            <boxGeometry args={[0.115, 0.012, 0.022]} />
-            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
-          </mesh>
-          <mesh position={[-0.03, 0.012, -0.265]}>
-            <boxGeometry args={[0.085, 0.011, 0.018]} />
-            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
-          </mesh>
-        </group>
-      )}
-      {bridge === 'bigsby' && (
-        <mesh position={[-0.03, 0.01, -0.245]}>
-          <cylinderGeometry args={[0.018, 0.018, 0.13, 16]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
-        </mesh>
-      )}
-    </group>
-  )
-}
-
-function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
-  const store = useConfigStore()
-  const shape = BODY_SHAPES.find(s => s.id === store.shape) ?? BODY_SHAPES[0]
-  const finish = FINISHES.find(f => f.id === store.finish)
-  const neck = NECK_WOODS.find(n => n.id === store.neck)
-  const board = FRETBOARDS.find(f => f.id === store.fretboard)
-  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
-  const { scene } = useGLTF(modelPath)
-  const { model, center, scale, maxDimension } = useMemo(() => {
-    const clone = scene.clone(true)
-    const box = new THREE.Box3().setFromObject(clone)
-    const size = box.getSize(new THREE.Vector3())
-    const center = box.getCenter(new THREE.Vector3())
-    const maxDimension = Math.max(size.x, size.y, size.z) || 1
-    const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
-    return { model: clone, center, scale: targetSize / maxDimension, maxDimension }
-  }, [scene, shape.id])
-  const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
-
-  useEffect(() => {
-    model.traverse(obj => {
-      if (!(obj as THREE.Mesh).isMesh) return
-      const mesh = obj as THREE.Mesh
+  const model = useMemo(() => {
+    const scene = loadedModel.scene.clone(true)
+    scene.traverse(object => {
+      if (!(object as THREE.Mesh).isMesh) return
+      const mesh = object as THREE.Mesh
       mesh.castShadow = true
       mesh.receiveShadow = true
-      if (Array.isArray(mesh.material)) {
-        mesh.material = mesh.material.map(mat => mat.clone())
-      } else {
-        mesh.material = mesh.material.clone()
-      }
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => {
-        if (shape.id === 'modern-s') {
-          enhanceModernSMaterial(mesh, mat, colors, finish)
-          return
-        }
-        enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
-      })
+      mesh.material = cloneMaterial(mesh.material)
     })
-  }, [colors, finish, maxDimension, model, shape.id])
+    return scene
+  }, [loadedModel.scene])
 
-  const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
-  const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
+  const { meshMap, center, scale } = useMemo(() => {
+    const map = new Map<string, THREE.Mesh>()
+    model.traverse(object => {
+      if (!(object as THREE.Mesh).isMesh) return
+      const mesh = object as THREE.Mesh
+      map.set(normalizeMeshName(mesh.name || mesh.geometry?.name || 'unnamed'), mesh)
+    })
+    const box = new THREE.Box3().setFromObject(model)
+    const size = box.getSize(new THREE.Vector3())
+    const centerPoint = box.getCenter(new THREE.Vector3())
+    const maxDimension = Math.max(size.x, size.y, size.z) || 1
+    return {
+      meshMap: map,
+      center: centerPoint,
+      scale: instrumentConfig.camera.targetSize / maxDimension,
+    }
+  }, [instrumentConfig.camera.targetSize, model])
 
-  return (
-    <Center>
-      <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
-        <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && <group scale={0.74}><StratOptionOverlays colors={colors} /></group>}
-      </group>
-    </Center>
-  )
+  useEffect(() => {
+    applyMaterialsByPartMap(meshMap, instrumentConfig, {
+      finishId,
+      hardwareId,
+      fretboardId,
+      pickupId,
+      neckWoodId,
+    })
+  }, [finishId, fretboardId, hardwareId, instrumentConfig, meshMap, neckWoodId, pickupId])
+
+  return <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
 }
 
-function ModelLoading() {
-  return (
-    <group>
-      <mesh>
-        <torusGeometry args={[0.8, 0.025, 12, 72]} />
-        <meshStandardMaterial color="#C9A45C" transparent opacity={0.28} />
-      </mesh>
-    </group>
-  )
+function CameraRig({ view, controlsRef }: { view: ViewId; controlsRef: RefObject<OrbitControlsImpl | null> }) {
+  const { camera } = useThree()
+  const instrumentConfig = useConfigStore(s => s.instrumentConfig)
+  const target = useMemo(() => new THREE.Vector3(...instrumentConfig.camera.target), [instrumentConfig])
+  const desiredPosition = useMemo(() => new THREE.Vector3(...instrumentConfig.camera[view]), [instrumentConfig, view])
+
+  useFrame(() => {
+    camera.position.lerp(desiredPosition, 0.085)
+    const controls = controlsRef.current
+    if (controls) {
+      controls.target.lerp(target, 0.085)
+      controls.update()
+    } else {
+      camera.lookAt(target)
+    }
+  })
+
+  return null
 }
 
-function SingleCutFinishFallback() {
-  const store = useConfigStore()
-  const finish = FINISHES.find(f => f.id === store.finish)
-  const neck = NECK_WOODS.find(n => n.id === store.neck)
-  const board = FRETBOARDS.find(f => f.id === store.fretboard)
-  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const colors = makeColors(finish, neck, board, hw)
-  const bodyFill = finish?.id === 'sunburst' ? 'url(#singleCutBurst)' : colors.finish
+function Scene({ loadedModel, view }: { loadedModel: LoadedInstrumentModel | null; view: ViewId }) {
+  const controlsRef = useRef<OrbitControlsImpl | null>(null)
+  const instrumentConfig = useConfigStore(s => s.instrumentConfig)
 
-  return (
-    <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
-      <svg viewBox="0 0 760 520" role="img" aria-label="Single Cut Electric finish preview" style={{ width: 'min(86%, 860px)', height: 'min(82%, 560px)', filter: 'drop-shadow(0 28px 60px rgba(0,0,0,0.46))' }}>
-        <defs>
-          <radialGradient id="singleCutBurst" cx="46%" cy="54%" r="62%">
-            <stop offset="0%" stopColor="#F2A33B" />
-            <stop offset="45%" stopColor={colors.finish} />
-            <stop offset="86%" stopColor="#140703" />
-          </radialGradient>
-          <linearGradient id="singleCutTopGloss" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
-            <stop offset="42%" stopColor="rgba(255,255,255,0.06)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.16)" />
-          </linearGradient>
-        </defs>
-        <g transform="translate(68 36) rotate(-12 330 230)">
-          <rect x="295" y="58" width="78" height="318" rx="21" fill={colors.neck} />
-          <rect x="315" y="68" width="38" height="298" rx="13" fill={colors.board} />
-          <path d="M286 42 L379 42 L398 8 Q334 -20 267 8 Z" fill={colors.neck} stroke="#1a0d07" strokeWidth="6" />
-          {[86, 122, 158, 194, 230, 266, 302, 338].map(y => (
-            <line key={y} x1="316" x2="352" y1={y} y2={y} stroke="#C9CED6" strokeWidth="2.4" opacity="0.9" />
-          ))}
-          <path
-            d="M213 254 C164 241 123 198 126 148 C128 95 179 66 233 83 C261 31 341 39 365 92 C410 98 449 132 449 184 C449 244 399 286 337 288 C321 333 270 354 226 333 C178 360 108 331 105 274 C103 234 157 220 213 254 Z"
-            fill="#F2EEE2"
-            stroke="#D9CBA4"
-            strokeWidth="14"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M213 254 C164 241 123 198 126 148 C128 95 179 66 233 83 C261 31 341 39 365 92 C410 98 449 132 449 184 C449 244 399 286 337 288 C321 333 270 354 226 333 C178 360 108 331 105 274 C103 234 157 220 213 254 Z"
-            fill={bodyFill}
-            stroke="#F2EEE2"
-            strokeWidth="8"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M190 246 C151 229 128 191 134 151 C142 102 188 77 234 92 C262 49 329 54 355 101 C396 106 431 137 431 183 C431 235 386 269 328 270 C312 306 268 326 229 304 C184 329 130 305 122 267 C116 235 151 222 190 246 Z"
-            fill="url(#singleCutTopGloss)"
-            opacity="0.55"
-          />
-          <g fill={colors.hardware} stroke="#1E2025" strokeWidth="3">
-            <rect x="232" y="168" width="92" height="32" rx="8" />
-            <rect x="229" y="221" width="96" height="32" rx="8" />
-            <rect x="181" y="289" width="140" height="18" rx="9" />
-            <circle cx="367" cy="236" r="13" />
-            <circle cx="400" cy="207" r="13" />
-          </g>
-          <g stroke="#DDE2EA" strokeWidth="1.2" opacity="0.75">
-            {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={324 + i * 5} x2={180 + i * 17} y1="46" y2="298" />)}
-          </g>
-        </g>
-      </svg>
-    </div>
-  )
-}
-
-// ── Scene ─────────────────────────────────────────────────────────────────────
-function Scene({ view }: { view: 'standard' | 'detail' }) {
   return (
     <>
+      <CameraRig view={view} controlsRef={controlsRef} />
       <ambientLight intensity={0.42} />
       <directionalLight position={[4.5, 7, 4]} intensity={1.35} castShadow shadow-mapSize={[2048, 2048]} />
       <spotLight position={[-4, 4, 4]} angle={0.45} penumbra={0.7} intensity={0.8} color="#E2C07A" castShadow />
       <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
       <Environment preset="studio" />
-      <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
-      <Suspense fallback={<ModelLoading />}>
-        <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
-        </Bounds>
-      </Suspense>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, instrumentConfig.camera.groundY, 0]} receiveShadow>
+        <planeGeometry args={[16, 16]} />
+        <shadowMaterial opacity={0.32} color="#000000" />
+      </mesh>
+      {loadedModel && <PreparedInstrument loadedModel={loadedModel} />}
+      <OrbitControls
+        ref={controlsRef}
+        enablePan={false}
+        target={instrumentConfig.camera.target}
+        minDistance={3.2}
+        maxDistance={10}
+        enableDamping
+        dampingFactor={0.08}
+        autoRotate={false}
+        maxPolarAngle={Math.PI * 0.75}
+        minPolarAngle={Math.PI * 0.08}
+      />
+      <Preload all />
     </>
   )
 }
 
-function CameraControls({ view }: { view: 'standard' | 'detail' | 'reset' }) {
-  const { camera } = useThree()
-  const shape = useConfigStore(s => s.shape)
-  useFrame(() => {
-    const distance = CAMERA_DISTANCE[shape] ?? CAMERA_DISTANCE.default
-    const target = view === 'detail'
-      ? new THREE.Vector3(0.12, 0.08, Math.max(4.6, distance * 0.72))
-      : view === 'reset'
-        ? new THREE.Vector3(0.28, 0.32, distance)
-        : new THREE.Vector3(0.28, 0.32, distance)
-    camera.position.lerp(target, 0.08)
-    camera.lookAt(0, 0, 0)
-  })
-  return null
+function LoadingOverlay() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 8, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid rgba(201,164,92,0.3)', borderTopColor: '#C9A45C', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <p style={{ fontSize: '0.8rem', color: 'rgba(245,241,232,0.52)' }}>Loading model...</p>
+      </div>
+    </div>
+  )
 }
 
-// ── Canvas wrapper ─────────────────────────────────────────────────────────────
-export default function GuitarCanvas() {
-  const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
-  const [webglLost, setWebglLost] = useState(false)
-  const shape = useConfigStore(s => s.shape)
-  const showSingleCutFallback = webglLost && shape === 'single-cut'
+function ErrorOverlay() {
+  const instrumentConfig = useConfigStore(s => s.instrumentConfig)
+  const errorCode = useConfigStore(s => s.errorCode)
+  if (!errorCode) return null
+  const title = errorCode === 'NOT_FOUND' ? 'Model file not found' : errorCode === 'INVALID_GLB' ? 'Invalid GLB file' : 'Unable to load model'
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
-        <SingleCutFinishFallback />
-      ) : (
-        <Canvas
-          camera={{ position: [0.35, 0.25, 5.35], fov: 37 }}
-          gl={{ antialias: true, alpha: false }}
-          style={{ background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', width: '100%', height: '100%' }}
-          shadows
-          onCreated={({ gl }) => {
-            gl.domElement.addEventListener('webglcontextlost', event => {
-              event.preventDefault()
-              setWebglLost(true)
-            })
-            gl.domElement.addEventListener('webglcontextrestored', () => setWebglLost(false))
-          }}
-        >
-          <CameraControls view={view} />
-          <Scene view={view === 'reset' ? 'standard' : view} />
-          <OrbitControls
-            enablePan={false}
-            target={[0, 0, 0]}
-            minDistance={3.2}
-            maxDistance={10}
-            enableDamping
-            dampingFactor={0.08}
-            autoRotate={false}
-            maxPolarAngle={Math.PI * 0.75}
-            minPolarAngle={Math.PI * 0.2}
-          />
-        </Canvas>
-      )}
-      <div style={{ position: 'absolute', left: 20, top: 64, zIndex: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {[
-          ['standard', 'Reset'],
-          ['detail', 'Zoom'],
-        ].map(([id, label]) => (
-          <button key={id} onClick={() => setView(id as 'standard' | 'detail')} style={{ border: '1px solid rgba(201,164,92,0.24)', background: view === id ? 'rgba(201,164,92,0.14)' : 'rgba(9,9,11,0.68)', color: '#C9A45C', borderRadius: 999, padding: '7px 12px', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
-            {label}
-          </button>
-        ))}
+    <div style={{ position: 'absolute', inset: 0, zIndex: 9, display: 'grid', placeItems: 'center', background: DARK_BACKGROUND }}>
+      <div style={{ maxWidth: 420, padding: '24px 28px', borderRadius: 18, background: 'rgba(9,9,11,0.86)', border: '1px solid rgba(201,164,92,0.22)', boxShadow: '0 18px 56px rgba(0,0,0,0.38)', textAlign: 'center' }}>
+        <div style={{ fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A45C', fontWeight: 700, marginBottom: 8 }}>3D Model</div>
+        <h3 style={{ fontFamily: "'Bodoni Moda',serif", fontSize: '1.45rem', marginBottom: 10 }}>{title}</h3>
+        <p style={{ color: 'rgba(245,241,232,0.58)', fontSize: '0.82rem', lineHeight: 1.55, wordBreak: 'break-word' }}>{instrumentConfig.modelPath}</p>
       </div>
+    </div>
+  )
+}
+
+function ViewButtons({ view, setView }: { view: ViewId; setView: (view: ViewId) => void }) {
+  const buttons: [ViewId, string][] = [['front', 'Front'], ['side', 'Side'], ['top', 'Top'], ['reset', 'Reset']]
+  return (
+    <div style={{ position: 'absolute', left: 20, top: 64, zIndex: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {buttons.map(([id, label]) => (
+        <button
+          key={id}
+          onClick={() => setView(id)}
+          style={{ border: '1px solid rgba(201,164,92,0.24)', background: view === id ? 'rgba(201,164,92,0.14)' : 'rgba(9,9,11,0.68)', color: '#C9A45C', borderRadius: 999, padding: '7px 12px', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', backdropFilter: 'blur(10px)' }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function MeshDebugPanel() {
+  const audit = useConfigStore(s => s.meshAudit)
+  const expected = useConfigStore(s => s.instrumentConfig.expectedMeshes)
+  const [open, setOpen] = useState(false)
+  const expectedSet = useMemo(() => new Set(expected.map(normalizeMeshName)), [expected])
+  if (!audit) return null
+
+  const rows = [
+    ...audit.all.map(name => ({ name, status: expectedSet.has(normalizeMeshName(name)) ? 'expected' : 'detected' })),
+    ...audit.missing.map(name => ({ name, status: 'missing' })),
+  ]
+
+  return (
+    <div style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 12, width: open ? 270 : 'auto', maxHeight: 280, overflow: 'hidden', background: 'rgba(9,9,11,0.82)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, backdropFilter: 'blur(12px)' }}>
+      <button onClick={() => setOpen(value => !value)} style={{ width: '100%', padding: '9px 12px', border: 0, background: 'transparent', color: '#C9A45C', fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', textAlign: 'left' }}>
+        Mesh Debug ({audit.all.length})
+      </button>
+      {open && (
+        <div style={{ maxHeight: 230, overflowY: 'auto', padding: '0 12px 12px' }}>
+          {rows.map((row, index) => (
+            <div key={`${row.status}-${row.name}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderTop: index === 0 ? '1px solid rgba(255,255,255,0.06)' : 0 }}>
+              <span style={{ color: 'rgba(245,241,232,0.68)', fontSize: '0.68rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</span>
+              <span style={{ color: row.status === 'missing' ? '#ff6b6b' : row.status === 'expected' ? '#5fb87a' : 'rgba(245,241,232,0.32)', fontSize: '0.62rem', textTransform: 'uppercase' }}>{row.status}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function GuitarCanvas() {
+  const [view, setView] = useState<ViewId>('reset')
+  const [loadedModel, setLoadedModel] = useState<LoadedInstrumentModel | null>(null)
+  const instrumentConfig = useConfigStore(s => s.instrumentConfig)
+  const modelStatus = useConfigStore(s => s.modelStatus)
+  const setModelStatus = useConfigStore(s => s.setModelStatus)
+  const setError = useConfigStore(s => s.setError)
+  const setMeshAudit = useConfigStore(s => s.setMeshAudit)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadedModel(null)
+    setMeshAudit(null)
+    setError(null)
+    setModelStatus('loading')
+
+    loadInstrumentModel(instrumentConfig)
+      .then(model => {
+        if (cancelled) return
+        setLoadedModel(model)
+        setMeshAudit(model.meshAudit)
+        setModelStatus('ready')
+      })
+      .catch(error => {
+        if (cancelled) return
+        setLoadedModel(null)
+        setMeshAudit(null)
+        if (error instanceof ModelNotFoundError) {
+          setError('NOT_FOUND')
+        } else if (error instanceof InvalidGLBError) {
+          setError('INVALID_GLB')
+        } else {
+          setError('UNKNOWN')
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [instrumentConfig, setError, setMeshAudit, setModelStatus])
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative', background: DARK_BACKGROUND }}>
+      <Canvas
+        camera={{ position: instrumentConfig.camera.reset, fov: instrumentConfig.camera.fov }}
+        gl={{ antialias: true, alpha: false }}
+        style={{ background: DARK_BACKGROUND, width: '100%', height: '100%' }}
+        shadows
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping
+          gl.toneMappingExposure = 1
+        }}
+      >
+        <Scene loadedModel={modelStatus === 'ready' ? loadedModel : null} view={view} />
+      </Canvas>
+      {modelStatus === 'loading' && <LoadingOverlay />}
+      {modelStatus === 'error' && <ErrorOverlay />}
+      <ViewButtons view={view} setView={setView} />
+      <MeshDebugPanel />
     </div>
   )
 }
