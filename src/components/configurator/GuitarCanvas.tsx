@@ -299,6 +299,15 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
+  useEffect(() => {
+    if (shape.id !== 'modern-s') return
+    const meshMap: Record<string, THREE.Mesh> = {}
+    scene.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      meshMap[obj.name] = obj as THREE.Mesh
+    })
+    console.log(Object.keys(meshMap))
+  }, [scene, shape.id])
   const { model, center, scale, maxDimension } = useMemo(() => {
     const clone = scene.clone(true)
     const box = new THREE.Box3().setFromObject(clone)
