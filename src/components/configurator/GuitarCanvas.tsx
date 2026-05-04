@@ -158,6 +158,12 @@ class ModelErrorBoundary extends Component<{ children: React.ReactNode; onError:
     this.props.onError(error)
   }
 
+  componentDidUpdate(previousProps: { resetKey: string }) {
+    if (previousProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null })
+    }
+  }
+
   render() {
     if (this.state.error) return null
     return this.props.children

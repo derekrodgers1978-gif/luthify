@@ -31,15 +31,31 @@ export class InvalidGlbFileError extends Error {
   }
 }
 
+export type ModelStatus = 'ready' | 'missing' | 'invalid'
+
+const modelStatusCache = new Map<string, ModelStatus>()
+
 export async function assertModelFile(path: string) {
   try {
     const response = await fetch(path, { method: 'HEAD' })
-    if (response.status === 404) throw new ModelFileNotFoundError(path)
-    if (!response.ok) throw new InvalidGlbFileError(path)
+    if (response.status === 404) {
+      modelStatusCache.set(path, 'missing')
+      throw new ModelFileNotFoundError(path)
+    }
+    if (!response.ok) {
+      modelStatusCache.set(path, 'invalid')
+      throw new InvalidGlbFileError(path)
+    }
+    modelStatusCache.set(path, 'ready')
   } catch (error) {
     if (error instanceof ModelFileNotFoundError) throw error
+    modelStatusCache.set(path, 'invalid')
     throw new InvalidGlbFileError(path)
   }
+}
+
+export function getModelStatus(path: string) {
+  return modelStatusCache.get(path) ?? 'invalid'
 }
 
 export function isModelFileNotFound(error: unknown) {
