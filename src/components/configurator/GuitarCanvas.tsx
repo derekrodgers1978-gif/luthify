@@ -28,22 +28,25 @@ const CAMERA_DISTANCE: Record<string, number> = {
   default: 6.4,
 }
 
-type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'pickup' | 'bridge' | 'protected' | 'other'
+type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
 type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?: 'solid' | 'burst'; burstEdgeHex?: string }
-type StratPartRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
-function materialRole(meshName: string, materialName: string): MaterialRole {
-  const key = `${meshName} ${materialName}`.toLowerCase()
-  if (/(pickguard|scratchplate|guard|binding|inlay|dot|nut|logo|label|plastic|plate)/.test(key)) return 'protected'
-  if (/(fretboard|fingerboard|finger board|fret|board)/.test(key)) return 'fretboard'
-  if (/(neck|headstock|head stock|headstock|peghead)/.test(key)) return 'neck'
-  if (/(pickup|pick up|humbucker|single coil|p90|p-90)/.test(key)) return 'pickup'
-  if (/(bridge|tailpiece|tail piece|tremolo|vibrato|saddle)/.test(key)) return 'bridge'
-  if (/(hardware|metal|chrome|tuner|tuning|knob|control|pot|string|ferrule|strap|jack|pickguard|scratchplate|guard)/.test(key)) return 'hardware'
-  if (/(body|top|paint|finish|soundboard|sound board|back|side)/.test(key)) return 'body'
+function materialRole(materialName: string | null | undefined): MaterialRole {
+  switch (materialName ?? '') {
+    case 'BodyMaterial':
+      return 'body'
+    case 'MetalPartsMaterial':
+      return 'hardware'
+    case 'NeckMaterial':
+      return 'neck'
+    case 'StringMaterial':
+      return 'strings'
+    case '':
+      return 'pickguard'
+  }
   return 'other'
 }
 
@@ -54,20 +57,9 @@ function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: 
     neck: neck?.id === 'maple' ? '#C8A05A' : neck?.id === 'roasted' ? '#8B4A20' : neck?.id === 'walnut' ? '#4A2411' : '#5C2F17',
     board: board?.hex ?? '#1A0A00',
     hardware: hw?.id === 'gold' || hw?.id === 'aged-brass' ? '#C9A45C' : hw?.id === 'black' ? '#111116' : '#C9CED6',
+    strings: '#DDE2EA',
+    pickguard: '#F2EEE2',
   }
-}
-
-function isLikelyPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
-  if (!mesh.geometry) return false
-  mesh.geometry.computeBoundingBox()
-  const box = mesh.geometry.boundingBox
-  if (!box) return false
-  const size = box.getSize(new THREE.Vector3()).multiply(mesh.scale)
-  const dims = [Math.abs(size.x), Math.abs(size.y), Math.abs(size.z)].sort((a, b) => b - a)
-  const largest = dims[0] || 0
-  const middle = dims[1] || 0
-  const ratio = middle > 0 ? largest / middle : Infinity
-  return largest > modelMaxDimension * 0.3 && middle > modelMaxDimension * 0.16 && ratio < 2.4
 }
 
 function isSingleCutPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
@@ -131,51 +123,30 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
-  if (shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
+  if (role === 'body' && shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
     applySingleCutBodyFinish(mat, finish, colors, mesh)
-  } else if (role === 'hardware' || role === 'bridge') {
+  } else if (role === 'hardware') {
     mat.color = new THREE.Color(colors.hardware)
     mat.metalness = 0.9
     mat.roughness = 0.2
-  } else if (role === 'pickup') {
-    mat.color = new THREE.Color('#08080A')
-    mat.metalness = 0.35
-    mat.roughness = 0.3
   } else if (role === 'neck') {
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.02
     mat.roughness = 0.42
-  } else if (role === 'fretboard') {
-    mat.color = new THREE.Color(colors.board)
-    mat.metalness = 0
-    mat.roughness = 0.58
-  } else if (role === 'protected') {
-    mat.color = new THREE.Color('#F2EEE2')
+  } else if (role === 'strings') {
+    mat.color = new THREE.Color(colors.strings)
+    mat.metalness = 0.7
+    mat.roughness = 0.26
+  } else if (role === 'pickguard') {
+    mat.color = new THREE.Color(colors.pickguard)
     mat.metalness = 0.02
     mat.roughness = 0.34
-  } else if (role === 'body' || (role === 'other' && isLikelyPaintSurface(mesh, modelMaxDimension))) {
+  } else if (role === 'body') {
     mat.color = new THREE.Color(colors.finish)
     mat.metalness = 0.04
     mat.roughness = Math.min(colors.finishRoughness, 0.24)
   }
   mat.needsUpdate = true
-}
-
-function parseObjectIndex(name: string) {
-  const match = /Object_(\d+)/i.exec(name)
-  return match ? Number(match[1]) : -1
-}
-
-function stratPartRole(mesh: THREE.Mesh, materialName: string): StratPartRole {
-  const objectIndex = parseObjectIndex(mesh.name)
-  const key = `${mesh.name} ${materialName}`.toLowerCase()
-  if (key.includes('bodymaterial')) return 'body'
-  if (key.includes('stringmaterial') || key.includes('metalpartsmaterial')) return 'hardware'
-  if (key.includes('neckmaterial')) {
-    if (objectIndex === 32) return 'fretboard'
-    return 'neck'
-  }
-  return 'other'
 }
 
 function applyModernSBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined) {
@@ -205,10 +176,10 @@ diffuseColor.rgb *= burstMix;`
   mat.customProgramCacheKey = () => `modern-s-burst-${finish?.id ?? 'default'}-${finish?.hex ?? ''}-${finish?.burstEdgeHex ?? ''}`
 }
 
-function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>, finish?: FinishOption) {
+function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>, finish?: FinishOption) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
-  const role = stratPartRole(mesh, mat.name)
+  const role = materialRole(mat.name)
   mat.envMapIntensity = 1.8
   if (role === 'body') {
     applyModernSBodyFinish(mat, finish)
@@ -216,14 +187,18 @@ function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colo
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.03
     mat.roughness = 0.45
-  } else if (role === 'fretboard') {
-    mat.color = new THREE.Color(colors.board)
-    mat.metalness = 0
-    mat.roughness = 0.62
   } else if (role === 'hardware') {
     mat.color = new THREE.Color(colors.hardware)
     mat.metalness = 0.95
     mat.roughness = 0.2
+  } else if (role === 'strings') {
+    mat.color = new THREE.Color(colors.strings)
+    mat.metalness = 0.7
+    mat.roughness = 0.26
+  } else if (role === 'pickguard') {
+    mat.color = new THREE.Color(colors.pickguard)
+    mat.metalness = 0.02
+    mat.roughness = 0.34
   }
   mat.needsUpdate = true
 }
@@ -324,10 +299,10 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach(mat => {
         if (shape.id === 'modern-s') {
-          enhanceModernSMaterial(mesh, mat, colors, finish)
+          enhanceModernSMaterial(mat, colors, finish)
           return
         }
-        enhanceMaterial(materialRole(mesh.name, mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
+        enhanceMaterial(materialRole(mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
       })
     })
   }, [colors, finish, maxDimension, model, shape.id])
