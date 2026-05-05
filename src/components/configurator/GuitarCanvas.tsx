@@ -290,48 +290,27 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
   )
 }
 
-function NeckAndPickguardOverlay({ colors }: { colors: ReturnType<typeof makeColors> }) {
-  const board = useConfigStore(s => s.fretboard)
-  const { scene: neckScene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
-  const { scene: pgScene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
-
-  const neckModel = useMemo(() => neckScene.clone(true), [neckScene])
-  const pgModel = useMemo(() => pgScene.clone(true), [pgScene])
-
-  useEffect(() => {
-    neckModel.traverse(obj => {
-      if (!(obj as THREE.Mesh).isMesh) return
-      const mesh = obj as THREE.Mesh
-      const mat = new THREE.MeshStandardMaterial()
-      mat.color = new THREE.Color(colors.neck)
-      mat.roughness = 0.44
-      mat.metalness = 0.02
-      mat.envMapIntensity = 1.4
-      mesh.material = mat
-    })
-    pgModel.traverse(obj => {
-      if (!(obj as THREE.Mesh).isMesh) return
-      const mesh = obj as THREE.Mesh
-      const name = mesh.name.toLowerCase()
-      const mat = new THREE.MeshStandardMaterial()
-      if (name.includes('screw') || name.includes('control') || name.includes('cutout')) {
-        mat.color = new THREE.Color('#888888')
-        mat.metalness = 0.8
-        mat.roughness = 0.2
-      } else {
-        mat.color = new THREE.Color(colors.pickguard)
-        mat.roughness = 0.34
-        mat.metalness = 0.02
-      }
-      mesh.material = mat
-    })
-  }, [colors, board, neckModel, pgModel])
+function PickguardOverlay() {
+  const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
 
   return (
-    <group>
-      <primitive object={neckModel} position={[0, 0, 0]} scale={1} />
-      <primitive object={pgModel} position={[0, 0, 0]} scale={1} />
-    </group>
+    <primitive
+      object={scene}
+      position={[0, 0, 0.001]}
+      name="PICKGUARD"
+    />
+  )
+}
+
+function NeckOverlay() {
+  const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
+
+  return (
+    <primitive
+      object={scene}
+      position={[0, 0, 0.001]}
+      name="NECK_NO_FRETBOARD"
+    />
   )
 }
 
@@ -453,7 +432,8 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         {shape.id === 'modern-s' && (
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
-            <NeckAndPickguardOverlay colors={colors} />
+            <PickguardOverlay />
+            <NeckOverlay />
             <FretboardOverlay colors={colors} />
           </group>
         )}
