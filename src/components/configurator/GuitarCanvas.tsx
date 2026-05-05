@@ -35,10 +35,11 @@ MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
 function materialRole(matName: string): MaterialRole {
   if (matName === 'Body') return 'body'
-  if (matName === 'BodyMaterial') return 'body'
-  if (matName === 'NeckMaterial') return 'neck'
-  if (matName === 'MetalPartsMaterial') return 'hardware'
-  if (matName === 'StringMaterial') return 'strings'
+  if (matName === 'Wood') return 'neck'
+  if (matName === 'Plastic') return 'pickguard'
+  if (matName === 'Chrome') return 'hardware'
+  if (matName === 'Knobs') return 'hardware'
+  if (matName === 'Strings') return 'strings'
   return 'pickguard'
 }
 
