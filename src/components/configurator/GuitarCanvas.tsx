@@ -35,6 +35,13 @@ MODEL_PATHS.forEach(path => useGLTF.preload(path))
 useGLTF.preload('/models/fretboard_strat.glb')
 useGLTF.preload('/models/fretboard_gibson.glb')
 
+const BURST_TEXTURE_PATHS: Record<string, string> = {
+  'burst-amber': '/textures/burst_amber.png',
+  'burst-vintage': '/textures/burst_vintage.png',
+  'burst-cherry': '/textures/burst_cherry.png',
+  'sunburst': '/textures/burst_sunburst.png',
+}
+
 type FinishOption = {
   id?: string
   hex?: string
@@ -106,42 +113,12 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
   }
 }
 
-function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
-  if (typeof document === 'undefined') return null
-  const canvas = document.createElement('canvas')
-  canvas.width = 512
-  canvas.height = 512
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256)
-  if (colors.finishId === 'sunburst') {
-    gradient.addColorStop(0, '#F5E490')
-    gradient.addColorStop(0.3, '#E8A020')
-    gradient.addColorStop(0.6, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
-  } else if (colors.finishId === 'burst-cherry') {
-    gradient.addColorStop(0, '#E04050')
-    gradient.addColorStop(0.55, colors.finish)
-    gradient.addColorStop(1, '#050000')
-  } else {
-    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.25).getStyle())
-    gradient.addColorStop(0.6, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
-  }
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, 512, 512)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.needsUpdate = true
-  return texture
-}
-
-function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
-  if (colors.finishStyle === 'burst') {
+function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>, burstTexture?: THREE.Texture | null) {
+  if (colors.finishStyle === 'burst' && burstTexture) {
     mat.color = new THREE.Color('#FFFFFF')
-    mat.map = makeBurstTexture(colors)
-    mat.map!.needsUpdate = true
-    mat.needsUpdate = true
+    mat.map = burstTexture
+    mat.map.colorSpace = THREE.SRGBColorSpace
+    mat.map.needsUpdate = true
   } else {
     mat.color = new THREE.Color(colors.finish)
     mat.map = null
@@ -171,7 +148,7 @@ function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
   }
 }
 
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, burstTexture?: THREE.Texture | null) {
   if (role === 'other') return
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
@@ -189,19 +166,19 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.metalness = 0.02
     mat.roughness = 0.34
   } else if (role === 'body') {
-    applyBodyMaterial(mat, colors)
+    applyBodyMaterial(mat, colors, burstTexture)
   }
   mat.needsUpdate = true
 }
 
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>, burstTexture?: THREE.Texture | null) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   const role = materialRole(mat.name)
   if (role === 'other') return
   mat.envMapIntensity = 1.8
   if (role === 'body') {
-    applyBodyMaterial(mat, colors)
+    applyBodyMaterial(mat, colors, burstTexture)
   } else if (role === 'neck') {
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.02
@@ -355,6 +332,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     return { model: clone, center, scale: targetSize / maxDimension }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
+  const burstTexture = useMemo(() => {
+    const path = BURST_TEXTURE_PATHS[store.finish]
+    if (!path) return null
+    const tex = new THREE.TextureLoader().load(path)
+    tex.colorSpace = THREE.SRGBColorSpace
+    return tex
+  }, [store.finish])
 
   useEffect(() => {
     model.traverse(obj => {
@@ -381,7 +365,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors)
+          enhanceModernSMaterial(mat, colors, burstTexture)
         })
         const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
         meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
@@ -389,12 +373,12 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
 
       materials.forEach(mat => {
-        enhanceMaterial(materialRole(mat.name), mat, colors)
+        enhanceMaterial(materialRole(mat.name), mat, colors, burstTexture)
       })
       const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
     })
-  }, [colors, model, shape.id])
+  }, [burstTexture, colors, model, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
