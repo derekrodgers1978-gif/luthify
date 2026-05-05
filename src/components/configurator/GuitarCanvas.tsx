@@ -364,6 +364,16 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         )
       }
       if (shape.id === 'modern-s') {
+        console.log('Model materials:', model.uuid)
+        model.traverse(obj => {
+          if (!(obj as THREE.Mesh).isMesh) return
+          const mesh = obj as THREE.Mesh
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+          mats.forEach(m => {
+            const mat = m as THREE.MeshStandardMaterial
+            console.log('Mesh:', mesh.name, '| Mat:', mat.name, '| role:', materialRole(mat.name))
+          })
+        })
         materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors, burstTexture)
         })
@@ -410,7 +420,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         {shape.id === 'modern-s' && (
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
-            <FretboardOverlay colors={colors} />
+            {/* <FretboardOverlay colors={colors} /> */}
           </group>
         )}
       </group>
