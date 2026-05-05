@@ -34,20 +34,12 @@ type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
-function materialRole(materialName: string | null | undefined): MaterialRole {
-  switch (materialName ?? '') {
-    case 'BodyMaterial':
-      return 'body'
-    case 'MetalPartsMaterial':
-      return 'hardware'
-    case 'NeckMaterial':
-      return 'neck'
-    case 'StringMaterial':
-      return 'strings'
-    case '':
-      return 'pickguard'
-  }
-  return 'other'
+function materialRole(matName: string): MaterialRole {
+  if (matName === 'BodyMaterial') return 'body'
+  if (matName === 'NeckMaterial') return 'neck'
+  if (matName === 'MetalPartsMaterial') return 'hardware'
+  if (matName === 'StringMaterial') return 'strings'
+  return 'pickguard'
 }
 
 function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: string }, board?: { hex?: string }, hw?: { id: string }) {
