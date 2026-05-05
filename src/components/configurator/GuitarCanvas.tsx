@@ -71,11 +71,11 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
 
 function materialRole(matName: string): MaterialRole {
   const name = matName.toLowerCase()
-  if (matName === 'Body' || name.includes('body')) return 'body'
-  if (matName === 'Wood' || name.includes('wood') || name.includes('neck')) return 'neck'
-  if (matName === 'Plastic' || name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
-  if (matName === 'Chrome' || matName === 'Knobs' || name.includes('chrome') || name.includes('knob') || name.includes('hardware') || name.includes('metal')) return 'hardware'
-  if (matName === 'Strings' || name.includes('string')) return 'strings'
+  if (name.includes('body')) return 'body'
+  if (name.includes('neck') || name.includes('wood') || name.includes('fret') || name.includes('board')) return 'neck'
+  if (name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
+  if (name.includes('metal') || name.includes('chrome') || name.includes('hardware') || name.includes('knob')) return 'hardware'
+  if (name.includes('string')) return 'strings'
   return 'other'
 }
 
