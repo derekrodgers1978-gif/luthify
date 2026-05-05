@@ -108,36 +108,31 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
 
 function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
   if (typeof document === 'undefined') return null
-
   const canvas = document.createElement('canvas')
-  canvas.width = 512
-  canvas.height = 512
+  canvas.width = 1024
+  canvas.height = 1024
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
-
-  const gradient = ctx.createRadialGradient(256, 280, 30, 256, 280, 310)
+  const cx = 512, cy = 520
+  const gradient = ctx.createRadialGradient(cx, cy, 40, cx, cy, 580)
   if (colors.finishId === 'sunburst') {
-    gradient.addColorStop(0, '#F2D49B')
-    gradient.addColorStop(0.42, '#C68642')
-    gradient.addColorStop(0.74, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#120603')
+    gradient.addColorStop(0, '#F5E4A0')
+    gradient.addColorStop(0.35, '#D4903A')
+    gradient.addColorStop(0.65, colors.finish)
+    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
   } else if (colors.finishId === 'burst-cherry') {
-    gradient.addColorStop(0, '#B31924')
-    gradient.addColorStop(0.58, colors.finish)
-    gradient.addColorStop(1, '#000000')
+    gradient.addColorStop(0, '#E03040')
+    gradient.addColorStop(0.5, colors.finish)
+    gradient.addColorStop(1, '#050000')
   } else {
-    gradient.addColorStop(0, colors.finish)
-    gradient.addColorStop(0.64, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#120603')
+    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.3).getStyle())
+    gradient.addColorStop(0.55, colors.finish)
+    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
   }
-
   ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-
+  ctx.fillRect(0, 0, 1024, 1024)
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
-  texture.wrapS = THREE.ClampToEdgeWrapping
-  texture.wrapT = THREE.ClampToEdgeWrapping
   texture.needsUpdate = true
   return texture
 }
@@ -286,6 +281,7 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
   )
 }
 
+// TODO: Replace s-style-electric.glb with a brand-neutral model
 function FretboardOverlay({ colors }: {
   colors: ReturnType<typeof makeColors>
 }) {
@@ -330,9 +326,9 @@ function FretboardOverlay({ colors }: {
   return (
     <primitive
       object={model}
-      position={[0, 0.012, 0.38]}
+      position={[0.01, 0.008, 0.12]}
       rotation={[0, Math.PI, 0]}
-      scale={0.96}
+      scale={0.014}
     />
   )
 }
@@ -373,6 +369,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         ? baseMaterials.map(mat => mat.clone())
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      if (shape.id === 'modern-s') {
+        console.log('Mesh:', mesh.name, '| Material:',
+          Array.isArray(mesh.material)
+            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
+            : (mesh.material as THREE.Material).name
+        )
+      }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors)
