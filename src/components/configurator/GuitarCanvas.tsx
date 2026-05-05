@@ -140,6 +140,8 @@ function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   if (colors.finishStyle === 'burst') {
     mat.color = new THREE.Color('#FFFFFF')
     mat.map = makeBurstTexture(colors)
+    mat.map!.needsUpdate = true
+    mat.needsUpdate = true
   } else {
     mat.color = new THREE.Color(colors.finish)
     mat.map = null
@@ -380,12 +382,16 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors)
         })
+        const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
         return
       }
 
       materials.forEach(mat => {
         enhanceMaterial(materialRole(mat.name), mat, colors)
       })
+      const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
     })
   }, [colors, model, shape.id])
 
