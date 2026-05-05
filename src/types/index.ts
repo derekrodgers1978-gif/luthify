@@ -34,6 +34,7 @@ export interface ConfigState {
   top:       string
   neck:      string
   fretboard: string
+  pickguard: string
   hardware:  string
   bridge:    string
   pickups:   string
