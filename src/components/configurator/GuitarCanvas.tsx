@@ -315,15 +315,15 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     return { model: clone, center, scale: targetSize / maxDimension }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
-  const burstTexture = useMemo(() => {
-    const path = BURST_TEXTURE_PATHS[store.finish]
-    if (!path) return null
-    const tex = new THREE.TextureLoader().load(path)
-    tex.colorSpace = THREE.SRGBColorSpace
-    return tex
-  }, [store.finish])
 
   useEffect(() => {
+    const burstPath = BURST_TEXTURE_PATHS[store.finish]
+    const burstTexture = burstPath ? (() => {
+      const tex = new THREE.TextureLoader().load(burstPath)
+      tex.colorSpace = THREE.SRGBColorSpace
+      return tex
+    })() : null
+
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
@@ -369,6 +369,18 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
             m.needsUpdate = true
           }
         })
+        materials.forEach(mat => {
+          const m = mat as THREE.MeshStandardMaterial
+          if (!m.isMeshStandardMaterial) return
+          if (m.name === 'NeckMaterial') {
+            // Apply neck color as base
+            m.color = new THREE.Color(colors.neck)
+            m.metalness = 0.02
+            m.roughness = 0.44
+            m.envMapIntensity = 1.4
+            m.needsUpdate = true
+          }
+        })
         return
       }
 
@@ -378,7 +390,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
     })
-  }, [burstTexture, colors, model, shape.id])
+  }, [colors, model, shape.id, store.finish])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
