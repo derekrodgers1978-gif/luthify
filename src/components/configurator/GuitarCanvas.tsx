@@ -28,7 +28,7 @@ const CAMERA_DISTANCE: Record<string, number> = {
   default: 6.4,
 }
 
-type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
+type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'strings' | 'pickguard' | 'pickup' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -67,14 +67,25 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
   'aged-brass': { color: '#B08D57', metalness: 0.85, roughness: 0.28 },
 }
 
-function materialRole(matName: string): MaterialRole {
-  const name = matName.toLowerCase()
-  if (matName === 'Body' || name.includes('body')) return 'body'
-  if (matName === 'Wood' || name.includes('wood') || name.includes('neck')) return 'neck'
-  if (matName === 'Plastic' || name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
-  if (matName === 'Chrome' || matName === 'Knobs' || name.includes('chrome') || name.includes('knob') || name.includes('hardware') || name.includes('metal')) return 'hardware'
-  if (matName === 'Strings' || name.includes('string')) return 'strings'
-  return 'pickguard'
+function materialRole(matName: string, meshName = ''): MaterialRole {
+  const materialName = matName.toLowerCase()
+  const combinedName = `${materialName} ${meshName.toLowerCase()}`
+
+  if (materialName === 'body' || combinedName.includes('body')) return 'body'
+  if (
+    combinedName.includes('fret') ||
+    combinedName.includes('board') ||
+    combinedName.includes('ebony') ||
+    combinedName.includes('rosewood')
+  ) {
+    return 'fretboard'
+  }
+  if (combinedName.includes('wood') || combinedName.includes('neck')) return 'neck'
+  if (materialName === 'chrome' || materialName === 'knobs' || combinedName.includes('chrome') || combinedName.includes('knob') || combinedName.includes('hardware') || combinedName.includes('metal')) return 'hardware'
+  if (materialName === 'strings' || combinedName.includes('string')) return 'strings'
+  if (combinedName.includes('pickguard')) return 'pickguard'
+  if (materialName === 'plastic' || combinedName.includes('pickup')) return 'pickup'
+  return 'other'
 }
 
 function blendHexColors(from: string, to: string, amount: number) {
@@ -164,6 +175,12 @@ function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   mat.roughness = 0.44
 }
 
+function applyFretboardMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  mat.color = new THREE.Color(colors.board)
+  mat.metalness = 0.02
+  mat.roughness = 0.48
+}
+
 function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
   return {
     color: colors.hardware,
@@ -180,6 +197,8 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     applyHardwareMaterial(mat, colors)
   } else if (role === 'neck') {
     applyWoodMaterial(mat, colors)
+  } else if (role === 'fretboard') {
+    applyFretboardMaterial(mat, colors)
   } else if (role === 'strings') {
     mat.color = new THREE.Color(colors.strings)
     mat.metalness = 0.7
@@ -194,15 +213,17 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   mat.needsUpdate = true
 }
 
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>, meshName = '') {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
-  const role = materialRole(mat.name)
+  const role = materialRole(mat.name, meshName)
   mat.envMapIntensity = 1.8
   if (role === 'body') {
     applyBodyMaterial(mat, colors)
   } else if (role === 'neck') {
     applyWoodMaterial(mat, colors)
+  } else if (role === 'fretboard') {
+    applyFretboardMaterial(mat, colors)
   } else if (role === 'hardware') {
     applyHardwareMaterial(mat, colors)
   } else if (role === 'strings') {
@@ -402,8 +423,9 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       if (shape.id === 'modern-s') {
         let woodMaterialIndex = -1
         materials.forEach((mat, index) => {
-          enhanceModernSMaterial(mat, colors)
-          if (materialRole(mat.name) === 'neck') woodMaterialIndex = index
+          const role = materialRole(mat.name, mesh.name)
+          enhanceModernSMaterial(mat, colors, mesh.name)
+          if (role === 'neck') woodMaterialIndex = index
         })
         if (woodMaterialIndex >= 0) {
           const hasFretboardSplit = applyFretboardSplit(mesh, woodMaterialIndex, colors)
@@ -419,7 +441,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
 
       materials.forEach(mat => {
-        enhanceMaterial(materialRole(mat.name), mat, colors)
+        enhanceMaterial(materialRole(mat.name, mesh.name), mat, colors)
       })
     })
   }, [colors, model, shape.id])
