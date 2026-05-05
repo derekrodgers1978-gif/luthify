@@ -35,6 +35,13 @@ MODEL_PATHS.forEach(path => useGLTF.preload(path))
 useGLTF.preload('/models/fretboard_strat.glb')
 useGLTF.preload('/models/fretboard_gibson.glb')
 
+const BURST_TEXTURE_PATHS: Record<string, string> = {
+  'burst-amber':   '/models/gretsch_orange_2k_sunburst.png',
+  'burst-vintage': '/models/gibson_tobacco_2k_sunburst.png',
+  'burst-cherry':  '/models/gibson_cherry_2k_sunburst.png',
+  'sunburst':      '/models/fender_2k_sunburst.png',
+}
+
 type FinishOption = {
   id?: string
   hex?: string
