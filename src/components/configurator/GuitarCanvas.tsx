@@ -1,10 +1,11 @@
 'use client'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
+import { MODULAR_GUITAR_MODEL_PATH, createModularGuitarModel } from '@/lib/modelLoader'
 
 const MODEL_TARGET_SIZE: Record<string, number> = {
   cello: 4.8,
@@ -28,21 +29,7 @@ const CAMERA_DISTANCE: Record<string, number> = {
   default: 6.4,
 }
 
-type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
-
-const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
-MODEL_PATHS.forEach(path => useGLTF.preload(path))
-useGLTF.preload('/models/fretboard_strat.glb')
-useGLTF.preload('/models/fretboard_gibson.glb')
-useGLTF.preload('/models/fender_style_pickguard_strat_s3.glb')
-useGLTF.preload('/models/fender_style_neck_no_fretboard.glb')
-
-const BURST_TEXTURE_PATHS: Record<string, string> = {
-  'burst-amber':   '/models/gretsch_orange_2k_sunburst.png',
-  'burst-vintage': '/models/gibson_tobacco_2k_sunburst.png',
-  'burst-cherry':  '/models/gibson_cherry_2k_sunburst.png',
-  'sunburst':      '/models/fender_2k_sunburst.png',
-}
+useGLTF.preload(MODULAR_GUITAR_MODEL_PATH)
 
 type FinishOption = {
   id?: string
@@ -78,16 +65,6 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
   'aged-brass': { color: '#B08D57', metalness: 0.85, roughness: 0.28 },
 }
 
-function materialRole(matName: string): MaterialRole {
-  const name = matName.toLowerCase()
-  if (name.includes('body')) return 'body'
-  if (name.includes('neck') || name.includes('wood') || name.includes('fret') || name.includes('board')) return 'neck'
-  if (name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
-  if (name.includes('metal') || name.includes('chrome') || name.includes('hardware') || name.includes('knob')) return 'hardware'
-  if (name.includes('string')) return 'strings'
-  return 'other'
-}
-
 function blendHexColors(from: string, to: string, amount: number) {
   return `#${new THREE.Color(from).lerp(new THREE.Color(to), amount).getHexString()}`
 }
@@ -115,328 +92,155 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
   }
 }
 
-function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
-  if (typeof document === 'undefined') return null
-  const canvas = document.createElement('canvas')
-  canvas.width = 1024
-  canvas.height = 1024
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  const cx = 512, cy = 520
-  const gradient = ctx.createRadialGradient(cx, cy, 40, cx, cy, 580)
-  if (colors.finishId === 'sunburst') {
-    gradient.addColorStop(0, '#F5E4A0')
-    gradient.addColorStop(0.35, '#D4903A')
-    gradient.addColorStop(0.65, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
-  } else if (colors.finishId === 'burst-cherry') {
-    gradient.addColorStop(0, '#E03040')
-    gradient.addColorStop(0.5, colors.finish)
-    gradient.addColorStop(1, '#050000')
-  } else {
-    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.3).getStyle())
-    gradient.addColorStop(0.55, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
-  }
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, 1024, 1024)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.needsUpdate = true
-  return texture
+const FINISH_TEXTURE_PATHS: Record<string, string> = {
+  'burst-amber': '/models/burst_amber.png',
+  'burst-vintage': '/models/burst_vintage.png',
+  'burst-cherry': '/models/burst_cherry.png',
+  sunburst: '/models/burst_sunburst.png',
 }
 
-function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
-  if (colors.finishStyle === 'burst') {
-    mat.color = new THREE.Color('#FFFFFF')
-    mat.map = makeBurstTexture(colors)
-  } else {
-    mat.color = new THREE.Color(colors.finish)
+const PICKUP_FINISHES: Record<string, { color: string; metalness: number; roughness: number }> = {
+  singlecoil: { color: '#F5F0E6', metalness: 0.02, roughness: 0.35 },
+  hss: { color: '#F5F0E6', metalness: 0.08, roughness: 0.34 },
+  p90: { color: '#F0E7D2', metalness: 0.04, roughness: 0.36 },
+  'dual-hum': { color: '#101014', metalness: 0.22, roughness: 0.32 },
+  'active-hum': { color: '#09090B', metalness: 0.26, roughness: 0.3 },
+}
+
+function standardMaterials(mesh: THREE.Mesh) {
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+  return materials.filter((material): material is THREE.MeshStandardMaterial => {
+    return Boolean((material as THREE.MeshStandardMaterial).isMeshStandardMaterial)
+  })
+}
+
+function applyBodyColorFallback(body: THREE.Mesh, finish?: FinishOption) {
+  standardMaterials(body).forEach(mat => {
     mat.map = null
-  }
-  mat.metalness = 0.04
-  mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
-}
-
-function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
-  mat.color = new THREE.Color(colors.hardware)
-  mat.metalness = colors.hardwareMetalness
-  mat.roughness = colors.hardwareRoughness
-}
-
-function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
-  mat.color = new THREE.Color(colors.neck)
-  mat.metalness = 0.02
-  mat.roughness = 0.44
-}
-
-function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
-  return {
-    color: colors.hardware,
-    metalness: colors.hardwareMetalness,
-    roughness: colors.hardwareRoughness,
-  }
-}
-
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
-  if (role === 'other') return
-  const mat = material as THREE.MeshStandardMaterial
-  if (!mat.isMeshStandardMaterial) return
-  mat.envMapIntensity = 1.55
-  if (role === 'hardware') {
-    applyHardwareMaterial(mat, colors)
-  } else if (role === 'neck') {
-    applyWoodMaterial(mat, colors)
-  } else if (role === 'strings') {
-    mat.color = new THREE.Color(colors.strings)
-    mat.metalness = 0.7
-    mat.roughness = 0.26
-  } else if (role === 'pickguard') {
-    mat.color = new THREE.Color(colors.pickguard)
-    mat.metalness = 0.02
-    mat.roughness = 0.34
-  } else if (role === 'body') {
-    applyBodyMaterial(mat, colors)
-  }
-  mat.needsUpdate = true
-}
-
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
-  const mat = material as THREE.MeshStandardMaterial
-  if (!mat.isMeshStandardMaterial) return
-  const role = materialRole(mat.name)
-  if (role === 'other') return
-  mat.envMapIntensity = 1.8
-  if (role === 'body') {
-    applyBodyMaterial(mat, colors)
-  } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.02
-    mat.roughness = 0.44
+    mat.color = new THREE.Color(finish?.hex ?? '#D4B896')
+    mat.metalness = 0.04
+    mat.roughness = Math.min(finish?.roughness ?? 0.24, 0.24)
+    mat.envMapIntensity = 1.8
     mat.needsUpdate = true
-  } else if (role === 'hardware') {
-    applyHardwareMaterial(mat, colors)
-  } else if (role === 'strings') {
-    mat.color = new THREE.Color(colors.strings)
-    mat.metalness = 0.7
-    mat.roughness = 0.26
-  } else if (role === 'pickguard') {
-    mat.color = new THREE.Color(colors.pickguard)
-    mat.metalness = 0.02
-    mat.roughness = 0.34
-  }
-  mat.needsUpdate = true
+  })
 }
 
-function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
-  const pickups = useConfigStore(s => s.pickups)
-  const bridge = useConfigStore(s => s.bridge)
-  const pickupZ = [-0.17, -0.05, 0.08]
-  const singleCoils = (
-    <group>
-      {pickupZ.map(z => (
-        <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-          <boxGeometry args={[0.095, 0.017, 0.032]} />
-          <meshStandardMaterial color="#f5f0e6" metalness={0.02} roughness={0.35} />
-        </mesh>
-      ))}
-    </group>
-  )
-  const humbucker = (z: number) => (
-    <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-      <boxGeometry args={[0.11, 0.017, 0.048]} />
-      <meshStandardMaterial color="#101014" metalness={0.22} roughness={0.32} />
-    </mesh>
-  )
-
-  return (
-    <group>
-      {(pickups === 'singlecoil' || pickups === 'hss') && singleCoils}
-      {(pickups === 'dual-hum' || pickups === 'active-hum') && <group>{humbucker(-0.15)}{humbucker(0.04)}</group>}
-      {pickups === 'p90' && <group>{pickupZ.map(z => humbucker(z))}</group>}
-      {pickups === 'hss' && humbucker(-0.17)}
-
-      {bridge === 'trem' && (
-        <mesh position={[-0.03, 0.01, -0.24]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.15, 0.012, 0.06]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-      {bridge === 'hardtail' && (
-        <mesh position={[-0.03, 0.01, -0.24]}>
-          <boxGeometry args={[0.13, 0.014, 0.045]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-      {bridge === 'tuneomatic' && (
-        <group>
-          <mesh position={[-0.03, 0.012, -0.22]}>
-            <boxGeometry args={[0.115, 0.012, 0.022]} />
-            <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-          </mesh>
-          <mesh position={[-0.03, 0.012, -0.265]}>
-            <boxGeometry args={[0.085, 0.011, 0.018]} />
-            <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-          </mesh>
-        </group>
-      )}
-      {bridge === 'bigsby' && (
-        <mesh position={[-0.03, 0.01, -0.245]}>
-          <cylinderGeometry args={[0.018, 0.018, 0.13, 16]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-    </group>
-  )
-}
-
-function PickguardOverlay() {
-  const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0.001]}
-      name="PICKGUARD"
-    />
-  )
-}
-
-function NeckOverlay() {
-  const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0.001]}
-      name="NECK_NO_FRETBOARD"
-    />
-  )
-}
-
-// TODO: Replace s-style-electric.glb with a brand-neutral model
-function FretboardOverlay({ colors }: {
-  colors: ReturnType<typeof makeColors>
+function applyMeshColor(mesh: THREE.Mesh | undefined, material: {
+  color: string
+  metalness: number
+  roughness: number
+  envMapIntensity?: number
 }) {
-  const board = useConfigStore(s => s.fretboard)
-  const shape = useConfigStore(s => s.shape)
-  const path = shape === 'modern-s' ? '/models/fretboard_strat.glb' : '/models/fretboard_gibson.glb'
-  const { scene } = useGLTF(path)
+  if (!mesh) return
 
-  const model = useMemo(() => scene.clone(true), [scene])
-
-  useEffect(() => {
-    model.traverse(obj => {
-      if (!(obj as THREE.Mesh).isMesh) return
-      const mesh = obj as THREE.Mesh
-      const mat = mesh.material as THREE.MeshStandardMaterial
-      if (!mat?.isMeshStandardMaterial) return
-
-      if (mesh.name === 'Fretboard') {
-        mat.color = new THREE.Color(FRETBOARD_COLORS[board] ?? FRETBOARD_COLORS.rosewood)
-        mat.roughness = 0.48
-        mat.metalness = 0.02
-        mat.envMapIntensity = 1.4
-        mat.needsUpdate = true
-      }
-      if (mesh.name === 'Frets') {
-        mat.color = new THREE.Color('#C8C8C8')
-        mat.metalness = 0.85
-        mat.roughness = 0.2
-        mat.envMapIntensity = 1.8
-        mat.needsUpdate = true
-      }
-      if (mesh.name === 'Inlays') {
-        mat.color = new THREE.Color('#E8E8EC')
-        mat.roughness = 0.1
-        mat.metalness = 0.0
-        mat.envMapIntensity = 2.0
-        mat.needsUpdate = true
-      }
-    })
-  }, [board, colors, model])
-
-  return (
-    <primitive
-      object={model}
-      position={[0.01, 0.008, 0.12]}
-      rotation={[0, Math.PI, 0]}
-      scale={0.014}
-    />
-  )
+  standardMaterials(mesh).forEach(mat => {
+    mat.map = null
+    mat.color = new THREE.Color(material.color)
+    mat.metalness = material.metalness
+    mat.roughness = material.roughness
+    mat.envMapIntensity = material.envMapIntensity ?? 1.55
+    mat.needsUpdate = true
+  })
 }
 
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
-  const store = useConfigStore()
-  const shape = BODY_SHAPES.find(s => s.id === store.shape) ?? BODY_SHAPES[0]
-  const finish = FINISHES.find(f => f.id === store.finish)
-  const neck = NECK_WOODS.find(n => n.id === store.neck)
-  const board = FRETBOARDS.find(f => f.id === store.fretboard)
-  const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
-  const { scene } = useGLTF(modelPath)
-  const { model, center, scale } = useMemo(() => {
-    const clone = scene.clone(true)
-    const box = new THREE.Box3().setFromObject(clone)
-    const size = box.getSize(new THREE.Vector3())
-    const center = box.getCenter(new THREE.Vector3())
-    const maxDimension = Math.max(size.x, size.y, size.z) || 1
-    const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
-    return { model: clone, center, scale: targetSize / maxDimension }
-  }, [scene, shape.id])
-  const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
+  const finishId = useConfigStore(s => s.finishId)
+  const hardwareId = useConfigStore(s => s.hardwareId)
+  const fretboardId = useConfigStore(s => s.fretboardId)
+  const pickupId = useConfigStore(s => s.pickupId)
+  const neckId = useConfigStore(s => s.neck)
+  const finish = FINISHES.find(f => f.id === finishId)
+  const neck = NECK_WOODS.find(n => n.id === neckId)
+  const board = FRETBOARDS.find(f => f.id === fretboardId)
+  const hw = HARDWARE_COLORS.find(h => h.id === hardwareId)
+  const partColors = useMemo(() => makeColors(undefined, neck, board, hw), [board, hw, neck])
+  const textureLoader = useMemo(() => new THREE.TextureLoader(), [])
+  const { scene } = useGLTF(MODULAR_GUITAR_MODEL_PATH)
+  const { model, center, scale, meshMap, meshAudit } = useMemo(() => {
+    return createModularGuitarModel(scene, MODEL_TARGET_SIZE.default)
+  }, [scene])
+  const body = meshMap.BODY
+
+  const applyFinish = useCallback((nextFinishId: string) => {
+    if (!body) return
+
+    const texturePath = FINISH_TEXTURE_PATHS[nextFinishId]
+    if (!texturePath) {
+      applyBodyColorFallback(body, finish)
+      return
+    }
+
+    const texture = textureLoader.load(
+      texturePath,
+      loadedTexture => {
+        loadedTexture.flipY = false
+        loadedTexture.colorSpace = THREE.SRGBColorSpace
+        loadedTexture.needsUpdate = true
+      },
+      undefined,
+      () => applyBodyColorFallback(body, finish)
+    )
+    texture.flipY = false
+    texture.colorSpace = THREE.SRGBColorSpace
+
+    standardMaterials(body).forEach(mat => {
+      mat.color = new THREE.Color('#FFFFFF')
+      mat.map = texture
+      mat.metalness = 0.04
+      mat.roughness = Math.min(finish?.roughness ?? 0.24, 0.24)
+      mat.envMapIntensity = 1.8
+      mat.needsUpdate = true
+    })
+  }, [body, finish, textureLoader])
 
   useEffect(() => {
-    model.traverse(obj => {
-      if (!(obj as THREE.Mesh).isMesh) return
-      const mesh = obj as THREE.Mesh
-      mesh.castShadow = true
-      mesh.receiveShadow = true
-      if (!mesh.userData.baseMaterials) {
-        const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-        mesh.userData.baseMaterials = sourceMaterials.map(mat => mat.clone())
-        mesh.userData.usesMaterialArray = Array.isArray(mesh.material)
-      }
-      const baseMaterials = mesh.userData.baseMaterials as THREE.Material[]
-      mesh.material = mesh.userData.usesMaterialArray
-        ? baseMaterials.map(mat => mat.clone())
-        : baseMaterials[0].clone()
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      if (shape.id === 'modern-s') {
-        console.log('Mesh:', mesh.name, '| Material:',
-          Array.isArray(mesh.material)
-            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
-            : (mesh.material as THREE.Material).name
-        )
-      }
-      if (shape.id === 'modern-s') {
-        materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors)
-        })
-        return
-      }
+    if (meshAudit.missing.length > 0) {
+      console.warn('meshAudit.missing:', meshAudit.missing)
+    }
+  }, [meshAudit])
 
-      materials.forEach(mat => {
-        enhanceMaterial(materialRole(mat.name), mat, colors)
-      })
+  useEffect(() => {
+    applyFinish(finishId)
+  }, [applyFinish, finishId])
+
+  useEffect(() => {
+    applyMeshColor(meshMap.NECK, {
+      color: partColors.neck,
+      metalness: 0.02,
+      roughness: 0.44,
+      envMapIntensity: 1.4,
     })
-  }, [colors, model, shape.id])
+    applyMeshColor(meshMap.FRETBOARD, {
+      color: partColors.board,
+      metalness: 0.02,
+      roughness: 0.48,
+      envMapIntensity: 1.4,
+    })
+    applyMeshColor(meshMap.PICKGUARD, {
+      color: partColors.pickguard,
+      metalness: 0.02,
+      roughness: 0.34,
+      envMapIntensity: 1.35,
+    })
+    applyMeshColor(meshMap.HARDWARE, {
+      color: partColors.hardware,
+      metalness: partColors.hardwareMetalness,
+      roughness: partColors.hardwareRoughness,
+      envMapIntensity: 1.8,
+    })
+    applyMeshColor(meshMap.PICKUPS, {
+      ...(PICKUP_FINISHES[pickupId] ?? PICKUP_FINISHES['dual-hum']),
+      envMapIntensity: 1.45,
+    })
+  }, [meshMap, partColors, pickupId])
 
-  const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
+  const baseRotation = MODEL_ROTATION.default ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
 
   return (
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && (
-          <group scale={0.74}>
-            <StratOptionOverlays colors={colors} />
-            <PickguardOverlay />
-            <NeckOverlay />
-            <FretboardOverlay colors={colors} />
-          </group>
-        )}
       </group>
     </Center>
   )

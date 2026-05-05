@@ -30,12 +30,16 @@ interface ConfigStore {
   // Current config
   shape:     string
   finish:    string
+  finishId:  string
   top:       string
   neck:      string
   fretboard: string
+  fretboardId: string
   hardware:  string
+  hardwareId: string
   bridge:    string
   pickups:   string
+  pickupId:  string
   livePrice: number
 
   // Saved builds
@@ -57,10 +61,20 @@ interface ConfigStore {
   breakdown: () => { label: string; amount: number }[]
 }
 
+function optionIds(config: Partial<ConfigStore>) {
+  return {
+    finishId: config.finish ?? config.finishId ?? DEFAULT_CONFIG.finish,
+    fretboardId: config.fretboard ?? config.fretboardId ?? DEFAULT_CONFIG.fretboard,
+    hardwareId: config.hardware ?? config.hardwareId ?? DEFAULT_CONFIG.hardware,
+    pickupId: config.pickups ?? config.pickupId ?? DEFAULT_CONFIG.pickups,
+  }
+}
+
 export const useConfigStore = create<ConfigStore>()(
   persist(
     (set, get) => ({
       ...DEFAULT_CONFIG,
+      ...optionIds(DEFAULT_CONFIG),
       livePrice:   calcPrice(DEFAULT_CONFIG),
       savedBuilds: [],
       accountBuilds: [],
@@ -68,7 +82,7 @@ export const useConfigStore = create<ConfigStore>()(
 
       setOption: (key, value) => {
         const config = { ...get().currentConfig(), [key]: value }
-        set({ ...config, livePrice: calcPrice(config) })
+        set({ ...config, ...optionIds(config), livePrice: calcPrice(config) })
       },
 
       currentConfig: () => {
@@ -77,6 +91,8 @@ export const useConfigStore = create<ConfigStore>()(
           shape: state.shape, finish: state.finish, top: state.top,
           neck: state.neck, fretboard: state.fretboard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+          finishId: state.finishId, fretboardId: state.fretboardId,
+          hardwareId: state.hardwareId, pickupId: state.pickupId,
           livePrice: state.livePrice,
         }
       },
@@ -133,7 +149,7 @@ export const useConfigStore = create<ConfigStore>()(
         const state = get()
         const build = [...state.savedBuilds, ...state.accountBuilds].find(b => b.id === id)
         if (!build) return
-        set({ ...build.config, livePrice: calcPrice(build.config) })
+        set({ ...build.config, ...optionIds(build.config), livePrice: calcPrice(build.config) })
       },
 
       deleteBuild: (id) => {
@@ -141,7 +157,7 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       resetConfig: () => {
-        set({ ...DEFAULT_CONFIG, livePrice: calcPrice(DEFAULT_CONFIG) })
+        set({ ...DEFAULT_CONFIG, ...optionIds(DEFAULT_CONFIG), livePrice: calcPrice(DEFAULT_CONFIG) })
       },
 
       breakdown: () => {
@@ -159,10 +175,16 @@ export const useConfigStore = create<ConfigStore>()(
         shape: state.shape, finish: state.finish, top: state.top,
         neck: state.neck, fretboard: state.fretboard,
         hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
+        finishId: state.finishId, fretboardId: state.fretboardId,
+        hardwareId: state.hardwareId, pickupId: state.pickupId,
         savedBuilds: state.savedBuilds,
         accountBuilds: state.accountBuilds,
         quoteSubmissions: state.quoteSubmissions,
       }),
+      merge: (persisted, current) => {
+        const restored = { ...current, ...(persisted as Partial<ConfigStore>) }
+        return { ...restored, ...optionIds(restored) }
+      },
     }
   )
 )
