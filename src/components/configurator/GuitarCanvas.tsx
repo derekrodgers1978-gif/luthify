@@ -36,10 +36,10 @@ useGLTF.preload('/models/fretboard_strat.glb')
 useGLTF.preload('/models/fretboard_gibson.glb')
 
 const BURST_TEXTURE_PATHS: Record<string, string> = {
-  'burst-amber': '/textures/burst_amber.png',
-  'burst-vintage': '/textures/burst_vintage.png',
-  'burst-cherry': '/textures/burst_cherry.png',
-  'sunburst': '/textures/burst_sunburst.png',
+  'burst-amber':   '/models/burst_amber.png',
+  'burst-vintage': '/models/burst_vintage.png',
+  'burst-cherry':  '/models/burst_cherry.png',
+  'sunburst':      '/models/burst_sunburst.png',
 }
 
 type FinishOption = {
