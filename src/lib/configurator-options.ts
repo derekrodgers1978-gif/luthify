@@ -53,6 +53,13 @@ export const FRETBOARDS: ConfigOption[] = [
   { id: 'pau',      label: 'Pau Ferro',       hex: '#3A1800', priceAdj: 40 },
 ]
 
+export const PICKGUARDS: ConfigOption[] = [
+  { id: 'white',     label: 'White',     hex: '#F2EEE2', priceAdj: 0  },
+  { id: 'black',     label: 'Black',     hex: '#111114', priceAdj: 0  },
+  { id: 'parchment', label: 'Parchment', hex: '#E6D8B7', priceAdj: 0  },
+  { id: 'tortoise',  label: 'Tortoise',  hex: '#5A2418', priceAdj: 80 },
+]
+
 export const HARDWARE_COLORS: ConfigOption[] = [
   { id: 'nickel', label: 'Nickel', priceAdj: 0   },
   { id: 'gold',   label: 'Gold',   priceAdj: 120 },
@@ -82,6 +89,7 @@ export const DEFAULT_CONFIG = {
   top:       'quilted',
   neck:      'maple',
   fretboard: 'rosewood',
+  pickguard: 'white',
   hardware:  'nickel',
   bridge:    'tuneomatic',
   pickups:   'dual-hum',
@@ -93,8 +101,9 @@ export const CONFIG_OPTION_GROUPS: [ConfigKey, string, ConfigOption[]][] = [
   ['shape',     'Body Shape', BODY_SHAPES],
   ['finish',    'Body Finish', FINISHES],
   ['top',       'Top', TOPS],
-  ['neck',      'Neck Wood', NECK_WOODS],
+  ['neck',      'Neck', NECK_WOODS],
   ['fretboard', 'Fretboard', FRETBOARDS],
+  ['pickguard', 'Pickguard', PICKGUARDS],
   ['hardware',  'Hardware', HARDWARE_COLORS],
   ['bridge',    'Bridge', BRIDGES],
   ['pickups',   'Pickups', PICKUPS],

@@ -33,6 +33,7 @@ interface ConfigStore {
   top:       string
   neck:      string
   fretboard: string
+  pickguard: string
   hardware:  string
   bridge:    string
   pickups:   string
@@ -75,7 +76,7 @@ export const useConfigStore = create<ConfigStore>()(
         const state = get()
         return {
           shape: state.shape, finish: state.finish, top: state.top,
-          neck: state.neck, fretboard: state.fretboard,
+          neck: state.neck, fretboard: state.fretboard, pickguard: state.pickguard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
           livePrice: state.livePrice,
         }
@@ -102,7 +103,7 @@ export const useConfigStore = create<ConfigStore>()(
           id, name,
           config: {
             shape: state.shape, finish: state.finish, top: state.top,
-            neck: state.neck, fretboard: state.fretboard,
+            neck: state.neck, fretboard: state.fretboard, pickguard: state.pickguard,
             hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
           },
           price: state.livePrice,
@@ -119,7 +120,7 @@ export const useConfigStore = create<ConfigStore>()(
           id, name,
           config: {
             shape: state.shape, finish: state.finish, top: state.top,
-            neck: state.neck, fretboard: state.fretboard,
+            neck: state.neck, fretboard: state.fretboard, pickguard: state.pickguard,
             hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
           },
           price: state.livePrice,
@@ -133,7 +134,8 @@ export const useConfigStore = create<ConfigStore>()(
         const state = get()
         const build = [...state.savedBuilds, ...state.accountBuilds].find(b => b.id === id)
         if (!build) return
-        set({ ...build.config, livePrice: calcPrice(build.config) })
+        const config = { ...DEFAULT_CONFIG, ...build.config }
+        set({ ...config, livePrice: calcPrice(config) })
       },
 
       deleteBuild: (id) => {
@@ -148,7 +150,7 @@ export const useConfigStore = create<ConfigStore>()(
         const state = get()
         return getPriceBreakdown({
           shape: state.shape, finish: state.finish, top: state.top,
-          neck: state.neck, fretboard: state.fretboard,
+          neck: state.neck, fretboard: state.fretboard, pickguard: state.pickguard,
           hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
         })
       },
@@ -157,7 +159,7 @@ export const useConfigStore = create<ConfigStore>()(
       name:    'luthify-config',
       partialize: (state) => ({
         shape: state.shape, finish: state.finish, top: state.top,
-        neck: state.neck, fretboard: state.fretboard,
+        neck: state.neck, fretboard: state.fretboard, pickguard: state.pickguard,
         hardware: state.hardware, bridge: state.bridge, pickups: state.pickups,
         savedBuilds: state.savedBuilds,
         accountBuilds: state.accountBuilds,
