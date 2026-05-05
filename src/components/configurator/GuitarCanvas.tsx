@@ -437,6 +437,158 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   )
 }
 
+function SvgPremiumPreview({ view }: { view: 'standard' | 'detail' }) {
+  const shape = useConfigStore(s => s.shape)
+  const finishId = useConfigStore(s => s.finish)
+  const neckId = useConfigStore(s => s.neck)
+  const fretboardId = useConfigStore(s => s.fretboard)
+  const hardwareId = useConfigStore(s => s.hardware)
+  const bridgeId = useConfigStore(s => s.bridge)
+  const pickupsId = useConfigStore(s => s.pickups)
+  const finish = FINISHES.find(f => f.id === finishId)
+  const neck = NECK_WOODS.find(n => n.id === neckId)
+  const board = FRETBOARDS.find(f => f.id === fretboardId)
+  const hw = HARDWARE_COLORS.find(h => h.id === hardwareId)
+  const colors = makeColors(finish, neck, board, hw)
+  const isSingleCut = shape === 'single-cut'
+  const id = `${shape}-${finishId}-${hardwareId}-${bridgeId}-${pickupsId}`.replace(/[^a-z0-9-]/gi, '')
+  const bodyPath = isSingleCut
+    ? 'M -95 -120 C -40 -204 82 -195 139 -100 C 160 -66 188 -67 207 -39 C 238 8 219 95 158 151 C 92 212 -21 214 -110 161 C -198 108 -229 7 -184 -78 C -164 -116 -128 -128 -95 -120 Z'
+    : 'M -51 -151 C -2 -177 48 -151 57 -98 C 90 -127 153 -112 168 -61 C 184 -7 137 21 78 28 C 136 70 121 145 54 173 C -7 199 -77 166 -82 101 C -122 143 -194 113 -193 46 C -192 -8 -148 -42 -91 -34 C -119 -80 -102 -128 -51 -151 Z'
+  const bodyInnerPath = isSingleCut
+    ? 'M -78 -96 C -33 -162 64 -154 109 -80 C 126 -52 150 -53 165 -31 C 188 7 173 75 126 118 C 74 166 -17 167 -88 126 C -157 85 -181 7 -146 -59 C -130 -89 -103 -101 -78 -96 Z'
+    : 'M -45 -126 C -8 -145 30 -127 38 -83 C 67 -104 114 -92 126 -52 C 139 -9 103 11 54 17 C 96 51 85 108 35 129 C -11 149 -61 122 -65 73 C -96 105 -150 82 -149 34 C -148 -5 -114 -27 -70 -21 C -92 -58 -83 -105 -45 -126 Z'
+  const headstockPath = isSingleCut
+    ? 'M -37 -7 C -8 -21 38 -11 51 24 L 70 116 C 39 139 -8 146 -50 130 L -63 50 C -60 22 -53 3 -37 -7 Z'
+    : 'M -29 -3 C 2 -19 43 -7 58 26 L 74 102 C 51 137 12 153 -36 139 L -61 85 C -50 46 -48 14 -29 -3 Z'
+  const pickups = pickupsId === 'singlecoil'
+    ? ['single', 'single', 'single']
+    : pickupsId === 'hss'
+      ? ['single', 'single', 'hum']
+      : pickupsId === 'p90'
+        ? ['p90', 'p90']
+        : ['hum', 'hum']
+  const pickupYs = pickups.length === 3 ? [-56, -7, 44] : [-42, 34]
+  const strings = [-16, -9.5, -3.2, 3.2, 9.5, 16]
+  const transform = `translate(500 398) rotate(-12) scale(${view === 'detail' ? 1.15 : 1})`
+  const bridgeY = isSingleCut ? 91 : 82
+
+  return (
+    <div data-preview-shape={shape} style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 43%, #19171d 0%, #09090B 64%)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+      <svg key={`${shape}-${pickupsId}-${bridgeId}-${hardwareId}-${finishId}`} data-shape={shape} viewBox="0 0 1000 760" role="img" aria-label={`${isSingleCut ? 'Single Cut' : 'S-Style'} modular guitar preview`} style={{ width: 'min(92%, 980px)', height: 'min(92%, 700px)' }}>
+        <defs>
+          <filter id={`${id}-shadow`} x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="26" stdDeviation="22" floodColor="#000000" floodOpacity="0.48" />
+          </filter>
+          <linearGradient id={`${id}-solid`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor={colors.finish} />
+            <stop offset="48%" stopColor={colors.finish} />
+            <stop offset="100%" stopColor="#09090B" stopOpacity="0.38" />
+          </linearGradient>
+          <radialGradient id={`${id}-burst`} cx="45%" cy="44%" r="73%">
+            <stop offset="0%" stopColor="#F3B24D" />
+            <stop offset="42%" stopColor={colors.finish} />
+            <stop offset="78%" stopColor="#2C0D04" />
+            <stop offset="100%" stopColor="#080303" />
+          </radialGradient>
+          <linearGradient id={`${id}-natural`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#8D5B2F" />
+            <stop offset="22%" stopColor={colors.finish} />
+            <stop offset="48%" stopColor="#F2D09A" />
+            <stop offset="72%" stopColor={colors.finish} />
+            <stop offset="100%" stopColor="#70421D" />
+          </linearGradient>
+          <linearGradient id={`${id}-neck`} x1="0" x2="1">
+            <stop offset="0%" stopColor="#5a3118" />
+            <stop offset="42%" stopColor={colors.neck} />
+            <stop offset="100%" stopColor="#2f180b" />
+          </linearGradient>
+          <linearGradient id={`${id}-metal`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.7" />
+            <stop offset="45%" stopColor={colors.hardware} />
+            <stop offset="100%" stopColor="#16171A" stopOpacity="0.8" />
+          </linearGradient>
+          <linearGradient id={`${id}-gloss`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.4" />
+            <stop offset="52%" stopColor="#FFFFFF" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.16" />
+          </linearGradient>
+          <pattern id={`${id}-grain`} width="36" height="18" patternUnits="userSpaceOnUse">
+            <path d="M0 9 C8 3 16 15 24 8 S34 8 36 4" fill="none" stroke="#2d1708" strokeOpacity="0.18" strokeWidth="1.4" />
+          </pattern>
+        </defs>
+
+        <g transform={transform} filter={`url(#${id}-shadow)`}>
+          <path data-body-outline="true" d={bodyPath} transform="translate(0 126)" fill="#F4E8CB" stroke="#130D08" strokeWidth="9" strokeLinejoin="round" />
+          <path d={bodyPath} transform="translate(0 126)" fill={isBurstFinish(finish?.id) ? `url(#${id}-burst)` : isNaturalFinish(finish?.id) ? `url(#${id}-natural)` : `url(#${id}-solid)`} stroke="#F1E7CD" strokeWidth="4" strokeLinejoin="round" />
+          {isNaturalFinish(finish?.id) && <path d={bodyPath} transform="translate(0 126)" fill={`url(#${id}-grain)`} opacity="0.62" />}
+          <path d={bodyInnerPath} transform="translate(0 126)" fill={`url(#${id}-gloss)`} opacity="0.72" />
+          <path d={bodyInnerPath} transform="translate(0 126)" fill="none" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="2" />
+
+          <path d="M -31 -236 L 31 -236 L 26 58 Q 0 76 -26 58 Z" fill={`url(#${id}-neck)`} stroke="#211008" strokeWidth="3" />
+          <path d="M -23 -226 L 23 -226 L 18 72 Q 0 86 -18 72 Z" fill={colors.board} stroke="#080503" strokeWidth="2" />
+          {[-198, -170, -142, -113, -84, -55, -26, 3, 32, 59].map(y => (
+            <line key={y} x1="-22" x2="22" y1={y} y2={y} stroke="#D8DDE5" strokeWidth="2.2" strokeOpacity="0.85" />
+          ))}
+          {[-142, -84, -26, 32].map(y => (
+            <circle key={y} cx="0" cy={y + 12} r="4.5" fill="#D7DCE5" opacity="0.92" />
+          ))}
+          <path d={headstockPath} transform="translate(0 -350)" fill={`url(#${id}-neck)`} stroke="#211008" strokeWidth="3" strokeLinejoin="round" />
+          <rect x="-31" y="-246" width="62" height="11" rx="3" fill="#F1E4C8" stroke="#2a1b0e" strokeWidth="1.5" />
+
+          {[-46, 46].flatMap((x, sideIndex) => [-328, -295, -262].map((y, i) => (
+            <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}>
+              <circle r="8" fill={`url(#${id}-metal)`} stroke="#111318" strokeWidth="1.3" />
+              <rect x={sideIndex === 0 ? -30 : 10} y="-5" width="21" height="10" rx="4" fill={`url(#${id}-metal)`} stroke="#111318" strokeWidth="1" />
+            </g>
+          )))}
+
+          {pickups.map((type, i) => (
+            <g key={`${type}-${i}`} transform={`translate(${isSingleCut ? -10 : 0} ${126 + pickupYs[i]}) rotate(${isSingleCut ? -3 : -7})`}>
+              {type === 'single' ? (
+                <>
+                  <rect x="-58" y="-10" width="116" height="20" rx="9" fill="#F4EDE1" stroke="#161514" strokeWidth="2" />
+                  {[...Array(6)].map((_, p) => <circle key={p} cx={-37 + p * 15} cy="0" r="3" fill={`url(#${id}-metal)`} />)}
+                </>
+              ) : type === 'p90' ? (
+                <>
+                  <rect x="-64" y="-17" width="128" height="34" rx="12" fill="#E8DDC7" stroke="#15130F" strokeWidth="2.2" />
+                  {[...Array(6)].map((_, p) => <circle key={p} cx={-38 + p * 15.5} cy="0" r="3.5" fill="#151515" />)}
+                </>
+              ) : (
+                <>
+                  <rect x="-70" y="-23" width="140" height="46" rx="8" fill={`url(#${id}-metal)`} stroke="#15171B" strokeWidth="2.5" />
+                  <rect x="-58" y="-16" width="52" height="32" rx="4" fill="#101014" />
+                  <rect x="6" y="-16" width="52" height="32" rx="4" fill="#101014" />
+                  {[...Array(6)].map((_, p) => <circle key={p} cx={-43 + p * 17} cy="0" r="3" fill="#DDE2EA" opacity="0.82" />)}
+                </>
+              )}
+            </g>
+          ))}
+
+          <g transform={`translate(${isSingleCut ? -14 : 0} ${126 + bridgeY}) rotate(-4)`}>
+            <rect x="-75" y="-13" width="150" height="26" rx="10" fill={`url(#${id}-metal)`} stroke="#121419" strokeWidth="2" />
+            {bridgeId === 'tuneomatic' || bridgeId === 'bigsby' ? <rect x="-92" y="38" width="184" height="20" rx="10" fill={`url(#${id}-metal)`} stroke="#121419" strokeWidth="2" /> : null}
+            {bridgeId === 'trem' ? <path d="M 42 16 C 92 48 105 74 82 99" fill="none" stroke={`url(#${id}-metal)`} strokeWidth="8" strokeLinecap="round" /> : null}
+            {strings.map(x => <rect key={x} x={x - 2.1} y="-20" width="4.2" height="18" rx="1.5" fill="#EEF2F7" opacity="0.86" />)}
+          </g>
+
+          {(isSingleCut ? [[112, 61], [146, 9], [83, 115], [141, 116]] : [[88, 82], [119, 50], [60, 122]]).map(([x, y], i) => (
+            <g key={`${x}-${y}`} transform={`translate(${x} ${126 + y})`}>
+              <circle r={i === 3 ? 9 : 13} fill={`url(#${id}-metal)`} stroke="#111318" strokeWidth="2" />
+              <circle r={i === 3 ? 4 : 6} fill="#ffffff" opacity="0.18" />
+            </g>
+          ))}
+
+          {strings.map((x, i) => (
+            <line key={x} x1={x * 0.75} y1="-239" x2={x * 1.15} y2={126 + bridgeY - 22} stroke="#EFF3F8" strokeWidth={1.1 + i * 0.18} strokeOpacity="0.8" />
+          ))}
+        </g>
+      </svg>
+    </div>
+  )
+}
+
 function ModelLoading() {
   return (
     <group>
@@ -526,11 +678,16 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
       <Suspense fallback={<ModelLoading />}>
         <Bounds fit clip observe margin={1.28}>
-          <GlbInstrument view={view} />
+          <ConfiguredInstrument view={view} />
         </Bounds>
       </Suspense>
     </>
   )
+}
+
+function ConfiguredInstrument({ view }: { view: 'standard' | 'detail' }) {
+  const shape = useConfigStore(s => s.shape)
+  return <GlbInstrument view={view} />
 }
 
 function CameraControls({ view }: { view: 'standard' | 'detail' | 'reset' }) {
@@ -554,11 +711,16 @@ export default function GuitarCanvas() {
   const [view, setView] = useState<'standard' | 'detail' | 'reset'>('standard')
   const [webglLost, setWebglLost] = useState(false)
   const shape = useConfigStore(s => s.shape)
+  const showSvgPremiumPreview = shape === 'modern-s' || shape === 'single-cut'
   const showSingleCutFallback = webglLost && shape === 'single-cut'
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {showSingleCutFallback ? (
+      {showSvgPremiumPreview ? (
+        <div key={`premium-preview-${shape}`} style={{ width: '100%', height: '100%' }}>
+          <SvgPremiumPreview view={view === 'detail' ? 'detail' : 'standard'} />
+        </div>
+      ) : showSingleCutFallback ? (
         <SingleCutFinishFallback />
       ) : (
         <Canvas
