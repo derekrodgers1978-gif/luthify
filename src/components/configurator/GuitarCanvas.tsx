@@ -129,37 +129,27 @@ const BURST_COLOR_STOPS: Record<string, BurstColorStops> = {
 }
 
 const BODY_BURST_VERTEX_SHADER = `
-  varying vec3 vLocalPosition;
+  attribute float bodyBurstEdgeDistance;
+  varying float vBodyBurstEdgeDistance;
   varying vec3 vViewNormal;
 
   void main() {
-    vLocalPosition = position;
+    vBodyBurstEdgeDistance = bodyBurstEdgeDistance;
     vViewNormal = normalize(normalMatrix * normal);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `
 
 const BODY_BURST_FRAGMENT_SHADER = `
-  uniform vec3 uBoundsCenter;
-  uniform vec3 uAxisA;
-  uniform vec3 uAxisB;
-  uniform float uHalfA;
-  uniform float uHalfB;
   uniform vec3 uCenterColor;
   uniform vec3 uMiddleColor;
   uniform vec3 uEdgeColor;
 
-  varying vec3 vLocalPosition;
+  varying float vBodyBurstEdgeDistance;
   varying vec3 vViewNormal;
 
   void main() {
-    vec3 localOffset = vLocalPosition - uBoundsCenter;
-    vec2 bodyPosition = vec2(
-      dot(localOffset, uAxisA) / max(uHalfA, 0.0001),
-      dot(localOffset, uAxisB) / max(uHalfB, 0.0001)
-    );
-
-    float edgeDistance = clamp(1.0 - max(abs(bodyPosition.x), abs(bodyPosition.y)), 0.0, 1.0);
+    float edgeDistance = clamp(vBodyBurstEdgeDistance, 0.0, 1.0);
     float centerBlend = smoothstep(0.28, 0.74, edgeDistance);
     float middleBlend = smoothstep(0.04, 0.26, edgeDistance);
 
@@ -185,6 +175,8 @@ const LOCAL_AXES = [
   { key: 'z', vector: new THREE.Vector3(0, 0, 1) },
 ] as const
 
+const BODY_BURST_EDGE_ATTRIBUTE = 'bodyBurstEdgeDistance'
+
 function getBurstColorStops(colors: ReturnType<typeof makeColors>): BurstColorStops {
   return BURST_COLOR_STOPS[colors.finishId ?? ''] ?? {
     center: colors.finish,
@@ -198,6 +190,50 @@ function applySolidBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnT
   mat.map = null
   mat.metalness = 0.04
   mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
+}
+
+function ensureBodyBurstEdgeAttribute(
+  geometry: THREE.BufferGeometry,
+  center: THREE.Vector3,
+  planeAxes: { vector: THREE.Vector3; halfSize: number }[],
+) {
+  if (geometry.getAttribute(BODY_BURST_EDGE_ATTRIBUTE)) return
+
+  const position = geometry.getAttribute('position')
+  if (!position) return
+
+  const binCount = 128
+  const maxRadiusByBin = new Float32Array(binCount)
+  const vertexRadius = new Float32Array(position.count)
+  const vertexBin = new Uint16Array(position.count)
+  const vertex = new THREE.Vector3()
+  const localOffset = new THREE.Vector3()
+
+  for (let i = 0; i < position.count; i += 1) {
+    vertex.fromBufferAttribute(position, i)
+    localOffset.copy(vertex).sub(center)
+    const x = localOffset.dot(planeAxes[0].vector) / Math.max(planeAxes[0].halfSize, 0.0001)
+    const y = localOffset.dot(planeAxes[1].vector) / Math.max(planeAxes[1].halfSize, 0.0001)
+    const radius = Math.sqrt(x * x + y * y)
+    const angle = Math.atan2(y, x)
+    const bin = Math.min(binCount - 1, Math.max(0, Math.floor(((angle + Math.PI) / (Math.PI * 2)) * binCount)))
+
+    vertexRadius[i] = radius
+    vertexBin[i] = bin
+    maxRadiusByBin[bin] = Math.max(maxRadiusByBin[bin], radius)
+  }
+
+  const edgeDistance = new Float32Array(position.count)
+  for (let i = 0; i < position.count; i += 1) {
+    let maxRadius = maxRadiusByBin[vertexBin[i]]
+    for (let offset = -2; offset <= 2; offset += 1) {
+      const bin = (vertexBin[i] + offset + binCount) % binCount
+      maxRadius = Math.max(maxRadius, maxRadiusByBin[bin])
+    }
+    edgeDistance[i] = Math.max(0, Math.min(1, 1 - vertexRadius[i] / Math.max(maxRadius, 0.0001)))
+  }
+
+  geometry.setAttribute(BODY_BURST_EDGE_ATTRIBUTE, new THREE.BufferAttribute(edgeDistance, 1))
 }
 
 function makeBodyBurstMaterial(mesh: THREE.Mesh, colors: ReturnType<typeof makeColors>, sourceMaterial: THREE.Material) {
@@ -218,15 +254,11 @@ function makeBodyBurstMaterial(mesh: THREE.Mesh, colors: ReturnType<typeof makeC
     .sort((a, b) => b.halfSize - a.halfSize)
     .slice(0, 2)
   const stops = getBurstColorStops(colors)
+  ensureBodyBurstEdgeAttribute(geometry, center, planeAxes)
 
   const material = new THREE.ShaderMaterial({
     name: 'BodyEdgeDistanceBurstMaterial',
     uniforms: {
-      uBoundsCenter: { value: center },
-      uAxisA: { value: planeAxes[0].vector },
-      uAxisB: { value: planeAxes[1].vector },
-      uHalfA: { value: planeAxes[0].halfSize },
-      uHalfB: { value: planeAxes[1].halfSize },
       uCenterColor: { value: new THREE.Color(stops.center) },
       uMiddleColor: { value: new THREE.Color(stops.middle) },
       uEdgeColor: { value: new THREE.Color(stops.edge) },
