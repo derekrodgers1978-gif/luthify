@@ -163,7 +163,7 @@ function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnTy
 }
 
 function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
-  mat.color = new THREE.Color(colors.visibleWood)
+  mat.color = new THREE.Color(colors.neck)
   mat.metalness = 0.02
   mat.roughness = 0.44
 }
