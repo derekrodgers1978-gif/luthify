@@ -32,6 +32,8 @@ type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'ot
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
+useGLTF.preload('/models/fretboard_strat.glb')
+useGLTF.preload('/models/fretboard_gibson.glb')
 
 type FinishOption = {
   id?: string
@@ -158,8 +160,8 @@ function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnTy
   mat.roughness = colors.hardwareRoughness
 }
 
-function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>, hasFretboardSplit = false) {
-  mat.color = new THREE.Color(hasFretboardSplit ? colors.neck : colors.visibleWood)
+function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  mat.color = new THREE.Color(colors.visibleWood)
   mat.metalness = 0.02
   mat.roughness = 0.44
 }
@@ -215,90 +217,6 @@ function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typ
     mat.roughness = 0.34
   }
   mat.needsUpdate = true
-}
-
-function getTriangleNormal(
-  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  index: THREE.BufferAttribute | null,
-  triangleStart: number,
-) {
-  const a = index ? index.getX(triangleStart) : triangleStart
-  const b = index ? index.getX(triangleStart + 1) : triangleStart + 1
-  const c = index ? index.getX(triangleStart + 2) : triangleStart + 2
-  const va = new THREE.Vector3().fromBufferAttribute(position, a)
-  const vb = new THREE.Vector3().fromBufferAttribute(position, b)
-  const vc = new THREE.Vector3().fromBufferAttribute(position, c)
-  return vb.sub(va).cross(vc.sub(va)).normalize()
-}
-
-function mergeGroup(groups: THREE.BufferGeometry['groups'], start: number, materialIndex: number) {
-  const previous = groups[groups.length - 1]
-  if (previous && previous.materialIndex === materialIndex && previous.start + previous.count === start) {
-    previous.count += 3
-    return
-  }
-  groups.push({ start, count: 3, materialIndex })
-}
-
-function applyFretboardSplit(mesh: THREE.Mesh, woodMaterialIndex: number, colors: ReturnType<typeof makeColors>) {
-  const geometry = mesh.geometry as THREE.BufferGeometry
-  const position = geometry.getAttribute('position')
-  if (!position) return false
-
-  if (!mesh.userData.fretboardGeometryCloned) {
-    mesh.geometry = geometry.clone()
-    mesh.userData.fretboardGeometryCloned = true
-  }
-
-  const splitGeometry = mesh.geometry as THREE.BufferGeometry
-  const splitPosition = splitGeometry.getAttribute('position')
-  if (!splitPosition) return false
-
-  if (!splitGeometry.userData.originalGroups) {
-    const drawCount = splitGeometry.index?.count ?? splitPosition.count
-    splitGeometry.userData.originalGroups = splitGeometry.groups.length
-      ? splitGeometry.groups.map(group => ({ ...group }))
-      : [{ start: 0, count: drawCount, materialIndex: 0 }]
-  }
-
-  const materials = Array.isArray(mesh.material) ? mesh.material.slice() : [mesh.material]
-  const sourceWoodMaterial = materials[woodMaterialIndex] as THREE.MeshStandardMaterial
-  if (!sourceWoodMaterial?.isMeshStandardMaterial) return false
-
-  const fretboardMaterial = sourceWoodMaterial.clone()
-  fretboardMaterial.name = `${sourceWoodMaterial.name}-Fretboard`
-  fretboardMaterial.color = new THREE.Color(colors.board)
-  fretboardMaterial.metalness = 0.02
-  fretboardMaterial.roughness = 0.48
-  fretboardMaterial.needsUpdate = true
-  const fretboardMaterialIndex = materials.length
-  materials.push(fretboardMaterial)
-
-  const index = splitGeometry.index
-  const originalGroups = splitGeometry.userData.originalGroups as THREE.BufferGeometry['groups']
-  const nextGroups: THREE.BufferGeometry['groups'] = []
-  let fretboardFaceCount = 0
-
-  originalGroups.forEach(group => {
-    if (group.materialIndex !== woodMaterialIndex) {
-      nextGroups.push({ ...group })
-      return
-    }
-
-    for (let start = group.start; start < group.start + group.count; start += 3) {
-      const normal = getTriangleNormal(splitPosition, index, start)
-      const isFretboardFacing = normal.y > 0.52 && Math.abs(normal.y) > Math.abs(normal.x) && Math.abs(normal.y) > Math.abs(normal.z)
-      mergeGroup(nextGroups, start, isFretboardFacing ? fretboardMaterialIndex : woodMaterialIndex)
-      if (isFretboardFacing) fretboardFaceCount += 1
-    }
-  })
-
-  if (!fretboardFaceCount) return false
-
-  splitGeometry.clearGroups()
-  nextGroups.forEach(group => splitGeometry.addGroup(group.start, group.count, group.materialIndex))
-  mesh.material = materials
-  return true
 }
 
 function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
@@ -363,6 +281,59 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
   )
 }
 
+function FretboardOverlay({ colors, scale, center }: {
+  colors: ReturnType<typeof makeColors>
+  scale: number
+  center: THREE.Vector3
+}) {
+  const board = useConfigStore(s => s.fretboard)
+  const shape = useConfigStore(s => s.shape)
+  const path = shape === 'modern-s' ? '/models/fretboard_strat.glb' : '/models/fretboard_gibson.glb'
+  const { scene } = useGLTF(path)
+
+  const model = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      const mesh = obj as THREE.Mesh
+      const mat = mesh.material as THREE.MeshStandardMaterial
+      if (!mat?.isMeshStandardMaterial) return
+
+      if (mesh.name === 'Fretboard') {
+        mat.color = new THREE.Color(FRETBOARD_COLORS[board] ?? FRETBOARD_COLORS.rosewood)
+        mat.roughness = 0.48
+        mat.metalness = 0.02
+        mat.envMapIntensity = 1.4
+        mat.needsUpdate = true
+      }
+      if (mesh.name === 'Frets') {
+        mat.color = new THREE.Color('#C8C8C8')
+        mat.metalness = 0.85
+        mat.roughness = 0.2
+        mat.envMapIntensity = 1.8
+        mat.needsUpdate = true
+      }
+      if (mesh.name === 'Inlays') {
+        mat.color = new THREE.Color('#E8E8EC')
+        mat.roughness = 0.1
+        mat.metalness = 0.0
+        mat.envMapIntensity = 2.0
+        mat.needsUpdate = true
+      }
+    })
+  }, [board, colors, model])
+
+  // Position fretboard on top of neck - adjust these values to align with the model
+  return (
+    <primitive
+      object={model}
+      position={[-center.x * scale, -center.y * scale, -center.z * scale]}
+      scale={scale}
+    />
+  )
+}
+
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const store = useConfigStore()
   const shape = BODY_SHAPES.find(s => s.id === store.shape) ?? BODY_SHAPES[0]
@@ -400,21 +371,9 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       if (shape.id === 'modern-s') {
-        let woodMaterialIndex = -1
-        materials.forEach((mat, index) => {
+        materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors)
-          if (materialRole(mat.name) === 'neck') woodMaterialIndex = index
         })
-        if (woodMaterialIndex >= 0) {
-          const hasFretboardSplit = applyFretboardSplit(mesh, woodMaterialIndex, colors)
-          const activeMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-          const woodMaterial = activeMaterials[woodMaterialIndex] as THREE.MeshStandardMaterial
-          if (woodMaterial?.isMeshStandardMaterial) {
-            applyWoodMaterial(woodMaterial, colors, hasFretboardSplit)
-            woodMaterial.envMapIntensity = 1.8
-            woodMaterial.needsUpdate = true
-          }
-        }
         return
       }
 
@@ -431,7 +390,12 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && <group scale={0.74}><StratOptionOverlays colors={colors} /></group>}
+        {shape.id === 'modern-s' && (
+          <group scale={0.74}>
+            <StratOptionOverlays colors={colors} />
+            <FretboardOverlay colors={colors} scale={scale} center={center} />
+          </group>
+        )}
       </group>
     </Center>
   )
