@@ -29,7 +29,6 @@ const CAMERA_DISTANCE: Record<string, number> = {
 }
 
 type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
-type FinishOption = { id: string; hex?: string; roughness?: number; finishStyle?: 'solid' | 'burst'; burstEdgeHex?: string }
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -54,70 +53,11 @@ function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: 
   }
 }
 
-function isSingleCutPaintSurface(mesh: THREE.Mesh, modelMaxDimension: number) {
-  if (!mesh.geometry) return false
-  mesh.geometry.computeBoundingBox()
-  const box = mesh.geometry.boundingBox
-  if (!box) return false
-  const size = box.getSize(new THREE.Vector3()).multiply(mesh.scale)
-  const center = box.getCenter(new THREE.Vector3())
-  const dims = [Math.abs(size.x), Math.abs(size.y), Math.abs(size.z)].sort((a, b) => b - a)
-  return (
-    dims[0] > modelMaxDimension * 0.4 &&
-    dims[1] > modelMaxDimension * 0.28 &&
-    dims[2] < modelMaxDimension * 0.08 &&
-    center.y > 0.15 &&
-    center.y < 1.9
-  )
-}
-
-function applySingleCutBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh) {
-  mesh.geometry.computeBoundingBox()
-  const box = mesh.geometry.boundingBox
-  const center = box?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3()
-  const size = box?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(1, 1, 1)
-  const halfSize = new THREE.Vector2(Math.max(size.x * 0.5, 0.001), Math.max(size.y * 0.5, 0.001))
-
-  mat.color = new THREE.Color('#ffffff')
-  mat.map = null
-  mat.metalness = 0.04
-  mat.roughness = Math.min(colors.finishRoughness, 0.24)
-  mat.onBeforeCompile = shader => {
-    shader.uniforms.uFinishColor = { value: new THREE.Color(colors.finish) }
-    shader.uniforms.uBindingColor = { value: new THREE.Color('#F2EEE2') }
-    shader.uniforms.uBodyCenter = { value: new THREE.Vector2(center.x, center.y) }
-    shader.uniforms.uBodyHalfSize = { value: halfSize }
-    shader.uniforms.uIsBurst = { value: finish?.id === 'sunburst' ? 1 : 0 }
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vFinishPosition;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFinishPosition = position;')
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        '#include <common>',
-        '#include <common>\nuniform vec3 uFinishColor;\nuniform vec3 uBindingColor;\nuniform vec2 uBodyCenter;\nuniform vec2 uBodyHalfSize;\nuniform int uIsBurst;\nvarying vec3 vFinishPosition;'
-      )
-      .replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-vec2 finishUv = (vFinishPosition.xy - uBodyCenter) / uBodyHalfSize;
-float finishRadius = length(finishUv);
-vec3 burstColor = mix(vec3(0.95, 0.58, 0.16), uFinishColor, smoothstep(0.18, 0.56, finishRadius));
-burstColor = mix(burstColor, vec3(0.07, 0.025, 0.008), smoothstep(0.62, 0.92, finishRadius));
-vec3 paintColor = uIsBurst == 1 ? burstColor : uFinishColor;
-float binding = smoothstep(0.82, 0.91, finishRadius);
-diffuseColor.rgb = mix(paintColor, uBindingColor, binding * 0.92);`
-      )
-  }
-  mat.customProgramCacheKey = () => `single-cut-finish-${finish?.id ?? 'default'}-${colors.finish}`
-}
-
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, mesh: THREE.Mesh, modelMaxDimension: number, shapeId: string, finish?: FinishOption) {
+function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
-  if (role === 'body' && shapeId === 'single-cut' && isSingleCutPaintSurface(mesh, modelMaxDimension)) {
-    applySingleCutBodyFinish(mat, finish, colors, mesh)
-  } else if (role === 'hardware') {
+  if (role === 'hardware') {
     mat.color = new THREE.Color(colors.hardware)
     mat.metalness = 0.9
     mat.roughness = 0.2
@@ -136,45 +76,20 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   } else if (role === 'body') {
     mat.color = new THREE.Color(colors.finish)
     mat.metalness = 0.04
-    mat.roughness = Math.min(colors.finishRoughness, 0.24)
+    mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
   }
   mat.needsUpdate = true
 }
 
-function applyModernSBodyFinish(mat: THREE.MeshStandardMaterial, finish: FinishOption | undefined) {
-  mat.color = new THREE.Color(finish?.hex ?? '#D4B896')
-  mat.metalness = 0.12
-  mat.roughness = Math.min(finish?.roughness ?? 0.18, 0.24)
-  if (finish?.finishStyle !== 'burst') {
-    mat.customProgramCacheKey = () => `modern-s-solid-${finish?.id ?? 'default'}`
-    return
-  }
-  mat.onBeforeCompile = shader => {
-    shader.uniforms.uBurstCenter = { value: new THREE.Color(finish.hex ?? '#A35E28') }
-    shader.uniforms.uBurstEdge = { value: new THREE.Color(finish.burstEdgeHex ?? '#150706') }
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec2 vBurstUv;')
-      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvBurstUv = uv;')
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uBurstCenter;\nuniform vec3 uBurstEdge;\nvarying vec2 vBurstUv;')
-      .replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-float d = distance(vBurstUv, vec2(0.52, 0.5));
-vec3 burstMix = mix(uBurstCenter, uBurstEdge, smoothstep(0.28, 0.82, d));
-diffuseColor.rgb *= burstMix;`
-      )
-  }
-  mat.customProgramCacheKey = () => `modern-s-burst-${finish?.id ?? 'default'}-${finish?.hex ?? ''}-${finish?.burstEdgeHex ?? ''}`
-}
-
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>, finish?: FinishOption) {
+function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   const role = materialRole(mat.name)
   mat.envMapIntensity = 1.8
   if (role === 'body') {
-    applyModernSBodyFinish(mat, finish)
+    mat.color = new THREE.Color(colors.finish)
+    mat.metalness = 0.04
+    mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
   } else if (role === 'neck') {
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.03
@@ -266,14 +181,14 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
-  const { model, center, scale, maxDimension } = useMemo(() => {
+  const { model, center, scale } = useMemo(() => {
     const clone = scene.clone(true)
     const box = new THREE.Box3().setFromObject(clone)
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
     const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
-    return { model: clone, center, scale: targetSize / maxDimension, maxDimension }
+    return { model: clone, center, scale: targetSize / maxDimension }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
@@ -291,13 +206,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach(mat => {
         if (shape.id === 'modern-s') {
-          enhanceModernSMaterial(mat, colors, finish)
+          enhanceModernSMaterial(mat, colors)
           return
         }
-        enhanceMaterial(materialRole(mat.name), mat, colors, mesh, maxDimension, shape.id, finish)
+        enhanceMaterial(materialRole(mat.name), mat, colors)
       })
     })
-  }, [colors, finish, maxDimension, model, shape.id])
+  }, [colors, model, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
