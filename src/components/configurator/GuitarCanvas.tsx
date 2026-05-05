@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
-import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
+import { FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
 import { MODULAR_GUITAR_MODEL_PATH, createModularGuitarModel } from '@/lib/modelLoader'
 
 const MODEL_TARGET_SIZE: Record<string, number> = {
@@ -35,8 +35,6 @@ type FinishOption = {
   id?: string
   hex?: string
   roughness?: number
-  finishStyle?: 'solid' | 'burst'
-  burstEdgeHex?: string
 }
 
 type WoodOption = { id: string }
@@ -78,8 +76,6 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
   return {
     finish: finish?.hex ?? '#D4B896',
     finishId: finish?.id,
-    finishStyle: finish?.finishStyle ?? 'solid',
-    burstEdge: finish?.burstEdgeHex,
     finishRoughness: finish?.roughness ?? 0.18,
     neck: neckColor,
     visibleWood: blendHexColors(neckColor, boardColor, isDarkBoard ? 0.42 : 0.16),
@@ -159,7 +155,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const { model, center, scale, meshMap, meshAudit } = useMemo(() => {
     return createModularGuitarModel(scene, MODEL_TARGET_SIZE.default)
   }, [scene])
-  const body = meshMap.BODY
+  const body = meshMap['BODY']
 
   const applyFinish = useCallback((nextFinishId: string) => {
     if (!body) return
