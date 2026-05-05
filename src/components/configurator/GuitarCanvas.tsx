@@ -34,6 +34,7 @@ const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
 function materialRole(matName: string): MaterialRole {
+  if (matName === 'Body') return 'body'
   if (matName === 'BodyMaterial') return 'body'
   if (matName === 'NeckMaterial') return 'neck'
   if (matName === 'MetalPartsMaterial') return 'hardware'
