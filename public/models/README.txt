@@ -1,14 +1,16 @@
-Luthify high-resolution sunburst GLB starter pack
-Includes 8 stylized guitar body GLBs with embedded 2K sunburst textures.
-Mesh name metadata: BODY. Textures are also included as standalone PNG files.
-Use as starter/prototype assets; replace body geometry with your final licensed/scanned meshes for production.
+Luthify GLB Parts Pack
 
 Files:
-fender_style_strat_3tone_sunburst.glb
-fender_style_tele_3tone_sunburst.glb
-gibson_style_les_paul_cherry_sunburst.glb
-gibson_style_es335_tobacco_sunburst.glb
-gibson_style_sg_cherry_sunburst.glb
-gibson_style_v_tobacco_sunburst.glb
-fender_style_bass_3tone_sunburst.glb
-gretsch_style_orange_sunburst.glb
+- fender_style_pickguard_strat_s3.glb
+- fender_style_neck_no_fretboard.glb
+- fender_pickguard_and_neck_no_fretboard.glb
+
+Notes:
+- Stylized Fender-style parts for configurator prototyping.
+- Pickguard is Strat/SSS style with visible pickup, control, and screw-hole meshes.
+- Neck is a maple-style neck blank/headstock with NO fretboard slab on top and NO frets.
+- Units are meters.
+- Main mesh names:
+  PICKGUARD_BODY
+  NECK_BLANK_TOP_NO_FRETBOARD
+  ROUNDED_BACK_PROFILE
