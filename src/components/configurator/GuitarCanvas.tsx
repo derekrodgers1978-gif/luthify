@@ -56,9 +56,9 @@ type HardwareOption = { id: string }
 
 const NECK_COLORS: Record<string, string> = {
   maple: '#F2D49B',
-  mahogany: '#8B4513',
-  walnut: '#5C3317',
-  roasted: '#C68642',
+  mahogany: '#6B2D0F',
+  walnut: '#4A2208',
+  roasted: '#B8722A',
 }
 
 const FRETBOARD_COLORS: Record<string, string> = {
