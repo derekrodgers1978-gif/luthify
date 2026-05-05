@@ -87,7 +87,7 @@ export function buildMeshMap(root: THREE.Object3D) {
     missing: MODULAR_MESH_KEYS.filter(key => key !== 'BODY' && !meshMap[key]),
   }
 
-  console.log('meshMap:', Object.keys(meshMap))
+  console.log(Object.keys(meshMap))
 
   return { meshMap, meshAudit }
 }
