@@ -35,13 +35,6 @@ MODEL_PATHS.forEach(path => useGLTF.preload(path))
 useGLTF.preload('/models/fretboard_strat.glb')
 useGLTF.preload('/models/fretboard_gibson.glb')
 
-const BURST_TEXTURE_PATHS: Record<string, string> = {
-  'burst-amber':   '/models/gretsch_orange_2k_sunburst.png',
-  'burst-vintage': '/models/gibson_tobacco_2k_sunburst.png',
-  'burst-cherry':  '/models/gibson_cherry_2k_sunburst.png',
-  'sunburst':      '/models/fender_2k_sunburst.png',
-}
-
 type FinishOption = {
   id?: string
   hex?: string
@@ -56,9 +49,9 @@ type HardwareOption = { id: string }
 
 const NECK_COLORS: Record<string, string> = {
   maple: '#F2D49B',
-  mahogany: '#6B2D0F',
-  walnut: '#4A2208',
-  roasted: '#B8722A',
+  mahogany: '#8B4513',
+  walnut: '#5C3317',
+  roasted: '#C68642',
 }
 
 const FRETBOARD_COLORS: Record<string, string> = {
@@ -76,21 +69,10 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
   'aged-brass': { color: '#B08D57', metalness: 0.85, roughness: 0.28 },
 }
 
-function materialRole(matName: string, meshName?: string): MaterialRole {
-  const mesh = (meshName ?? '').toLowerCase()
+function materialRole(matName: string): MaterialRole {
   const name = matName.toLowerCase()
-
-  // Check mesh name first for precise role assignment.
-  if (mesh.includes('body')) return 'body'
-  if (mesh.includes('pickguard') || mesh.includes('guard') || mesh.includes('plate')) return 'pickguard'
-  if (mesh.includes('fret') || mesh.includes('board')) return 'neck'
-  if (mesh.includes('neck') || mesh.includes('headstock')) return 'neck'
-  if (mesh.includes('string')) return 'strings'
-  if (mesh.includes('tuner') || mesh.includes('hardware') || mesh.includes('bridge') || mesh.includes('pickup') || mesh.includes('metal')) return 'hardware'
-
-  // Fall back to material name.
   if (name.includes('body')) return 'body'
-  if (name.includes('neck') || name.includes('wood')) return 'neck'
+  if (name.includes('neck') || name.includes('wood') || name.includes('fret') || name.includes('board')) return 'neck'
   if (name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
   if (name.includes('metal') || name.includes('chrome') || name.includes('hardware') || name.includes('knob')) return 'hardware'
   if (name.includes('string')) return 'strings'
@@ -124,19 +106,47 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
   }
 }
 
-function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>, burstTexture?: THREE.Texture | null) {
-  if (colors.finishStyle === 'burst' && burstTexture) {
+function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
+  if (typeof document === 'undefined') return null
+  const canvas = document.createElement('canvas')
+  canvas.width = 1024
+  canvas.height = 1024
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  const cx = 512, cy = 520
+  const gradient = ctx.createRadialGradient(cx, cy, 40, cx, cy, 580)
+  if (colors.finishId === 'sunburst') {
+    gradient.addColorStop(0, '#F5E4A0')
+    gradient.addColorStop(0.35, '#D4903A')
+    gradient.addColorStop(0.65, colors.finish)
+    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
+  } else if (colors.finishId === 'burst-cherry') {
+    gradient.addColorStop(0, '#E03040')
+    gradient.addColorStop(0.5, colors.finish)
+    gradient.addColorStop(1, '#050000')
+  } else {
+    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.3).getStyle())
+    gradient.addColorStop(0.55, colors.finish)
+    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
+  }
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, 1024, 1024)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.needsUpdate = true
+  return texture
+}
+
+function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  if (colors.finishStyle === 'burst') {
     mat.color = new THREE.Color('#FFFFFF')
-    mat.map = burstTexture
-    mat.map.colorSpace = THREE.SRGBColorSpace
-    mat.map.needsUpdate = true
+    mat.map = makeBurstTexture(colors)
   } else {
     mat.color = new THREE.Color(colors.finish)
     mat.map = null
   }
   mat.metalness = 0.04
   mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
-  mat.needsUpdate = true
 }
 
 function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
@@ -159,7 +169,7 @@ function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
   }
 }
 
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, burstTexture?: THREE.Texture | null) {
+function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
   if (role === 'other') return
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
@@ -177,7 +187,34 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.metalness = 0.02
     mat.roughness = 0.34
   } else if (role === 'body') {
-    applyBodyMaterial(mat, colors, burstTexture)
+    applyBodyMaterial(mat, colors)
+  }
+  mat.needsUpdate = true
+}
+
+function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+  const mat = material as THREE.MeshStandardMaterial
+  if (!mat.isMeshStandardMaterial) return
+  const role = materialRole(mat.name)
+  if (role === 'other') return
+  mat.envMapIntensity = 1.8
+  if (role === 'body') {
+    applyBodyMaterial(mat, colors)
+  } else if (role === 'neck') {
+    mat.color = new THREE.Color(colors.neck)
+    mat.metalness = 0.02
+    mat.roughness = 0.44
+    mat.needsUpdate = true
+  } else if (role === 'hardware') {
+    applyHardwareMaterial(mat, colors)
+  } else if (role === 'strings') {
+    mat.color = new THREE.Color(colors.strings)
+    mat.metalness = 0.7
+    mat.roughness = 0.26
+  } else if (role === 'pickguard') {
+    mat.color = new THREE.Color(colors.pickguard)
+    mat.metalness = 0.02
+    mat.roughness = 0.34
   }
   mat.needsUpdate = true
 }
@@ -317,13 +354,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
-    const burstPath = BURST_TEXTURE_PATHS[store.finish]
-    const burstTexture = burstPath ? (() => {
-      const tex = new THREE.TextureLoader().load(burstPath)
-      tex.colorSpace = THREE.SRGBColorSpace
-      return tex
-    })() : null
-
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
@@ -340,57 +370,24 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       if (shape.id === 'modern-s') {
-        const firstMaterial = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial
-        console.log('Mesh:', mesh.name, '| Mat:', firstMaterial.name, '| role:', materialRole(firstMaterial.name, mesh.name))
+        console.log('Mesh:', mesh.name, '| Material:',
+          Array.isArray(mesh.material)
+            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
+            : (mesh.material as THREE.Material).name
+        )
+      }
+      if (shape.id === 'modern-s') {
         materials.forEach(mat => {
-          const m = mat as THREE.MeshStandardMaterial
-          if (!m.isMeshStandardMaterial) return
-          const role = materialRole(m.name, mesh.name)
-          m.envMapIntensity = 1.8
-          if (role === 'body') {
-            applyBodyMaterial(m, colors, burstTexture)
-          } else if (role === 'neck') {
-            m.color = new THREE.Color(colors.neck)
-            m.metalness = 0.02
-            m.roughness = 0.44
-            m.needsUpdate = true
-          } else if (role === 'hardware') {
-            applyHardwareMaterial(m, colors)
-            m.needsUpdate = true
-          } else if (role === 'strings') {
-            m.color = new THREE.Color(colors.strings)
-            m.metalness = 0.7
-            m.roughness = 0.26
-            m.needsUpdate = true
-          } else if (role === 'pickguard') {
-            m.color = new THREE.Color(colors.pickguard)
-            m.metalness = 0.02
-            m.roughness = 0.34
-            m.needsUpdate = true
-          }
-        })
-        materials.forEach(mat => {
-          const m = mat as THREE.MeshStandardMaterial
-          if (!m.isMeshStandardMaterial) return
-          if (m.name === 'NeckMaterial') {
-            // Apply neck color as base
-            m.color = new THREE.Color(colors.neck)
-            m.metalness = 0.02
-            m.roughness = 0.44
-            m.envMapIntensity = 1.4
-            m.needsUpdate = true
-          }
+          enhanceModernSMaterial(mat, colors)
         })
         return
       }
 
       materials.forEach(mat => {
-        enhanceMaterial(materialRole((mat as THREE.MeshStandardMaterial).name, mesh.name), mat, colors, burstTexture)
+        enhanceMaterial(materialRole(mat.name), mat, colors)
       })
-      const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
     })
-  }, [colors, model, shape.id, store.finish])
+  }, [colors, model, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
@@ -402,7 +399,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         {shape.id === 'modern-s' && (
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
-            {/* <FretboardOverlay colors={colors} /> */}
+            <FretboardOverlay colors={colors} />
           </group>
         )}
       </group>
