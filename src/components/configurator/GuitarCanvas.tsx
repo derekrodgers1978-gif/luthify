@@ -34,15 +34,6 @@ const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 useGLTF.preload('/models/fretboard_strat.glb')
 useGLTF.preload('/models/fretboard_gibson.glb')
-useGLTF.preload('/models/fender_style_pickguard_strat_s3.glb')
-useGLTF.preload('/models/fender_style_neck_no_fretboard.glb')
-
-const BURST_TEXTURE_PATHS: Record<string, string> = {
-  'burst-amber':   '/models/gretsch_orange_2k_sunburst.png',
-  'burst-vintage': '/models/gibson_tobacco_2k_sunburst.png',
-  'burst-cherry':  '/models/gibson_cherry_2k_sunburst.png',
-  'sunburst':      '/models/fender_2k_sunburst.png',
-}
 
 type FinishOption = {
   id?: string
@@ -165,7 +156,7 @@ function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnTy
 }
 
 function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
-  mat.color = new THREE.Color(colors.neck)
+  mat.color = new THREE.Color(colors.visibleWood)
   mat.metalness = 0.02
   mat.roughness = 0.44
 }
@@ -290,30 +281,6 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
   )
 }
 
-function PickguardOverlay() {
-  const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0.001]}
-      name="PICKGUARD"
-    />
-  )
-}
-
-function NeckOverlay() {
-  const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0.001]}
-      name="NECK_NO_FRETBOARD"
-    />
-  )
-}
-
 // TODO: Replace s-style-electric.glb with a brand-neutral model
 function FretboardOverlay({ colors }: {
   colors: ReturnType<typeof makeColors>
@@ -375,6 +342,9 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
+  useEffect(() => {
+    console.log("Model loaded successfully")
+  }, [modelPath])
   const { model, center, scale } = useMemo(() => {
     const clone = scene.clone(true)
     const box = new THREE.Box3().setFromObject(clone)
@@ -432,8 +402,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         {shape.id === 'modern-s' && (
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
-            <PickguardOverlay />
-            <NeckOverlay />
             <FretboardOverlay colors={colors} />
           </group>
         )}
