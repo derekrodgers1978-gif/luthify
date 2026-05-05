@@ -31,12 +31,16 @@ export interface ConfigOption {
 export interface ConfigState {
   shape:     string
   finish:    string
+  finishId:  string
   top:       string
   neck:      string
   fretboard: string
+  fretboardId: string
   hardware:  string
+  hardwareId: string
   bridge:    string
   pickups:   string
+  pickupId:  string
   livePrice: number
 }
 
