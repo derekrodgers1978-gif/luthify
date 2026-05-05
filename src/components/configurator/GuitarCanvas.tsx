@@ -109,28 +109,27 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
 function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
   if (typeof document === 'undefined') return null
   const canvas = document.createElement('canvas')
-  canvas.width = 1024
-  canvas.height = 1024
+  canvas.width = 512
+  canvas.height = 512
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
-  const cx = 512, cy = 520
-  const gradient = ctx.createRadialGradient(cx, cy, 40, cx, cy, 580)
+  const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256)
   if (colors.finishId === 'sunburst') {
-    gradient.addColorStop(0, '#F5E4A0')
-    gradient.addColorStop(0.35, '#D4903A')
-    gradient.addColorStop(0.65, colors.finish)
+    gradient.addColorStop(0, '#F5E490')
+    gradient.addColorStop(0.3, '#E8A020')
+    gradient.addColorStop(0.6, colors.finish)
     gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
   } else if (colors.finishId === 'burst-cherry') {
-    gradient.addColorStop(0, '#E03040')
-    gradient.addColorStop(0.5, colors.finish)
+    gradient.addColorStop(0, '#E04050')
+    gradient.addColorStop(0.55, colors.finish)
     gradient.addColorStop(1, '#050000')
   } else {
-    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.3).getStyle())
-    gradient.addColorStop(0.55, colors.finish)
+    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.25).getStyle())
+    gradient.addColorStop(0.6, colors.finish)
     gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
   }
   ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, 1024, 1024)
+  ctx.fillRect(0, 0, 512, 512)
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.needsUpdate = true
@@ -147,6 +146,7 @@ function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   }
   mat.metalness = 0.04
   mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
+  mat.needsUpdate = true
 }
 
 function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
