@@ -367,6 +367,26 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors, burstTexture)
         })
+        if (colors.finishStyle === 'burst') {
+          model.traverse(obj => {
+            if (!(obj as THREE.Mesh).isMesh) return
+            const mesh = obj as THREE.Mesh
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+            const isBody = materials.some(m => materialRole((m as THREE.MeshStandardMaterial).name) === 'body')
+            if (!isBody) return
+            const geo = mesh.geometry
+            const pos = geo.getAttribute('position') as THREE.BufferAttribute
+            const box = new THREE.Box3().setFromBufferAttribute(pos)
+            const size = box.getSize(new THREE.Vector3())
+            const uvArray = new Float32Array(pos.count * 2)
+            for (let i = 0; i < pos.count; i++) {
+              uvArray[i * 2] = (pos.getX(i) - box.min.x) / size.x
+              uvArray[i * 2 + 1] = (pos.getZ(i) - box.min.z) / size.z
+            }
+            geo.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
+            geo.attributes.uv.needsUpdate = true
+          })
+        }
         const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
         meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
         return
