@@ -76,10 +76,21 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
   'aged-brass': { color: '#B08D57', metalness: 0.85, roughness: 0.28 },
 }
 
-function materialRole(matName: string): MaterialRole {
+function materialRole(matName: string, meshName?: string): MaterialRole {
+  const mesh = (meshName ?? '').toLowerCase()
   const name = matName.toLowerCase()
+
+  // Check mesh name first for precise role assignment.
+  if (mesh.includes('body')) return 'body'
+  if (mesh.includes('pickguard') || mesh.includes('guard') || mesh.includes('plate')) return 'pickguard'
+  if (mesh.includes('fret') || mesh.includes('board')) return 'neck'
+  if (mesh.includes('neck') || mesh.includes('headstock')) return 'neck'
+  if (mesh.includes('string')) return 'strings'
+  if (mesh.includes('tuner') || mesh.includes('hardware') || mesh.includes('bridge') || mesh.includes('pickup') || mesh.includes('metal')) return 'hardware'
+
+  // Fall back to material name.
   if (name.includes('body')) return 'body'
-  if (name.includes('neck') || name.includes('wood') || name.includes('fret') || name.includes('board')) return 'neck'
+  if (name.includes('neck') || name.includes('wood')) return 'neck'
   if (name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
   if (name.includes('metal') || name.includes('chrome') || name.includes('hardware') || name.includes('knob')) return 'hardware'
   if (name.includes('string')) return 'strings'
@@ -167,34 +178,6 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.roughness = 0.34
   } else if (role === 'body') {
     applyBodyMaterial(mat, colors, burstTexture)
-  }
-  mat.needsUpdate = true
-}
-
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>, burstTexture?: THREE.Texture | null) {
-  const mat = material as THREE.MeshStandardMaterial
-  if (!mat.isMeshStandardMaterial) return
-  const role = materialRole(mat.name)
-  if (role === 'other') return
-  mat.envMapIntensity = 1.8
-  if (role === 'body') {
-    applyBodyMaterial(mat, colors, burstTexture)
-  } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.02
-    mat.roughness = 0.44
-    mat.envMapIntensity = 1.4
-    mat.needsUpdate = true
-  } else if (role === 'hardware') {
-    applyHardwareMaterial(mat, colors)
-  } else if (role === 'strings') {
-    mat.color = new THREE.Color(colors.strings)
-    mat.metalness = 0.7
-    mat.roughness = 0.26
-  } else if (role === 'pickguard') {
-    mat.color = new THREE.Color(colors.pickguard)
-    mat.metalness = 0.02
-    mat.roughness = 0.34
   }
   mat.needsUpdate = true
 }
@@ -357,53 +340,40 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       if (shape.id === 'modern-s') {
-        console.log('Mesh:', mesh.name, '| Material:',
-          Array.isArray(mesh.material)
-            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
-            : (mesh.material as THREE.Material).name
-        )
-      }
-      if (shape.id === 'modern-s') {
-        console.log('Model materials:', model.uuid)
-        model.traverse(obj => {
-          if (!(obj as THREE.Mesh).isMesh) return
-          const mesh = obj as THREE.Mesh
-          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-          mats.forEach(m => {
-            const mat = m as THREE.MeshStandardMaterial
-            console.log('Mesh:', mesh.name, '| Mat:', mat.name, '| role:', materialRole(mat.name))
-          })
-        })
+        const firstMaterial = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial
+        console.log('Mesh:', mesh.name, '| Mat:', firstMaterial.name, '| role:', materialRole(firstMaterial.name, mesh.name))
         materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors, burstTexture)
+          const m = mat as THREE.MeshStandardMaterial
+          if (!m.isMeshStandardMaterial) return
+          const role = materialRole(m.name, mesh.name)
+          m.envMapIntensity = 1.8
+          if (role === 'body') {
+            applyBodyMaterial(m, colors, burstTexture)
+          } else if (role === 'neck') {
+            m.color = new THREE.Color(colors.neck)
+            m.metalness = 0.02
+            m.roughness = 0.44
+            m.needsUpdate = true
+          } else if (role === 'hardware') {
+            applyHardwareMaterial(m, colors)
+            m.needsUpdate = true
+          } else if (role === 'strings') {
+            m.color = new THREE.Color(colors.strings)
+            m.metalness = 0.7
+            m.roughness = 0.26
+            m.needsUpdate = true
+          } else if (role === 'pickguard') {
+            m.color = new THREE.Color(colors.pickguard)
+            m.metalness = 0.02
+            m.roughness = 0.34
+            m.needsUpdate = true
+          }
         })
-        if (colors.finishStyle === 'burst') {
-          model.traverse(obj => {
-            if (!(obj as THREE.Mesh).isMesh) return
-            const mesh = obj as THREE.Mesh
-            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-            const isBody = materials.some(m => materialRole((m as THREE.MeshStandardMaterial).name) === 'body')
-            if (!isBody) return
-            const geo = mesh.geometry
-            const pos = geo.getAttribute('position') as THREE.BufferAttribute
-            const box = new THREE.Box3().setFromBufferAttribute(pos)
-            const size = box.getSize(new THREE.Vector3())
-            const uvArray = new Float32Array(pos.count * 2)
-            for (let i = 0; i < pos.count; i++) {
-              uvArray[i * 2] = (pos.getX(i) - box.min.x) / size.x
-              uvArray[i * 2 + 1] = (pos.getZ(i) - box.min.z) / size.z
-            }
-            geo.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
-            geo.attributes.uv.needsUpdate = true
-          })
-        }
-        const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-        meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
         return
       }
 
       materials.forEach(mat => {
-        enhanceMaterial(materialRole(mat.name), mat, colors, burstTexture)
+        enhanceMaterial(materialRole((mat as THREE.MeshStandardMaterial).name, mesh.name), mat, colors, burstTexture)
       })
       const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       meshMaterials.forEach(m => { (m as THREE.MeshStandardMaterial).needsUpdate = true })
