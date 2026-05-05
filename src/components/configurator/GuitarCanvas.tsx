@@ -1,7 +1,7 @@
 'use client'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bounds, Center, ContactShadows, Environment, Html, OrbitControls, Preload, useGLTF, useProgress } from '@react-three/drei'
+import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
@@ -33,25 +33,142 @@ type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'ot
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 
+type FinishOption = {
+  id?: string
+  hex?: string
+  roughness?: number
+  finishStyle?: 'solid' | 'burst'
+  burstEdgeHex?: string
+}
+
+type WoodOption = { id: string }
+type BoardOption = { id: string; hex?: string }
+type HardwareOption = { id: string }
+
+const NECK_COLORS: Record<string, string> = {
+  maple: '#F2D49B',
+  mahogany: '#8B4513',
+  walnut: '#5C3317',
+  roasted: '#C68642',
+}
+
+const FRETBOARD_COLORS: Record<string, string> = {
+  rosewood: '#3D1C02',
+  ebony: '#1A0A00',
+  maple: '#F2D49B',
+  pau: '#3A1800',
+}
+
+const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roughness: number }> = {
+  nickel: { color: '#C8C8C8', metalness: 0.8, roughness: 0.3 },
+  chrome: { color: '#E8E8E8', metalness: 1.0, roughness: 0.1 },
+  gold: { color: '#CFB53B', metalness: 0.9, roughness: 0.2 },
+  black: { color: '#1A1A1A', metalness: 0.7, roughness: 0.4 },
+  'aged-brass': { color: '#B08D57', metalness: 0.85, roughness: 0.28 },
+}
+
 function materialRole(matName: string): MaterialRole {
-  if (matName === 'Body') return 'body'
-  if (matName === 'Wood') return 'neck'
-  if (matName === 'Plastic') return 'pickguard'
-  if (matName === 'Chrome') return 'hardware'
-  if (matName === 'Knobs') return 'hardware'
-  if (matName === 'Strings') return 'strings'
+  const name = matName.toLowerCase()
+  if (matName === 'Body' || name.includes('body')) return 'body'
+  if (matName === 'Wood' || name.includes('wood') || name.includes('neck')) return 'neck'
+  if (matName === 'Plastic' || name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
+  if (matName === 'Chrome' || matName === 'Knobs' || name.includes('chrome') || name.includes('knob') || name.includes('hardware') || name.includes('metal')) return 'hardware'
+  if (matName === 'Strings' || name.includes('string')) return 'strings'
   return 'pickguard'
 }
 
-function makeColors(finish?: { hex?: string; roughness?: number }, neck?: { id: string }, board?: { hex?: string }, hw?: { id: string }) {
+function blendHexColors(from: string, to: string, amount: number) {
+  return `#${new THREE.Color(from).lerp(new THREE.Color(to), amount).getHexString()}`
+}
+
+function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOption, hw?: HardwareOption) {
+  const neckColor = NECK_COLORS[neck?.id ?? ''] ?? NECK_COLORS.mahogany
+  const boardColor = FRETBOARD_COLORS[board?.id ?? ''] ?? board?.hex ?? FRETBOARD_COLORS.ebony
+  const isDarkBoard = boardColor !== FRETBOARD_COLORS.maple
+  const hardware = HARDWARE_FINISHES[hw?.id ?? ''] ?? HARDWARE_FINISHES.nickel
+
   return {
     finish: finish?.hex ?? '#D4B896',
+    finishId: finish?.id,
+    finishStyle: finish?.finishStyle ?? 'solid',
+    burstEdge: finish?.burstEdgeHex,
     finishRoughness: finish?.roughness ?? 0.18,
-    neck: neck?.id === 'maple' ? '#C8A05A' : neck?.id === 'roasted' ? '#8B4A20' : neck?.id === 'walnut' ? '#4A2411' : '#5C2F17',
-    board: board?.hex ?? '#1A0A00',
-    hardware: hw?.id === 'gold' || hw?.id === 'aged-brass' ? '#C9A45C' : hw?.id === 'black' ? '#111116' : '#C9CED6',
+    neck: neckColor,
+    visibleWood: blendHexColors(neckColor, boardColor, isDarkBoard ? 0.42 : 0.16),
+    board: boardColor,
+    hardware: hardware.color,
+    hardwareMetalness: hardware.metalness,
+    hardwareRoughness: hardware.roughness,
     strings: '#DDE2EA',
     pickguard: '#F2EEE2',
+  }
+}
+
+function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
+  if (typeof document === 'undefined') return null
+
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+
+  const gradient = ctx.createRadialGradient(256, 256, 20, 256, 256, 360)
+  if (colors.finishId === 'sunburst') {
+    gradient.addColorStop(0, '#F2D49B')
+    gradient.addColorStop(0.42, '#C68642')
+    gradient.addColorStop(0.74, colors.finish)
+    gradient.addColorStop(1, colors.burstEdge ?? '#120603')
+  } else if (colors.finishId === 'burst-cherry') {
+    gradient.addColorStop(0, '#B31924')
+    gradient.addColorStop(0.58, colors.finish)
+    gradient.addColorStop(1, '#000000')
+  } else {
+    gradient.addColorStop(0, colors.finish)
+    gradient.addColorStop(0.64, colors.finish)
+    gradient.addColorStop(1, colors.burstEdge ?? '#120603')
+  }
+
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.ClampToEdgeWrapping
+  texture.wrapT = THREE.ClampToEdgeWrapping
+  texture.needsUpdate = true
+  return texture
+}
+
+function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  if (colors.finishStyle === 'burst') {
+    mat.color = new THREE.Color('#FFFFFF')
+    mat.map = makeBurstTexture(colors)
+  } else {
+    mat.color = new THREE.Color(colors.finish)
+    mat.map = null
+  }
+  mat.metalness = 0.04
+  mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
+}
+
+function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  mat.color = new THREE.Color(colors.hardware)
+  mat.metalness = colors.hardwareMetalness
+  mat.roughness = colors.hardwareRoughness
+}
+
+function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>, hasFretboardSplit = false) {
+  mat.color = new THREE.Color(hasFretboardSplit ? colors.neck : colors.visibleWood)
+  mat.metalness = 0.02
+  mat.roughness = 0.44
+}
+
+function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
+  return {
+    color: colors.hardware,
+    metalness: colors.hardwareMetalness,
+    roughness: colors.hardwareRoughness,
   }
 }
 
@@ -60,13 +177,9 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
   if (role === 'hardware') {
-    mat.color = new THREE.Color(colors.hardware)
-    mat.metalness = 0.9
-    mat.roughness = 0.2
+    applyHardwareMaterial(mat, colors)
   } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.02
-    mat.roughness = 0.42
+    applyWoodMaterial(mat, colors)
   } else if (role === 'strings') {
     mat.color = new THREE.Color(colors.strings)
     mat.metalness = 0.7
@@ -76,9 +189,7 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.metalness = 0.02
     mat.roughness = 0.34
   } else if (role === 'body') {
-    mat.color = new THREE.Color(colors.finish)
-    mat.metalness = 0.04
-    mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
+    applyBodyMaterial(mat, colors)
   }
   mat.needsUpdate = true
 }
@@ -89,17 +200,11 @@ function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typ
   const role = materialRole(mat.name)
   mat.envMapIntensity = 1.8
   if (role === 'body') {
-    mat.color = new THREE.Color(colors.finish)
-    mat.metalness = 0.04
-    mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
+    applyBodyMaterial(mat, colors)
   } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.03
-    mat.roughness = 0.45
+    applyWoodMaterial(mat, colors)
   } else if (role === 'hardware') {
-    mat.color = new THREE.Color(colors.hardware)
-    mat.metalness = 0.95
-    mat.roughness = 0.2
+    applyHardwareMaterial(mat, colors)
   } else if (role === 'strings') {
     mat.color = new THREE.Color(colors.strings)
     mat.metalness = 0.7
@@ -110,6 +215,90 @@ function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typ
     mat.roughness = 0.34
   }
   mat.needsUpdate = true
+}
+
+function getTriangleNormal(
+  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  index: THREE.BufferAttribute | null,
+  triangleStart: number,
+) {
+  const a = index ? index.getX(triangleStart) : triangleStart
+  const b = index ? index.getX(triangleStart + 1) : triangleStart + 1
+  const c = index ? index.getX(triangleStart + 2) : triangleStart + 2
+  const va = new THREE.Vector3().fromBufferAttribute(position, a)
+  const vb = new THREE.Vector3().fromBufferAttribute(position, b)
+  const vc = new THREE.Vector3().fromBufferAttribute(position, c)
+  return vb.sub(va).cross(vc.sub(va)).normalize()
+}
+
+function mergeGroup(groups: THREE.BufferGeometry['groups'], start: number, materialIndex: number) {
+  const previous = groups[groups.length - 1]
+  if (previous && previous.materialIndex === materialIndex && previous.start + previous.count === start) {
+    previous.count += 3
+    return
+  }
+  groups.push({ start, count: 3, materialIndex })
+}
+
+function applyFretboardSplit(mesh: THREE.Mesh, woodMaterialIndex: number, colors: ReturnType<typeof makeColors>) {
+  const geometry = mesh.geometry as THREE.BufferGeometry
+  const position = geometry.getAttribute('position')
+  if (!position) return false
+
+  if (!mesh.userData.fretboardGeometryCloned) {
+    mesh.geometry = geometry.clone()
+    mesh.userData.fretboardGeometryCloned = true
+  }
+
+  const splitGeometry = mesh.geometry as THREE.BufferGeometry
+  const splitPosition = splitGeometry.getAttribute('position')
+  if (!splitPosition) return false
+
+  if (!splitGeometry.userData.originalGroups) {
+    const drawCount = splitGeometry.index?.count ?? splitPosition.count
+    splitGeometry.userData.originalGroups = splitGeometry.groups.length
+      ? splitGeometry.groups.map(group => ({ ...group }))
+      : [{ start: 0, count: drawCount, materialIndex: 0 }]
+  }
+
+  const materials = Array.isArray(mesh.material) ? mesh.material.slice() : [mesh.material]
+  const sourceWoodMaterial = materials[woodMaterialIndex] as THREE.MeshStandardMaterial
+  if (!sourceWoodMaterial?.isMeshStandardMaterial) return false
+
+  const fretboardMaterial = sourceWoodMaterial.clone()
+  fretboardMaterial.name = `${sourceWoodMaterial.name}-Fretboard`
+  fretboardMaterial.color = new THREE.Color(colors.board)
+  fretboardMaterial.metalness = 0.02
+  fretboardMaterial.roughness = 0.48
+  fretboardMaterial.needsUpdate = true
+  const fretboardMaterialIndex = materials.length
+  materials.push(fretboardMaterial)
+
+  const index = splitGeometry.index
+  const originalGroups = splitGeometry.userData.originalGroups as THREE.BufferGeometry['groups']
+  const nextGroups: THREE.BufferGeometry['groups'] = []
+  let fretboardFaceCount = 0
+
+  originalGroups.forEach(group => {
+    if (group.materialIndex !== woodMaterialIndex) {
+      nextGroups.push({ ...group })
+      return
+    }
+
+    for (let start = group.start; start < group.start + group.count; start += 3) {
+      const normal = getTriangleNormal(splitPosition, index, start)
+      const isFretboardFacing = normal.y > 0.52 && Math.abs(normal.y) > Math.abs(normal.x) && Math.abs(normal.y) > Math.abs(normal.z)
+      mergeGroup(nextGroups, start, isFretboardFacing ? fretboardMaterialIndex : woodMaterialIndex)
+      if (isFretboardFacing) fretboardFaceCount += 1
+    }
+  })
+
+  if (!fretboardFaceCount) return false
+
+  splitGeometry.clearGroups()
+  nextGroups.forEach(group => splitGeometry.addGroup(group.start, group.count, group.materialIndex))
+  mesh.material = materials
+  return true
 }
 
 function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
@@ -143,31 +332,31 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
       {bridge === 'trem' && (
         <mesh position={[-0.03, 0.01, -0.24]} rotation={[0, 0, 0]}>
           <boxGeometry args={[0.15, 0.012, 0.06]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.2} />
+          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
         </mesh>
       )}
       {bridge === 'hardtail' && (
         <mesh position={[-0.03, 0.01, -0.24]}>
           <boxGeometry args={[0.13, 0.014, 0.045]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.25} />
+          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
         </mesh>
       )}
       {bridge === 'tuneomatic' && (
         <group>
           <mesh position={[-0.03, 0.012, -0.22]}>
             <boxGeometry args={[0.115, 0.012, 0.022]} />
-            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
+            <meshStandardMaterial {...hardwareMaterialProps(colors)} />
           </mesh>
           <mesh position={[-0.03, 0.012, -0.265]}>
             <boxGeometry args={[0.085, 0.011, 0.018]} />
-            <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
+            <meshStandardMaterial {...hardwareMaterialProps(colors)} />
           </mesh>
         </group>
       )}
       {bridge === 'bigsby' && (
         <mesh position={[-0.03, 0.01, -0.245]}>
           <cylinderGeometry args={[0.018, 0.018, 0.13, 16]} />
-          <meshStandardMaterial color={colors.hardware} metalness={0.95} roughness={0.22} />
+          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
         </mesh>
       )}
     </group>
@@ -200,17 +389,36 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       const mesh = obj as THREE.Mesh
       mesh.castShadow = true
       mesh.receiveShadow = true
-      if (Array.isArray(mesh.material)) {
-        mesh.material = mesh.material.map(mat => mat.clone())
-      } else {
-        mesh.material = mesh.material.clone()
+      if (!mesh.userData.baseMaterials) {
+        const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        mesh.userData.baseMaterials = sourceMaterials.map(mat => mat.clone())
+        mesh.userData.usesMaterialArray = Array.isArray(mesh.material)
       }
+      const baseMaterials = mesh.userData.baseMaterials as THREE.Material[]
+      mesh.material = mesh.userData.usesMaterialArray
+        ? baseMaterials.map(mat => mat.clone())
+        : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      materials.forEach(mat => {
-        if (shape.id === 'modern-s') {
+      if (shape.id === 'modern-s') {
+        let woodMaterialIndex = -1
+        materials.forEach((mat, index) => {
           enhanceModernSMaterial(mat, colors)
-          return
+          if (materialRole(mat.name) === 'neck') woodMaterialIndex = index
+        })
+        if (woodMaterialIndex >= 0) {
+          const hasFretboardSplit = applyFretboardSplit(mesh, woodMaterialIndex, colors)
+          const activeMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+          const woodMaterial = activeMaterials[woodMaterialIndex] as THREE.MeshStandardMaterial
+          if (woodMaterial?.isMeshStandardMaterial) {
+            applyWoodMaterial(woodMaterial, colors, hasFretboardSplit)
+            woodMaterial.envMapIntensity = 1.8
+            woodMaterial.needsUpdate = true
+          }
         }
+        return
+      }
+
+      materials.forEach(mat => {
         enhanceMaterial(materialRole(mat.name), mat, colors)
       })
     })
