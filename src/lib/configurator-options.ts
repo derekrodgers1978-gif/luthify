@@ -25,10 +25,10 @@ export const FINISHES: ConfigOption[] = [
   { id: 'red',       label: 'Cherry Red',     hex: '#A51C30', roughness: 0.1,  finishStyle: 'solid', priceAdj: 0 },
   { id: 'aged',      label: 'Aged Honey',     hex: '#C8954A', roughness: 0.3,  finishStyle: 'solid', priceAdj: 0 },
   { id: 'forest',    label: 'Forest Green',   hex: '#2D5A3D', roughness: 0.15, finishStyle: 'solid', priceAdj: 0 },
-  { id: 'burst-amber',   label: 'Amber Burst',   hex: '#C07A2E', burstEdgeHex: '#2A0F06', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
-  { id: 'burst-vintage', label: 'Vintage Burst', hex: '#9F5D2B', burstEdgeHex: '#1C0D06', roughness: 0.11, finishStyle: 'burst', priceAdj: 120 },
-  { id: 'burst-cherry',  label: 'Cherry Burst',  hex: '#8D2A2A', burstEdgeHex: '#150606', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
-  { id: 'sunburst',      label: 'Classic Sunburst', hex: '#6B2200', burstEdgeHex: '#120603', roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
+  { id: 'burst-amber',   label: 'Amber Burst',   hex: '#F6C56B', burstEdgeHex: '#130804', burstStops: { center: '#F6C56B', middle: '#B45A16', edge: '#130804' }, roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
+  { id: 'burst-vintage', label: 'Tobacco Burst', hex: '#E6A044', burstEdgeHex: '#080403', burstStops: { center: '#E6A044', middle: '#713315', edge: '#080403' }, roughness: 0.11, finishStyle: 'burst', priceAdj: 120 },
+  { id: 'burst-cherry',  label: 'Cherry Burst',  hex: '#F8B85A', burstEdgeHex: '#120506', burstStops: { center: '#F8B85A', middle: '#A51E22', edge: '#120506' }, roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
+  { id: 'sunburst',      label: 'Classic Sunburst', hex: '#FFD35A', burstEdgeHex: '#090504', burstStops: { center: '#FFD35A', middle: '#A13F12', edge: '#090504' }, roughness: 0.1, finishStyle: 'burst', priceAdj: 120 },
 ]
 
 export const TOPS: ConfigOption[] = [

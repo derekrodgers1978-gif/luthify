@@ -24,6 +24,11 @@ export interface ConfigOption {
   roughness?: number
   finishStyle?: 'solid' | 'burst'
   burstEdgeHex?: string
+  burstStops?: {
+    center: string
+    middle: string
+    edge:   string
+  }
   texture?: string
   modelPath?: string
 }
