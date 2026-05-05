@@ -1,0 +1,3 @@
+Use /public/models/strat_fixed_separate_parts_sunburst.glb as the Strat test model.
+
+Update the configurator so changing finish only changes meshMap.BODY.material. Do not swap the full GLB for finish changes. Keep NECK, FRETBOARD, PICKGUARD, PICKUPS, and HARDWARE as independent material targets. Remove/disable fake overlay GLBs for this model.

@@ -1,16 +1,16 @@
-Luthify GLB Parts Pack
+Fixed Strat GLB for Luthify
 
-Files:
-- fender_style_pickguard_strat_s3.glb
-- fender_style_neck_no_fretboard.glb
-- fender_pickguard_and_neck_no_fretboard.glb
+File:
+- strat_fixed_separate_parts_sunburst.glb
 
-Notes:
-- Stylized Fender-style parts for configurator prototyping.
-- Pickguard is Strat/SSS style with visible pickup, control, and screw-hole meshes.
-- Neck is a maple-style neck blank/headstock with NO fretboard slab on top and NO frets.
-- Units are meters.
-- Main mesh names:
-  PICKGUARD_BODY
-  NECK_BLANK_TOP_NO_FRETBOARD
-  ROUNDED_BACK_PROFILE
+Separate named mesh/material targets:
+- BODY
+- NECK
+- FRETBOARD
+- PICKGUARD
+- PICKUPS
+- HARDWARE
+- HEADSTOCK
+- FRET_MARKERS
+
+Sunburst is applied only to BODY. Neck, fretboard, pickguard, pickups, and hardware are separate. Stylized prototype, not a licensed Fender model. Units are meters.
