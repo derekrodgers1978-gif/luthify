@@ -206,6 +206,7 @@ function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typ
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.02
     mat.roughness = 0.44
+    mat.envMapIntensity = 1.4
     mat.needsUpdate = true
   } else if (role === 'hardware') {
     applyHardwareMaterial(mat, colors)
