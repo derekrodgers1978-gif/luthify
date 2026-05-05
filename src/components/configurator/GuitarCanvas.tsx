@@ -76,7 +76,7 @@ function materialRole(matName: string): MaterialRole {
   if (matName === 'Plastic' || name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
   if (matName === 'Chrome' || matName === 'Knobs' || name.includes('chrome') || name.includes('knob') || name.includes('hardware') || name.includes('metal')) return 'hardware'
   if (matName === 'Strings' || name.includes('string')) return 'strings'
-  return 'pickguard'
+  return 'other'
 }
 
 function blendHexColors(from: string, to: string, amount: number) {
@@ -115,7 +115,7 @@ function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
 
-  const gradient = ctx.createRadialGradient(256, 256, 20, 256, 256, 360)
+  const gradient = ctx.createRadialGradient(256, 280, 30, 256, 280, 310)
   if (colors.finishId === 'sunburst') {
     gradient.addColorStop(0, '#F2D49B')
     gradient.addColorStop(0.42, '#C68642')
@@ -175,6 +175,7 @@ function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
 }
 
 function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+  if (role === 'other') return
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
@@ -200,11 +201,15 @@ function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typ
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   const role = materialRole(mat.name)
+  if (role === 'other') return
   mat.envMapIntensity = 1.8
   if (role === 'body') {
     applyBodyMaterial(mat, colors)
   } else if (role === 'neck') {
-    applyWoodMaterial(mat, colors)
+    mat.color = new THREE.Color(colors.neck)
+    mat.metalness = 0.02
+    mat.roughness = 0.44
+    mat.needsUpdate = true
   } else if (role === 'hardware') {
     applyHardwareMaterial(mat, colors)
   } else if (role === 'strings') {
@@ -281,10 +286,8 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
   )
 }
 
-function FretboardOverlay({ colors, scale, center }: {
+function FretboardOverlay({ colors }: {
   colors: ReturnType<typeof makeColors>
-  scale: number
-  center: THREE.Vector3
 }) {
   const board = useConfigStore(s => s.fretboard)
   const shape = useConfigStore(s => s.shape)
@@ -324,12 +327,12 @@ function FretboardOverlay({ colors, scale, center }: {
     })
   }, [board, colors, model])
 
-  // Position fretboard on top of neck - adjust these values to align with the model
   return (
     <primitive
       object={model}
-      position={[-center.x * scale, -center.y * scale, -center.z * scale]}
-      scale={scale}
+      position={[0, 0.012, 0.38]}
+      rotation={[0, Math.PI, 0]}
+      scale={0.96}
     />
   )
 }
@@ -393,7 +396,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         {shape.id === 'modern-s' && (
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
-            <FretboardOverlay colors={colors} scale={scale} center={center} />
+            <FretboardOverlay colors={colors} />
           </group>
         )}
       </group>
