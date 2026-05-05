@@ -32,17 +32,6 @@ type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'ot
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
-useGLTF.preload('/models/fretboard_strat.glb')
-useGLTF.preload('/models/fretboard_gibson.glb')
-useGLTF.preload('/models/fender_style_pickguard_strat_s3.glb')
-useGLTF.preload('/models/fender_style_neck_no_fretboard.glb')
-
-const BURST_TEXTURE_PATHS: Record<string, string> = {
-  'burst-amber':   '/models/gretsch_orange_2k_sunburst.png',
-  'burst-vintage': '/models/gibson_tobacco_2k_sunburst.png',
-  'burst-cherry':  '/models/gibson_cherry_2k_sunburst.png',
-  'sunburst':      '/models/fender_2k_sunburst.png',
-}
 
 type FinishOption = {
   id?: string
@@ -50,6 +39,11 @@ type FinishOption = {
   roughness?: number
   finishStyle?: 'solid' | 'burst'
   burstEdgeHex?: string
+  burstStops?: {
+    center: string
+    middle: string
+    edge:   string
+  }
 }
 
 type WoodOption = { id: string }
@@ -88,6 +82,11 @@ function materialRole(matName: string): MaterialRole {
   return 'other'
 }
 
+function resolveMaterialRole(meshName: string, matName: string): MaterialRole {
+  const meshRole = materialRole(meshName)
+  return meshRole === 'other' ? materialRole(matName) : meshRole
+}
+
 function blendHexColors(from: string, to: string, amount: number) {
   return `#${new THREE.Color(from).lerp(new THREE.Color(to), amount).getHexString()}`
 }
@@ -103,6 +102,7 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
     finishId: finish?.id,
     finishStyle: finish?.finishStyle ?? 'solid',
     burstEdge: finish?.burstEdgeHex,
+    burstStops: finish?.burstStops,
     finishRoughness: finish?.roughness ?? 0.18,
     neck: neckColor,
     visibleWood: blendHexColors(neckColor, boardColor, isDarkBoard ? 0.42 : 0.16),
@@ -115,44 +115,54 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
   }
 }
 
-function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
-  if (typeof document === 'undefined') return null
-  const canvas = document.createElement('canvas')
-  canvas.width = 1024
-  canvas.height = 1024
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  const cx = 512, cy = 520
-  const gradient = ctx.createRadialGradient(cx, cy, 40, cx, cy, 580)
-  if (colors.finishId === 'sunburst') {
-    gradient.addColorStop(0, '#F5E4A0')
-    gradient.addColorStop(0.35, '#D4903A')
-    gradient.addColorStop(0.65, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
-  } else if (colors.finishId === 'burst-cherry') {
-    gradient.addColorStop(0, '#E03040')
-    gradient.addColorStop(0.5, colors.finish)
-    gradient.addColorStop(1, '#050000')
-  } else {
-    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.3).getStyle())
-    gradient.addColorStop(0.55, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
+const DEFAULT_BURST_STOPS = {
+  center: '#F6C56B',
+  middle: '#B45A16',
+  edge:   '#130804',
+}
+
+function applyEdgeDistanceBurst(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  const stops = colors.burstStops ?? DEFAULT_BURST_STOPS
+  const center = new THREE.Color(stops.center)
+  const middle = new THREE.Color(stops.middle)
+  const edge = new THREE.Color(stops.edge)
+
+  mat.color = new THREE.Color('#FFFFFF')
+  mat.map = null
+  mat.defines = { ...mat.defines, USE_UV: '' }
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.burstCenterColor = { value: center }
+    shader.uniforms.burstMiddleColor = { value: middle }
+    shader.uniforms.burstEdgeColor = { value: edge }
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform vec3 burstCenterColor;
+uniform vec3 burstMiddleColor;
+uniform vec3 burstEdgeColor;`
+      )
+      .replace(
+        '#include <map_fragment>',
+        `float horizontalEdgeDistance = min(vUv.x, 1.0 - vUv.x);
+float verticalEdgeDistance = min(vUv.y, 1.0 - vUv.y);
+float edgeDistance = min(horizontalEdgeDistance, verticalEdgeDistance);
+vec3 burstColor = mix(burstEdgeColor, burstMiddleColor, smoothstep(0.02, 0.18, edgeDistance));
+burstColor = mix(burstColor, burstCenterColor, smoothstep(0.18, 0.42, edgeDistance));
+diffuseColor.rgb *= burstColor;`
+      )
   }
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, 1024, 1024)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.needsUpdate = true
-  return texture
+  mat.customProgramCacheKey = () => `edge-distance-burst-${stops.center}-${stops.middle}-${stops.edge}`
 }
 
 function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
   if (colors.finishStyle === 'burst') {
-    mat.color = new THREE.Color('#FFFFFF')
-    mat.map = makeBurstTexture(colors)
+    applyEdgeDistanceBurst(mat, colors)
   } else {
     mat.color = new THREE.Color(colors.finish)
     mat.map = null
+    mat.onBeforeCompile = () => {}
+    mat.customProgramCacheKey = () => `solid-${colors.finish}`
   }
   mat.metalness = 0.04
   mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
@@ -168,14 +178,6 @@ function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   mat.color = new THREE.Color(colors.neck)
   mat.metalness = 0.02
   mat.roughness = 0.44
-}
-
-function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
-  return {
-    color: colors.hardware,
-    metalness: colors.hardwareMetalness,
-    roughness: colors.hardwareRoughness,
-  }
 }
 
 function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
@@ -199,171 +201,6 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     applyBodyMaterial(mat, colors)
   }
   mat.needsUpdate = true
-}
-
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
-  const mat = material as THREE.MeshStandardMaterial
-  if (!mat.isMeshStandardMaterial) return
-  const role = materialRole(mat.name)
-  if (role === 'other') return
-  mat.envMapIntensity = 1.8
-  if (role === 'body') {
-    applyBodyMaterial(mat, colors)
-  } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.02
-    mat.roughness = 0.44
-    mat.needsUpdate = true
-  } else if (role === 'hardware') {
-    applyHardwareMaterial(mat, colors)
-  } else if (role === 'strings') {
-    mat.color = new THREE.Color(colors.strings)
-    mat.metalness = 0.7
-    mat.roughness = 0.26
-  } else if (role === 'pickguard') {
-    mat.color = new THREE.Color(colors.pickguard)
-    mat.metalness = 0.02
-    mat.roughness = 0.34
-  }
-  mat.needsUpdate = true
-}
-
-function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
-  const pickups = useConfigStore(s => s.pickups)
-  const bridge = useConfigStore(s => s.bridge)
-  const pickupZ = [-0.17, -0.05, 0.08]
-  const singleCoils = (
-    <group>
-      {pickupZ.map(z => (
-        <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-          <boxGeometry args={[0.095, 0.017, 0.032]} />
-          <meshStandardMaterial color="#f5f0e6" metalness={0.02} roughness={0.35} />
-        </mesh>
-      ))}
-    </group>
-  )
-  const humbucker = (z: number) => (
-    <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-      <boxGeometry args={[0.11, 0.017, 0.048]} />
-      <meshStandardMaterial color="#101014" metalness={0.22} roughness={0.32} />
-    </mesh>
-  )
-
-  return (
-    <group>
-      {(pickups === 'singlecoil' || pickups === 'hss') && singleCoils}
-      {(pickups === 'dual-hum' || pickups === 'active-hum') && <group>{humbucker(-0.15)}{humbucker(0.04)}</group>}
-      {pickups === 'p90' && <group>{pickupZ.map(z => humbucker(z))}</group>}
-      {pickups === 'hss' && humbucker(-0.17)}
-
-      {bridge === 'trem' && (
-        <mesh position={[-0.03, 0.01, -0.24]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.15, 0.012, 0.06]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-      {bridge === 'hardtail' && (
-        <mesh position={[-0.03, 0.01, -0.24]}>
-          <boxGeometry args={[0.13, 0.014, 0.045]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-      {bridge === 'tuneomatic' && (
-        <group>
-          <mesh position={[-0.03, 0.012, -0.22]}>
-            <boxGeometry args={[0.115, 0.012, 0.022]} />
-            <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-          </mesh>
-          <mesh position={[-0.03, 0.012, -0.265]}>
-            <boxGeometry args={[0.085, 0.011, 0.018]} />
-            <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-          </mesh>
-        </group>
-      )}
-      {bridge === 'bigsby' && (
-        <mesh position={[-0.03, 0.01, -0.245]}>
-          <cylinderGeometry args={[0.018, 0.018, 0.13, 16]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-    </group>
-  )
-}
-
-function PickguardOverlay() {
-  const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0.001]}
-      name="PICKGUARD"
-    />
-  )
-}
-
-function NeckOverlay() {
-  const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0.001]}
-      name="NECK_NO_FRETBOARD"
-    />
-  )
-}
-
-// TODO: Replace s-style-electric.glb with a brand-neutral model
-function FretboardOverlay({ colors }: {
-  colors: ReturnType<typeof makeColors>
-}) {
-  const board = useConfigStore(s => s.fretboard)
-  const shape = useConfigStore(s => s.shape)
-  const path = shape === 'modern-s' ? '/models/fretboard_strat.glb' : '/models/fretboard_gibson.glb'
-  const { scene } = useGLTF(path)
-
-  const model = useMemo(() => scene.clone(true), [scene])
-
-  useEffect(() => {
-    model.traverse(obj => {
-      if (!(obj as THREE.Mesh).isMesh) return
-      const mesh = obj as THREE.Mesh
-      const mat = mesh.material as THREE.MeshStandardMaterial
-      if (!mat?.isMeshStandardMaterial) return
-
-      if (mesh.name === 'Fretboard') {
-        mat.color = new THREE.Color(FRETBOARD_COLORS[board] ?? FRETBOARD_COLORS.rosewood)
-        mat.roughness = 0.48
-        mat.metalness = 0.02
-        mat.envMapIntensity = 1.4
-        mat.needsUpdate = true
-      }
-      if (mesh.name === 'Frets') {
-        mat.color = new THREE.Color('#C8C8C8')
-        mat.metalness = 0.85
-        mat.roughness = 0.2
-        mat.envMapIntensity = 1.8
-        mat.needsUpdate = true
-      }
-      if (mesh.name === 'Inlays') {
-        mat.color = new THREE.Color('#E8E8EC')
-        mat.roughness = 0.1
-        mat.metalness = 0.0
-        mat.envMapIntensity = 2.0
-        mat.needsUpdate = true
-      }
-    })
-  }, [board, colors, model])
-
-  return (
-    <primitive
-      object={model}
-      position={[0.01, 0.008, 0.12]}
-      rotation={[0, Math.PI, 0]}
-      scale={0.014}
-    />
-  )
 }
 
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
@@ -402,22 +239,8 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         ? baseMaterials.map(mat => mat.clone())
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      if (shape.id === 'modern-s') {
-        console.log('Mesh:', mesh.name, '| Material:',
-          Array.isArray(mesh.material)
-            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
-            : (mesh.material as THREE.Material).name
-        )
-      }
-      if (shape.id === 'modern-s') {
-        materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors)
-        })
-        return
-      }
-
       materials.forEach(mat => {
-        enhanceMaterial(materialRole(mat.name), mat, colors)
+        enhanceMaterial(resolveMaterialRole(mesh.name, mat.name), mat, colors)
       })
     })
   }, [colors, model, shape.id])
@@ -429,28 +252,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && (
-          <group scale={0.74}>
-            <StratOptionOverlays colors={colors} />
-            <PickguardOverlay />
-            <NeckOverlay />
-            <FretboardOverlay colors={colors} />
-          </group>
-        )}
       </group>
     </Center>
   )
 }
 
 function ModelLoading() {
-  return (
-    <group>
-      <mesh>
-        <torusGeometry args={[0.8, 0.025, 12, 72]} />
-        <meshStandardMaterial color="#C9A45C" transparent opacity={0.28} />
-      </mesh>
-    </group>
-  )
+  return null
 }
 
 function SingleCutFinishFallback() {
@@ -460,17 +268,11 @@ function SingleCutFinishFallback() {
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const colors = makeColors(finish, neck, board, hw)
-  const bodyFill = finish?.id === 'sunburst' ? 'url(#singleCutBurst)' : colors.finish
 
   return (
     <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', display: 'grid', placeItems: 'center' }}>
       <svg viewBox="0 0 760 520" role="img" aria-label="Single Cut Electric finish preview" style={{ width: 'min(86%, 860px)', height: 'min(82%, 560px)', filter: 'drop-shadow(0 28px 60px rgba(0,0,0,0.46))' }}>
         <defs>
-          <radialGradient id="singleCutBurst" cx="46%" cy="54%" r="62%">
-            <stop offset="0%" stopColor="#F2A33B" />
-            <stop offset="45%" stopColor={colors.finish} />
-            <stop offset="86%" stopColor="#140703" />
-          </radialGradient>
           <linearGradient id="singleCutTopGloss" x1="0" x2="1" y1="0" y2="1">
             <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
             <stop offset="42%" stopColor="rgba(255,255,255,0.06)" />
@@ -493,7 +295,7 @@ function SingleCutFinishFallback() {
           />
           <path
             d="M213 254 C164 241 123 198 126 148 C128 95 179 66 233 83 C261 31 341 39 365 92 C410 98 449 132 449 184 C449 244 399 286 337 288 C321 333 270 354 226 333 C178 360 108 331 105 274 C103 234 157 220 213 254 Z"
-            fill={bodyFill}
+            fill={colors.finish}
             stroke="#F2EEE2"
             strokeWidth="8"
             strokeLinejoin="round"
