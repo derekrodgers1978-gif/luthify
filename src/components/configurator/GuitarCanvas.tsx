@@ -30,6 +30,8 @@ const CAMERA_DISTANCE: Record<string, number> = {
 
 type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
 
+const STRAT_BODY_MESH_NAME = 'BODY'
+
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 useGLTF.preload('/models/fretboard_strat.glb')
@@ -146,6 +148,24 @@ function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
   return texture
 }
 
+function isStratBodyMesh(mesh: THREE.Mesh) {
+  return mesh.name.trim().toUpperCase() === STRAT_BODY_MESH_NAME
+}
+
+function getBodyBurstPlaneAxes(size: THREE.Vector3): [number, number] {
+  const [verticalAxis, horizontalAxis] = [
+    { axis: 0, size: size.x },
+    { axis: 1, size: size.y },
+    { axis: 2, size: size.z },
+  ].sort((a, b) => b.size - a.size).slice(0, 2).map(entry => entry.axis) as [number, number]
+
+  return [horizontalAxis, verticalAxis]
+}
+
+function axisVector(axis: number) {
+  return new THREE.Vector3(axis === 0 ? 1 : 0, axis === 1 ? 1 : 0, axis === 2 ? 1 : 0)
+}
+
 function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
   if (colors.finishStyle === 'burst') {
     mat.color = new THREE.Color('#FFFFFF')
@@ -156,6 +176,105 @@ function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   }
   mat.metalness = 0.04
   mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
+}
+
+function applyStratBodyMaterial(mesh: THREE.Mesh, mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  if (colors.finishStyle !== 'burst') {
+    applyBodyMaterial(mat, colors)
+    return
+  }
+
+  const geometry = mesh.geometry
+  if (!geometry.boundingBox) geometry.computeBoundingBox()
+  const box = geometry.boundingBox
+  if (!box) {
+    applyBodyMaterial(mat, colors)
+    return
+  }
+
+  const size = box.getSize(new THREE.Vector3())
+  const [axisA, axisB] = getBodyBurstPlaneAxes(size)
+  const safeSize = new THREE.Vector3(
+    Math.max(size.x, 0.0001),
+    Math.max(size.y, 0.0001),
+    Math.max(size.z, 0.0001)
+  )
+
+  mat.color = new THREE.Color('#FFFFFF')
+  mat.map = null
+  mat.metalness = 0.04
+  mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uBodyBurstBoxMin = { value: box.min.clone() }
+    shader.uniforms.uBodyBurstBoxSize = { value: safeSize.clone() }
+    shader.uniforms.uBodyBurstAxisA = { value: axisVector(axisA) }
+    shader.uniforms.uBodyBurstAxisB = { value: axisVector(axisB) }
+    shader.uniforms.uBodyBurstDark = { value: new THREE.Color(colors.burstEdge ?? '#120603') }
+    shader.uniforms.uBodyBurstOrange = { value: new THREE.Color('#B45A16') }
+    shader.uniforms.uBodyBurstAmber = { value: new THREE.Color('#F1C257') }
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vBodyBurstLocalPosition;`
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+vBodyBurstLocalPosition = position;`
+      )
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform vec3 uBodyBurstBoxMin;
+uniform vec3 uBodyBurstBoxSize;
+uniform vec3 uBodyBurstAxisA;
+uniform vec3 uBodyBurstAxisB;
+uniform vec3 uBodyBurstDark;
+uniform vec3 uBodyBurstOrange;
+uniform vec3 uBodyBurstAmber;
+varying vec3 vBodyBurstLocalPosition;
+
+float bodyBurstHash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float bodyBurstNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = bodyBurstHash(i);
+  float b = bodyBurstHash(i + vec2(1.0, 0.0));
+  float c = bodyBurstHash(i + vec2(0.0, 1.0));
+  float d = bodyBurstHash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+vec3 stratBodyBurstColor() {
+  vec3 normalizedBody = clamp((vBodyBurstLocalPosition - uBodyBurstBoxMin) / uBodyBurstBoxSize, vec3(0.0), vec3(1.0));
+  vec2 bodyUv = vec2(dot(normalizedBody, uBodyBurstAxisA), dot(normalizedBody, uBodyBurstAxisB));
+  float edgeDistance = min(min(bodyUv.x, 1.0 - bodyUv.x), min(bodyUv.y, 1.0 - bodyUv.y));
+
+  float bottomBias = smoothstep(0.34, 0.0, bodyUv.y) * 0.035;
+  float hornBias = smoothstep(0.68, 1.0, bodyUv.y) * 0.03;
+  float grain = bodyBurstNoise(bodyUv * vec2(120.0, 165.0)) - 0.5;
+  edgeDistance = clamp(edgeDistance - bottomBias - hornBias + grain * 0.014, 0.0, 0.5);
+
+  vec3 burstColor = mix(uBodyBurstDark, uBodyBurstOrange, smoothstep(0.10, 0.18, edgeDistance));
+  burstColor = mix(burstColor, uBodyBurstAmber, smoothstep(0.22, 0.28, edgeDistance));
+  return clamp(burstColor * (1.0 + grain * 0.045), vec3(0.0), vec3(1.0));
+}`
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+diffuseColor.rgb = stratBodyBurstColor();`
+      )
+  }
+  mat.customProgramCacheKey = () => `strat-body-edge-burst-${colors.finishId ?? 'burst'}-${axisA}-${axisB}`
 }
 
 function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
@@ -201,15 +320,20 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
   mat.needsUpdate = true
 }
 
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
+  if (isStratBodyMesh(mesh)) {
+    mat.envMapIntensity = 1.8
+    applyStratBodyMaterial(mesh, mat, colors)
+    mat.needsUpdate = true
+    return
+  }
+
   const role = materialRole(mat.name)
   if (role === 'other') return
   mat.envMapIntensity = 1.8
-  if (role === 'body') {
-    applyBodyMaterial(mat, colors)
-  } else if (role === 'neck') {
+  if (role === 'neck') {
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.02
     mat.roughness = 0.44
@@ -411,7 +535,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors)
+          enhanceModernSMaterial(mesh, mat, colors)
         })
         return
       }
