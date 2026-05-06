@@ -388,7 +388,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
 
   useEffect(() => {
     model.traverse(obj => {
-      if (!(obj as THREE.Mesh).isMesh) return
+      if (!(obj instanceof THREE.Mesh)) return
       const mesh = obj as THREE.Mesh
       mesh.castShadow = true
       mesh.receiveShadow = true
