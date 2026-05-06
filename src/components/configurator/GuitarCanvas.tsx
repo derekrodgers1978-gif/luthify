@@ -70,6 +70,12 @@ const FRETBOARD_COLORS: Record<string, string> = {
   pau: '#3A1800',
 }
 
+const PART_TEST_COLORS = {
+  neck: NECK_COLORS.maple,
+  fretboard: FRETBOARD_COLORS.rosewood,
+  pickguard: '#F2EEE2',
+}
+
 const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roughness: number }> = {
   nickel: { color: '#C8C8C8', metalness: 0.8, roughness: 0.3 },
   chrome: { color: '#E8E8E8', metalness: 1.0, roughness: 0.1 },
@@ -168,6 +174,46 @@ function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   mat.color = new THREE.Color(colors.neck)
   mat.metalness = 0.02
   mat.roughness = 0.44
+}
+
+function materialList(material: THREE.Material | THREE.Material[]) {
+  return Array.isArray(material) ? material : [material]
+}
+
+function isolateMeshMaterials(mesh: THREE.Mesh, fallbackMaterialName: string) {
+  if (!mesh.userData.materialsIsolated) {
+    const wasMaterialArray = Array.isArray(mesh.material)
+    const sourceMaterials = materialList(mesh.material)
+    const clonedMaterials = sourceMaterials.map((material, index) => {
+      const cloned = material.clone()
+      if (!cloned.name) {
+        cloned.name = index === 0 ? fallbackMaterialName : `${fallbackMaterialName}_${index + 1}`
+      }
+      return cloned
+    })
+
+    mesh.material = wasMaterialArray ? clonedMaterials : clonedMaterials[0]
+    mesh.userData.materialsIsolated = true
+  }
+
+  return materialList(mesh.material)
+}
+
+function applyIsolatedPartMaterial(
+  mesh: THREE.Mesh,
+  fallbackMaterialName: string,
+  color: string,
+  materialProps: { metalness: number; roughness: number; envMapIntensity: number }
+) {
+  isolateMeshMaterials(mesh, fallbackMaterialName).forEach(material => {
+    const mat = material as THREE.MeshStandardMaterial
+    if (!mat.isMeshStandardMaterial) return
+    mat.color = new THREE.Color(color)
+    mat.metalness = materialProps.metalness
+    mat.roughness = materialProps.roughness
+    mat.envMapIntensity = materialProps.envMapIntensity
+    mat.needsUpdate = true
+  })
 }
 
 function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
@@ -292,22 +338,55 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
 
 function PickguardOverlay() {
   const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
+  const model = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      const mesh = obj as THREE.Mesh
+      if (!mesh.name.toUpperCase().includes('PICKGUARD')) return
+
+      applyIsolatedPartMaterial(mesh, 'PICKGUARD_material', PART_TEST_COLORS.pickguard, {
+        metalness: 0.02,
+        roughness: 0.34,
+        envMapIntensity: 1.4,
+      })
+    })
+  }, [model])
 
   return (
     <primitive
-      object={scene}
+      object={model}
       position={[0, 0, 0.001]}
       name="PICKGUARD"
     />
   )
 }
 
-function NeckOverlay() {
+function NeckOverlay({ colors }: {
+  colors: ReturnType<typeof makeColors>
+}) {
   const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
+  const model = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      const mesh = obj as THREE.Mesh
+      const meshName = mesh.name.toUpperCase()
+      if (!meshName.includes('NECK') && meshName !== 'ROUNDED_BACK_PROFILE') return
+
+      applyIsolatedPartMaterial(mesh, 'NECK_material', colors.neck ?? PART_TEST_COLORS.neck, {
+        metalness: 0.02,
+        roughness: 0.44,
+        envMapIntensity: 1.4,
+      })
+    })
+  }, [colors.neck, model])
 
   return (
     <primitive
-      object={scene}
+      object={model}
       position={[0, 0, 0.001]}
       name="NECK_NO_FRETBOARD"
     />
@@ -318,7 +397,6 @@ function NeckOverlay() {
 function FretboardOverlay({ colors }: {
   colors: ReturnType<typeof makeColors>
 }) {
-  const board = useConfigStore(s => s.fretboard)
   const shape = useConfigStore(s => s.shape)
   const path = shape === 'modern-s' ? '/models/fretboard_strat.glb' : '/models/fretboard_gibson.glb'
   const { scene } = useGLTF(path)
@@ -329,32 +407,30 @@ function FretboardOverlay({ colors }: {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
-      const mat = mesh.material as THREE.MeshStandardMaterial
-      if (!mat?.isMeshStandardMaterial) return
 
       if (mesh.name === 'Fretboard') {
-        mat.color = new THREE.Color(FRETBOARD_COLORS[board] ?? FRETBOARD_COLORS.rosewood)
-        mat.roughness = 0.48
-        mat.metalness = 0.02
-        mat.envMapIntensity = 1.4
-        mat.needsUpdate = true
+        applyIsolatedPartMaterial(mesh, 'FRETBOARD_material', colors.board ?? PART_TEST_COLORS.fretboard, {
+          metalness: 0.02,
+          roughness: 0.48,
+          envMapIntensity: 1.4,
+        })
       }
       if (mesh.name === 'Frets') {
-        mat.color = new THREE.Color('#C8C8C8')
-        mat.metalness = 0.85
-        mat.roughness = 0.2
-        mat.envMapIntensity = 1.8
-        mat.needsUpdate = true
+        applyIsolatedPartMaterial(mesh, 'FRETS_material', '#C8C8C8', {
+          metalness: 0.85,
+          roughness: 0.2,
+          envMapIntensity: 1.8,
+        })
       }
       if (mesh.name === 'Inlays') {
-        mat.color = new THREE.Color('#E8E8EC')
-        mat.roughness = 0.1
-        mat.metalness = 0.0
-        mat.envMapIntensity = 2.0
-        mat.needsUpdate = true
+        applyIsolatedPartMaterial(mesh, 'INLAYS_material', '#E8E8EC', {
+          metalness: 0.0,
+          roughness: 0.1,
+          envMapIntensity: 2.0,
+        })
       }
     })
-  }, [board, colors, model])
+  }, [colors.board, model])
 
   return (
     <primitive
@@ -433,7 +509,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
             <PickguardOverlay />
-            <NeckOverlay />
+            <NeckOverlay colors={colors} />
             <FretboardOverlay colors={colors} />
           </group>
         )}
