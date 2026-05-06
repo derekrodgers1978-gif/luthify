@@ -32,17 +32,6 @@ type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'ot
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
-useGLTF.preload('/models/fretboard_strat.glb')
-useGLTF.preload('/models/fretboard_gibson.glb')
-useGLTF.preload('/models/fender_style_pickguard_strat_s3.glb')
-useGLTF.preload('/models/fender_style_neck_no_fretboard.glb')
-
-const BURST_TEXTURE_PATHS: Record<string, string> = {
-  'burst-amber':   '/models/gretsch_orange_2k_sunburst.png',
-  'burst-vintage': '/models/gibson_tobacco_2k_sunburst.png',
-  'burst-cherry':  '/models/gibson_cherry_2k_sunburst.png',
-  'sunburst':      '/models/fender_2k_sunburst.png',
-}
 
 type FinishOption = {
   id?: string
@@ -76,6 +65,21 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
   gold: { color: '#CFB53B', metalness: 0.9, roughness: 0.2 },
   black: { color: '#1A1A1A', metalness: 0.7, roughness: 0.4 },
   'aged-brass': { color: '#B08D57', metalness: 0.85, roughness: 0.28 },
+}
+
+const BURST_EDGE_COLOR = '#020101'
+const BURST_TRANSITION_COLOR = '#160703'
+const BURST_MID_COLORS: Record<string, string> = {
+  'burst-amber': '#C07A2E',
+  'burst-vintage': '#8A401F',
+  'burst-cherry': '#8D2A2A',
+  sunburst: '#B94A12',
+}
+const BURST_CENTER_COLORS: Record<string, string> = {
+  'burst-amber': '#F2B84D',
+  'burst-vintage': '#E4A23A',
+  'burst-cherry': '#F2A33B',
+  sunburst: '#F5E4A0',
 }
 
 function materialRole(matName: string): MaterialRole {
@@ -115,41 +119,62 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
   }
 }
 
-function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
-  if (typeof document === 'undefined') return null
-  const canvas = document.createElement('canvas')
-  canvas.width = 1024
-  canvas.height = 1024
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  const cx = 512, cy = 520
-  const gradient = ctx.createRadialGradient(cx, cy, 40, cx, cy, 580)
-  if (colors.finishId === 'sunburst') {
-    gradient.addColorStop(0, '#F5E4A0')
-    gradient.addColorStop(0.35, '#D4903A')
-    gradient.addColorStop(0.65, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
-  } else if (colors.finishId === 'burst-cherry') {
-    gradient.addColorStop(0, '#E03040')
-    gradient.addColorStop(0.5, colors.finish)
-    gradient.addColorStop(1, '#050000')
-  } else {
-    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.3).getStyle())
-    gradient.addColorStop(0.55, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
+function applyBodyBurstShader(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  const finishId = colors.finishId ?? ''
+  const midColor = new THREE.Color(BURST_MID_COLORS[finishId] ?? colors.finish)
+  const centerColor = new THREE.Color(BURST_CENTER_COLORS[finishId] ?? '#F2B84D')
+
+  mat.defines = { ...(mat.defines ?? {}), USE_UV: '' }
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uMidColor = { value: midColor }
+    shader.uniforms.uCenterColor = { value: centerColor }
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform vec3 uMidColor;
+uniform vec3 uCenterColor;
+
+float bodyBurstNoise(vec2 uv) {
+  return fract(sin(dot(uv, vec2(127.1, 311.7))) * 43758.5453123) - 0.5;
+}
+
+vec3 bodyBurstColor(float edgeDistance, vec2 uv) {
+  float edge = edgeDistance;
+  vec3 black = vec3(0.005, 0.003, 0.002);
+  vec3 darkBrown = vec3(0.07, 0.025, 0.01);
+  vec3 mid = uMidColor;
+  vec3 center = uCenterColor;
+
+  float t1 = smoothstep(0.00, 0.10, edge);
+  float t2 = smoothstep(0.10, 0.28, edge);
+  float t3 = smoothstep(0.28, 0.55, edge);
+
+  vec3 color = mix(black, darkBrown, t1);
+  color = mix(color, mid, t2);
+  color = mix(color, center, t3);
+
+  float noise = bodyBurstNoise(uv * 1024.0);
+  color += noise * 0.015 * smoothstep(0.03, 0.18, edge);
+
+  return clamp(color, 0.0, 1.0);
+}`
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+float bodyBurstEdgeDistance = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)) * 2.0;
+diffuseColor.rgb *= bodyBurstColor(clamp(bodyBurstEdgeDistance, 0.0, 1.0), vUv);`
+      )
   }
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, 1024, 1024)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.needsUpdate = true
-  return texture
+  mat.customProgramCacheKey = () => `body-burst-${finishId}-${colors.finish}`
 }
 
 function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
   if (colors.finishStyle === 'burst') {
     mat.color = new THREE.Color('#FFFFFF')
-    mat.map = makeBurstTexture(colors)
+    mat.map = null
+    applyBodyBurstShader(mat, colors)
   } else {
     mat.color = new THREE.Color(colors.finish)
     mat.map = null
@@ -168,14 +193,6 @@ function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   mat.color = new THREE.Color(colors.neck)
   mat.metalness = 0.02
   mat.roughness = 0.44
-}
-
-function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
-  return {
-    color: colors.hardware,
-    metalness: colors.hardwareMetalness,
-    roughness: colors.hardwareRoughness,
-  }
 }
 
 function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
@@ -228,144 +245,6 @@ function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typ
   mat.needsUpdate = true
 }
 
-function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors> }) {
-  const pickups = useConfigStore(s => s.pickups)
-  const bridge = useConfigStore(s => s.bridge)
-  const pickupZ = [-0.17, -0.05, 0.08]
-  const singleCoils = (
-    <group>
-      {pickupZ.map(z => (
-        <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-          <boxGeometry args={[0.095, 0.017, 0.032]} />
-          <meshStandardMaterial color="#f5f0e6" metalness={0.02} roughness={0.35} />
-        </mesh>
-      ))}
-    </group>
-  )
-  const humbucker = (z: number) => (
-    <mesh key={z} position={[-0.03, 0.014, z]} rotation={[0, 0.02, 0]}>
-      <boxGeometry args={[0.11, 0.017, 0.048]} />
-      <meshStandardMaterial color="#101014" metalness={0.22} roughness={0.32} />
-    </mesh>
-  )
-
-  return (
-    <group>
-      {(pickups === 'singlecoil' || pickups === 'hss') && singleCoils}
-      {(pickups === 'dual-hum' || pickups === 'active-hum') && <group>{humbucker(-0.15)}{humbucker(0.04)}</group>}
-      {pickups === 'p90' && <group>{pickupZ.map(z => humbucker(z))}</group>}
-      {pickups === 'hss' && humbucker(-0.17)}
-
-      {bridge === 'trem' && (
-        <mesh position={[-0.03, 0.01, -0.24]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.15, 0.012, 0.06]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-      {bridge === 'hardtail' && (
-        <mesh position={[-0.03, 0.01, -0.24]}>
-          <boxGeometry args={[0.13, 0.014, 0.045]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-      {bridge === 'tuneomatic' && (
-        <group>
-          <mesh position={[-0.03, 0.012, -0.22]}>
-            <boxGeometry args={[0.115, 0.012, 0.022]} />
-            <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-          </mesh>
-          <mesh position={[-0.03, 0.012, -0.265]}>
-            <boxGeometry args={[0.085, 0.011, 0.018]} />
-            <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-          </mesh>
-        </group>
-      )}
-      {bridge === 'bigsby' && (
-        <mesh position={[-0.03, 0.01, -0.245]}>
-          <cylinderGeometry args={[0.018, 0.018, 0.13, 16]} />
-          <meshStandardMaterial {...hardwareMaterialProps(colors)} />
-        </mesh>
-      )}
-    </group>
-  )
-}
-
-function PickguardOverlay() {
-  const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0.001]}
-      name="PICKGUARD"
-    />
-  )
-}
-
-function NeckOverlay() {
-  const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0.001]}
-      name="NECK_NO_FRETBOARD"
-    />
-  )
-}
-
-// TODO: Replace s-style-electric.glb with a brand-neutral model
-function FretboardOverlay({ colors }: {
-  colors: ReturnType<typeof makeColors>
-}) {
-  const board = useConfigStore(s => s.fretboard)
-  const shape = useConfigStore(s => s.shape)
-  const path = shape === 'modern-s' ? '/models/fretboard_strat.glb' : '/models/fretboard_gibson.glb'
-  const { scene } = useGLTF(path)
-
-  const model = useMemo(() => scene.clone(true), [scene])
-
-  useEffect(() => {
-    model.traverse(obj => {
-      if (!(obj as THREE.Mesh).isMesh) return
-      const mesh = obj as THREE.Mesh
-      const mat = mesh.material as THREE.MeshStandardMaterial
-      if (!mat?.isMeshStandardMaterial) return
-
-      if (mesh.name === 'Fretboard') {
-        mat.color = new THREE.Color(FRETBOARD_COLORS[board] ?? FRETBOARD_COLORS.rosewood)
-        mat.roughness = 0.48
-        mat.metalness = 0.02
-        mat.envMapIntensity = 1.4
-        mat.needsUpdate = true
-      }
-      if (mesh.name === 'Frets') {
-        mat.color = new THREE.Color('#C8C8C8')
-        mat.metalness = 0.85
-        mat.roughness = 0.2
-        mat.envMapIntensity = 1.8
-        mat.needsUpdate = true
-      }
-      if (mesh.name === 'Inlays') {
-        mat.color = new THREE.Color('#E8E8EC')
-        mat.roughness = 0.1
-        mat.metalness = 0.0
-        mat.envMapIntensity = 2.0
-        mat.needsUpdate = true
-      }
-    })
-  }, [board, colors, model])
-
-  return (
-    <primitive
-      object={model}
-      position={[0.01, 0.008, 0.12]}
-      rotation={[0, Math.PI, 0]}
-      scale={0.014}
-    />
-  )
-}
-
 function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const store = useConfigStore()
   const shape = BODY_SHAPES.find(s => s.id === store.shape) ?? BODY_SHAPES[0]
@@ -403,13 +282,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       if (shape.id === 'modern-s') {
-        console.log('Mesh:', mesh.name, '| Material:',
-          Array.isArray(mesh.material)
-            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
-            : (mesh.material as THREE.Material).name
-        )
-      }
-      if (shape.id === 'modern-s') {
         materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors)
         })
@@ -429,27 +301,8 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && (
-          <group scale={0.74}>
-            <StratOptionOverlays colors={colors} />
-            <PickguardOverlay />
-            <NeckOverlay />
-            <FretboardOverlay colors={colors} />
-          </group>
-        )}
       </group>
     </Center>
-  )
-}
-
-function ModelLoading() {
-  return (
-    <group>
-      <mesh>
-        <torusGeometry args={[0.8, 0.025, 12, 72]} />
-        <meshStandardMaterial color="#C9A45C" transparent opacity={0.28} />
-      </mesh>
-    </group>
   )
 }
 
@@ -529,7 +382,7 @@ function Scene({ view }: { view: 'standard' | 'detail' }) {
       <pointLight position={[3, -1, 3]} color="#fff6df" intensity={0.42} />
       <Environment preset="studio" />
       <ContactShadows position={[0, -2.35, -0.06]} opacity={0.32} scale={7.2} blur={3.1} far={4} color="#000000" />
-      <Suspense fallback={<ModelLoading />}>
+      <Suspense fallback={null}>
         <Bounds fit clip observe margin={1.28}>
           <GlbInstrument view={view} />
         </Bounds>
