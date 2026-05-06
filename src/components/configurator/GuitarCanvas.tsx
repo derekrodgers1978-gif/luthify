@@ -269,10 +269,10 @@ float bodyBurstSegmentDistance(vec2 p, vec2 a, vec2 b) {
 
 vec3 bodySilhouetteBurstColor(vec2 p) {
   float edgeDistance = 100000.0;
-  for (int i = 0; i < ${BURST_OUTLINE_POINT_COUNT}; i++) {
-    int nextIndex = i == ${BURST_OUTLINE_POINT_COUNT - 1} ? 0 : i + 1;
-    edgeDistance = min(edgeDistance, bodyBurstSegmentDistance(p, uBurstOutline[i], uBurstOutline[nextIndex]));
+  for (int i = 0; i < ${BURST_OUTLINE_POINT_COUNT - 1}; i++) {
+    edgeDistance = min(edgeDistance, bodyBurstSegmentDistance(p, uBurstOutline[i], uBurstOutline[i + 1]));
   }
+  edgeDistance = min(edgeDistance, bodyBurstSegmentDistance(p, uBurstOutline[${BURST_OUTLINE_POINT_COUNT - 1}], uBurstOutline[0]));
 
   float fade = smoothstep(0.0, uBurstFeather, edgeDistance);
   vec3 rimToMiddle = mix(uBurstEdgeColor, uBurstMiddleColor, smoothstep(0.04, 0.42, fade));
