@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
 export function logMeshDebug(scene: any) {
-  scene.traverse((obj) => {
+  scene.traverse((obj: THREE.Object3D) => {
     if (obj.isMesh) {
       const box = new THREE.Box3().setFromObject(obj)
       const size = box.getSize(new THREE.Vector3())
