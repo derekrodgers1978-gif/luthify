@@ -121,38 +121,50 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
 
 function applyBodyBurstShader(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
   const finishId = colors.finishId ?? ''
-  const edgeColor = new THREE.Color(BURST_EDGE_COLOR)
-  const transitionColor = new THREE.Color(BURST_TRANSITION_COLOR)
   const midColor = new THREE.Color(BURST_MID_COLORS[finishId] ?? colors.finish)
   const centerColor = new THREE.Color(BURST_CENTER_COLORS[finishId] ?? '#F2B84D')
 
   mat.defines = { ...(mat.defines ?? {}), USE_UV: '' }
   mat.onBeforeCompile = shader => {
-    shader.uniforms.uBurstEdgeColor = { value: edgeColor }
-    shader.uniforms.uBurstTransitionColor = { value: transitionColor }
-    shader.uniforms.uBurstMidColor = { value: midColor }
-    shader.uniforms.uBurstCenterColor = { value: centerColor }
+    shader.uniforms.uMidColor = { value: midColor }
+    shader.uniforms.uCenterColor = { value: centerColor }
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
         `#include <common>
-uniform vec3 uBurstEdgeColor;
-uniform vec3 uBurstTransitionColor;
-uniform vec3 uBurstMidColor;
-uniform vec3 uBurstCenterColor;
+uniform vec3 uMidColor;
+uniform vec3 uCenterColor;
 
-vec3 bodyBurstColor(float edgeDistance) {
-  if (edgeDistance <= 0.08) return uBurstEdgeColor;
-  if (edgeDistance <= 0.18) return uBurstTransitionColor;
-  if (edgeDistance <= 0.36) return uBurstMidColor;
-  return uBurstCenterColor;
+float bodyBurstNoise(vec2 uv) {
+  return fract(sin(dot(uv, vec2(127.1, 311.7))) * 43758.5453123) - 0.5;
+}
+
+vec3 bodyBurstColor(float edgeDistance, vec2 uv) {
+  float edge = edgeDistance;
+  vec3 black = vec3(0.005, 0.003, 0.002);
+  vec3 darkBrown = vec3(0.07, 0.025, 0.01);
+  vec3 mid = uMidColor;
+  vec3 center = uCenterColor;
+
+  float t1 = smoothstep(0.00, 0.10, edge);
+  float t2 = smoothstep(0.10, 0.28, edge);
+  float t3 = smoothstep(0.28, 0.55, edge);
+
+  vec3 color = mix(black, darkBrown, t1);
+  color = mix(color, mid, t2);
+  color = mix(color, center, t3);
+
+  float noise = bodyBurstNoise(uv * 1024.0);
+  color += noise * 0.015 * smoothstep(0.03, 0.18, edge);
+
+  return clamp(color, 0.0, 1.0);
 }`
       )
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
 float bodyBurstEdgeDistance = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)) * 2.0;
-diffuseColor.rgb *= bodyBurstColor(clamp(bodyBurstEdgeDistance, 0.0, 1.0));`
+diffuseColor.rgb *= bodyBurstColor(clamp(bodyBurstEdgeDistance, 0.0, 1.0), vUv);`
       )
   }
   mat.customProgramCacheKey = () => `body-burst-${finishId}-${colors.finish}`
