@@ -553,7 +553,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       if (shape.id === 'modern-s') {
         const box = new THREE.Box3().setFromObject(mesh)
         const boxSize = box.getSize(new THREE.Vector3())
-        const worldPosition = mesh.getWorldPosition(new THREE.Vector3())
+        const worldPosition = box.getCenter(new THREE.Vector3())
         console.log(mesh.name, boxSize, worldPosition)
         if (MODERN_S_ORPHAN_FRAGMENT_NAMES.has(mesh.name)) {
           mesh.visible = false
