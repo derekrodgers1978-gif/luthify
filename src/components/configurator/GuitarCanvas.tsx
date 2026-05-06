@@ -37,13 +37,6 @@ useGLTF.preload('/models/fretboard_gibson.glb')
 useGLTF.preload('/models/fender_style_pickguard_strat_s3.glb')
 useGLTF.preload('/models/fender_style_neck_no_fretboard.glb')
 
-const BURST_TEXTURE_PATHS: Record<string, string> = {
-  'burst-amber':   '/models/gretsch_orange_2k_sunburst.png',
-  'burst-vintage': '/models/gibson_tobacco_2k_sunburst.png',
-  'burst-cherry':  '/models/gibson_cherry_2k_sunburst.png',
-  'sunburst':      '/models/fender_2k_sunburst.png',
-}
-
 type FinishOption = {
   id?: string
   hex?: string
@@ -88,6 +81,11 @@ function materialRole(matName: string): MaterialRole {
   return 'other'
 }
 
+function meshMaterialRole(mesh: THREE.Mesh, material: THREE.Material): MaterialRole {
+  const meshRole = materialRole(mesh.name)
+  return meshRole === 'other' ? materialRole(material.name) : meshRole
+}
+
 function blendHexColors(from: string, to: string, amount: number) {
   return `#${new THREE.Color(from).lerp(new THREE.Color(to), amount).getHexString()}`
 }
@@ -115,41 +113,120 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
   }
 }
 
-function makeBurstTexture(colors: ReturnType<typeof makeColors>) {
-  if (typeof document === 'undefined') return null
-  const canvas = document.createElement('canvas')
-  canvas.width = 1024
-  canvas.height = 1024
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  const cx = 512, cy = 520
-  const gradient = ctx.createRadialGradient(cx, cy, 40, cx, cy, 580)
-  if (colors.finishId === 'sunburst') {
-    gradient.addColorStop(0, '#F5E4A0')
-    gradient.addColorStop(0.35, '#D4903A')
-    gradient.addColorStop(0.65, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
-  } else if (colors.finishId === 'burst-cherry') {
-    gradient.addColorStop(0, '#E03040')
-    gradient.addColorStop(0.5, colors.finish)
-    gradient.addColorStop(1, '#050000')
-  } else {
-    gradient.addColorStop(0, new THREE.Color(colors.finish).addScalar(0.3).getStyle())
-    gradient.addColorStop(0.55, colors.finish)
-    gradient.addColorStop(1, colors.burstEdge ?? '#0A0300')
+const BODY_BURST_SHADER_KEY = 'body-local-position-burst-v1'
+
+function getBodyBounds(geometry?: THREE.BufferGeometry) {
+  if (!geometry) {
+    return { minX: -0.5, maxX: 0.5, minY: -0.5, maxY: 0.5 }
   }
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, 1024, 1024)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.needsUpdate = true
-  return texture
+  if (!geometry.boundingBox) {
+    geometry.computeBoundingBox()
+  }
+  const box = geometry.boundingBox
+  if (!box) {
+    return { minX: -0.5, maxX: 0.5, minY: -0.5, maxY: 0.5 }
+  }
+  const minX = box.min.x
+  const maxX = box.max.x === box.min.x ? box.min.x + 0.0001 : box.max.x
+  const minY = box.min.y
+  const maxY = box.max.y === box.min.y ? box.min.y + 0.0001 : box.max.y
+  return { minX, maxX, minY, maxY }
 }
 
-function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+function getBurstShaderColors(colors: ReturnType<typeof makeColors>) {
+  if (colors.finishId === 'sunburst') {
+    return {
+      centerColor: new THREE.Color('#F5E4A0'),
+      midColor: new THREE.Color('#B64B16'),
+    }
+  }
+  if (colors.finishId === 'burst-cherry') {
+    return {
+      centerColor: new THREE.Color('#E84A42'),
+      midColor: new THREE.Color(colors.finish),
+    }
+  }
+  if (colors.finishId === 'burst-vintage') {
+    return {
+      centerColor: new THREE.Color('#D99A45'),
+      midColor: new THREE.Color(colors.finish),
+    }
+  }
+  return {
+    centerColor: new THREE.Color(colors.finish).lerp(new THREE.Color('#FFD36A'), 0.68),
+    midColor: new THREE.Color(colors.finish),
+  }
+}
+
+function applyBodyBurstShader(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>, geometry?: THREE.BufferGeometry) {
+  const bounds = getBodyBounds(geometry)
+  const { centerColor, midColor } = getBurstShaderColors(colors)
+  mat.map = null
+  mat.color = new THREE.Color('#FFFFFF')
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uMinX = { value: bounds.minX }
+    shader.uniforms.uMaxX = { value: bounds.maxX }
+    shader.uniforms.uMinY = { value: bounds.minY }
+    shader.uniforms.uMaxY = { value: bounds.maxY }
+    shader.uniforms.uCenterColor = { value: centerColor.clone() }
+    shader.uniforms.uMidColor = { value: midColor.clone() }
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vLocalPosition;
+varying vec3 vLocalNormal;`
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+  vLocalPosition = position;
+  vLocalNormal = normal;`
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform float uMinX;
+uniform float uMaxX;
+uniform float uMinY;
+uniform float uMaxY;
+uniform vec3 uCenterColor;
+uniform vec3 uMidColor;
+varying vec3 vLocalPosition;
+varying vec3 vLocalNormal;`
+      )
+      .replace(
+        'vec4 diffuseColor = vec4( diffuse, opacity );',
+        `vec2 p = vec2(
+  (vLocalPosition.x - uMinX) / (uMaxX - uMinX),
+  (vLocalPosition.y - uMinY) / (uMaxY - uMinY)
+);
+
+vec2 center = vec2(0.47, 0.46);
+vec2 scale = vec2(0.82, 1.05);
+vec2 q = (p - center) / scale;
+float r = length(q);
+
+float outer = smoothstep(0.72, 0.93, r);
+float mid = smoothstep(0.42, 0.78, r);
+
+vec3 color = uCenterColor;
+color = mix(color, uMidColor, mid);
+color = mix(color, vec3(0.002, 0.001, 0.000), outer);
+
+float normalEdge = 1.0 - smoothstep(0.18, 0.75, abs(normalize(vLocalNormal).z));
+color *= 1.0 - normalEdge * 0.08;
+
+vec4 diffuseColor = vec4( color, opacity );`
+      )
+  }
+  mat.customProgramCacheKey = () => BODY_BURST_SHADER_KEY
+}
+
+function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>, geometry?: THREE.BufferGeometry) {
   if (colors.finishStyle === 'burst') {
-    mat.color = new THREE.Color('#FFFFFF')
-    mat.map = makeBurstTexture(colors)
+    applyBodyBurstShader(mat, colors, geometry)
   } else {
     mat.color = new THREE.Color(colors.finish)
     mat.map = null
@@ -178,7 +255,7 @@ function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
   }
 }
 
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, geometry?: THREE.BufferGeometry) {
   if (role === 'other') return
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
@@ -196,19 +273,18 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     mat.metalness = 0.02
     mat.roughness = 0.34
   } else if (role === 'body') {
-    applyBodyMaterial(mat, colors)
+    applyBodyMaterial(mat, colors, geometry)
   }
   mat.needsUpdate = true
 }
 
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function enhanceModernSMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>, geometry?: THREE.BufferGeometry) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
-  const role = materialRole(mat.name)
   if (role === 'other') return
   mat.envMapIntensity = 1.8
   if (role === 'body') {
-    applyBodyMaterial(mat, colors)
+    applyBodyMaterial(mat, colors, geometry)
   } else if (role === 'neck') {
     mat.color = new THREE.Color(colors.neck)
     mat.metalness = 0.02
@@ -411,13 +487,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors)
+          enhanceModernSMaterial(meshMaterialRole(mesh, mat), mat, colors, mesh.geometry)
         })
         return
       }
 
       materials.forEach(mat => {
-        enhanceMaterial(materialRole(mat.name), mat, colors)
+        enhanceMaterial(meshMaterialRole(mesh, mat), mat, colors, mesh.geometry)
       })
     })
   }, [colors, model, shape.id])
