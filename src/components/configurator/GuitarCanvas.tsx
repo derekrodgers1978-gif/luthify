@@ -18,6 +18,32 @@ const MODEL_ROTATION: Record<string, [number, number, number]> = {
   resonator: [Math.PI / 2, 0, 0],
 }
 
+const FLOATING_STRAY_MESH_NAMES = new Set([
+  'CONTROL_HOLE_01',
+  'CONTROL_HOLE_02',
+  'CONTROL_HOLE_03',
+  'SCREW_HOLE_01',
+  'SCREW_HOLE_02',
+  'SCREW_HOLE_03',
+  'SCREW_HOLE_04',
+  'SCREW_HOLE_05',
+  'SCREW_HOLE_06',
+  'SCREW_HOLE_07',
+  'SCREW_HOLE_08',
+  'SCREW_HOLE_09',
+  'SCREW_HOLE_10',
+  'SCREW_HOLE_11',
+  'SINGLE_COIL_CUTOUT_1',
+  'SINGLE_COIL_CUTOUT_2',
+  'SINGLE_COIL_CUTOUT_3',
+  'TUNER_HOLE_01',
+  'TUNER_HOLE_02',
+  'TUNER_HOLE_03',
+  'TUNER_HOLE_04',
+  'TUNER_HOLE_05',
+  'TUNER_HOLE_06',
+])
+
 const CAMERA_DISTANCE: Record<string, number> = {
   cello: 8.4,
   baritone: 7.6,
@@ -112,6 +138,41 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
     hardwareRoughness: hardware.roughness,
     strings: '#DDE2EA',
     pickguard: '#F2EEE2',
+  }
+}
+
+function materialName(material: THREE.Material | THREE.Material[]) {
+  return Array.isArray(material)
+    ? material.map(mat => mat.name || '(unnamed)').join(', ')
+    : material.name || '(unnamed)'
+}
+
+function logMeshDiagnostics(mesh: THREE.Mesh) {
+  mesh.updateWorldMatrix(true, false)
+  const position = mesh.geometry.getAttribute('position')
+  const boundingBoxSize = new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3())
+  const worldPosition = mesh.getWorldPosition(new THREE.Vector3())
+
+  console.log('Mesh diagnostics:', {
+    name: mesh.name,
+    vertexCount: position?.count ?? 0,
+    boundingBoxSize: {
+      x: boundingBoxSize.x,
+      y: boundingBoxSize.y,
+      z: boundingBoxSize.z,
+    },
+    worldPosition: {
+      x: worldPosition.x,
+      y: worldPosition.y,
+      z: worldPosition.z,
+    },
+    materialName: materialName(mesh.material),
+  })
+}
+
+function hideFloatingStrayMesh(mesh: THREE.Mesh) {
+  if (FLOATING_STRAY_MESH_NAMES.has(mesh.name)) {
+    mesh.visible = false
   }
 }
 
@@ -292,10 +353,20 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
 
 function PickguardOverlay() {
   const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
+  const model = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      const mesh = obj as THREE.Mesh
+      logMeshDiagnostics(mesh)
+      hideFloatingStrayMesh(mesh)
+    })
+  }, [model])
 
   return (
     <primitive
-      object={scene}
+      object={model}
       position={[0, 0, 0.001]}
       name="PICKGUARD"
     />
@@ -304,10 +375,20 @@ function PickguardOverlay() {
 
 function NeckOverlay() {
   const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
+  const model = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      const mesh = obj as THREE.Mesh
+      logMeshDiagnostics(mesh)
+      hideFloatingStrayMesh(mesh)
+    })
+  }, [model])
 
   return (
     <primitive
-      object={scene}
+      object={model}
       position={[0, 0, 0.001]}
       name="NECK_NO_FRETBOARD"
     />
@@ -329,6 +410,8 @@ function FretboardOverlay({ colors }: {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
+      logMeshDiagnostics(mesh)
+      hideFloatingStrayMesh(mesh)
       const mat = mesh.material as THREE.MeshStandardMaterial
       if (!mat?.isMeshStandardMaterial) return
 
@@ -387,9 +470,12 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
+    model.updateWorldMatrix(true, true)
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
+      logMeshDiagnostics(mesh)
+      hideFloatingStrayMesh(mesh)
       mesh.castShadow = true
       mesh.receiveShadow = true
       if (!mesh.userData.baseMaterials) {
@@ -402,13 +488,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         ? baseMaterials.map(mat => mat.clone())
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      if (shape.id === 'modern-s') {
-        console.log('Mesh:', mesh.name, '| Material:',
-          Array.isArray(mesh.material)
-            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
-            : (mesh.material as THREE.Material).name
-        )
-      }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors)
