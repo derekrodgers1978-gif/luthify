@@ -78,6 +78,48 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
   'aged-brass': { color: '#B08D57', metalness: 0.85, roughness: 0.28 },
 }
 
+const STRAY_FRAGMENT_MESH_NAMES = new Set([
+  'SINGLE_COIL_CUTOUT_1',
+  'SINGLE_COIL_CUTOUT_2',
+  'SINGLE_COIL_CUTOUT_3',
+  'CONTROL_HOLE_01',
+  'CONTROL_HOLE_02',
+  'CONTROL_HOLE_03',
+  'SCREW_HOLE_01',
+  'SCREW_HOLE_02',
+  'SCREW_HOLE_03',
+  'SCREW_HOLE_04',
+  'SCREW_HOLE_05',
+  'SCREW_HOLE_06',
+  'SCREW_HOLE_07',
+  'SCREW_HOLE_08',
+  'SCREW_HOLE_09',
+  'SCREW_HOLE_10',
+  'SCREW_HOLE_11',
+  'TUNER_HOLE_01',
+  'TUNER_HOLE_02',
+  'TUNER_HOLE_03',
+  'TUNER_HOLE_04',
+  'TUNER_HOLE_05',
+  'TUNER_HOLE_06',
+])
+
+function logMeshDiagnostics(mesh: THREE.Mesh) {
+  console.log({
+    name: mesh.name,
+    visible: mesh.visible,
+    position: mesh.getWorldPosition(new THREE.Vector3()).toArray(),
+    size: new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3()).toArray()
+  })
+}
+
+function hideStrayFragmentMesh(mesh: THREE.Mesh) {
+  logMeshDiagnostics(mesh)
+  if (STRAY_FRAGMENT_MESH_NAMES.has(mesh.name)) {
+    mesh.visible = false
+  }
+}
+
 function materialRole(matName: string): MaterialRole {
   const name = matName.toLowerCase()
   if (name.includes('body')) return 'body'
@@ -292,10 +334,18 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
 
 function PickguardOverlay() {
   const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
+  const model = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      hideStrayFragmentMesh(obj as THREE.Mesh)
+    })
+  }, [model])
 
   return (
     <primitive
-      object={scene}
+      object={model}
       position={[0, 0, 0.001]}
       name="PICKGUARD"
     />
@@ -304,10 +354,18 @@ function PickguardOverlay() {
 
 function NeckOverlay() {
   const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
+  const model = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      hideStrayFragmentMesh(obj as THREE.Mesh)
+    })
+  }, [model])
 
   return (
     <primitive
-      object={scene}
+      object={model}
       position={[0, 0, 0.001]}
       name="NECK_NO_FRETBOARD"
     />
@@ -329,6 +387,7 @@ function FretboardOverlay({ colors }: {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
+      hideStrayFragmentMesh(mesh)
       const mat = mesh.material as THREE.MeshStandardMaterial
       if (!mat?.isMeshStandardMaterial) return
 
@@ -390,6 +449,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
+      hideStrayFragmentMesh(mesh)
       mesh.castShadow = true
       mesh.receiveShadow = true
       if (!mesh.userData.baseMaterials) {
@@ -402,13 +462,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         ? baseMaterials.map(mat => mat.clone())
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      if (shape.id === 'modern-s') {
-        console.log('Mesh:', mesh.name, '| Material:',
-          Array.isArray(mesh.material)
-            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
-            : (mesh.material as THREE.Material).name
-        )
-      }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors)
