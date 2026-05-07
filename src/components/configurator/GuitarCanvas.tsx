@@ -390,6 +390,8 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
+      const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
+      console.log('MESH:', mesh.name, '| MAT:', (mat as THREE.MeshStandardMaterial).name)
       mesh.castShadow = true
       mesh.receiveShadow = true
       if (!mesh.userData.baseMaterials) {
@@ -402,13 +404,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         ? baseMaterials.map(mat => mat.clone())
         : baseMaterials[0].clone()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      if (shape.id === 'modern-s') {
-        console.log('Mesh:', mesh.name, '| Material:',
-          Array.isArray(mesh.material)
-            ? (mesh.material as THREE.Material[]).map(m => m.name).join(', ')
-            : (mesh.material as THREE.Material).name
-        )
-      }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
           enhanceModernSMaterial(mat, colors)
