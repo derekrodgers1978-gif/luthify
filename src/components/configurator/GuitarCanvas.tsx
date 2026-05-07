@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bounds, Center, ContactShadows, Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
@@ -29,6 +29,53 @@ type ModernSMeshBounds = {
   name: string
   volume: number
   isBodyMesh: boolean
+}
+
+function selectModernSBodyMesh(model: THREE.Object3D) {
+  const modernSMeshBounds: ModernSMeshBounds[] = []
+
+  model.traverse(obj => {
+    if (!(obj as THREE.Mesh).isMesh) return
+    const mesh = obj as THREE.Mesh
+    mesh.visible = true
+  })
+
+  model.updateMatrixWorld(true)
+
+  model.traverse(obj => {
+    if (!(obj as THREE.Mesh).isMesh) return
+    const mesh = obj as THREE.Mesh
+    const box = new THREE.Box3().setFromObject(mesh)
+    if (box.isEmpty()) return
+
+    const size = box.getSize(new THREE.Vector3())
+    const volume = size.x * size.y * size.z
+    const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    modernSMeshBounds.push({
+      mesh,
+      name: mesh.name || '<unnamed>',
+      volume,
+      isBodyMesh: sourceMaterials.some(mat => materialRole(mat.name) === 'body'),
+    })
+  })
+
+  const bodyMeshBounds = modernSMeshBounds.filter(({ isBodyMesh }) => isBodyMesh)
+  const largestModernSMeshBounds = (bodyMeshBounds.length > 0 ? bodyMeshBounds : modernSMeshBounds).reduce<ModernSMeshBounds | null>(
+    (largest, current) => (!largest || current.volume > largest.volume ? current : largest),
+    null,
+  )
+
+  if (!largestModernSMeshBounds) {
+    throw new Error('No visible meshes found in modern-s model.')
+  }
+
+  modernSMeshBounds.forEach(({ mesh }) => {
+    if (mesh !== largestModernSMeshBounds.mesh) {
+      mesh.parent?.remove(mesh)
+    }
+  })
+
+  return largestModernSMeshBounds.mesh
 }
 
 function bodyModelPath(shape: { id: string; modelPath?: string }) {
@@ -380,83 +427,26 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
   const modelPath = bodyModelPath(shape) ?? bodyModelPath(BODY_SHAPES[0])!
   const { scene } = useGLTF(modelPath)
-  const { model, center, scale } = useMemo(() => {
+  const { model, center, scale, modernSBodyMesh } = useMemo(() => {
     const clone = scene.clone(true)
+    const modernSBodyMesh = shape.id === 'modern-s' ? selectModernSBodyMesh(clone) : null
     const box = new THREE.Box3().setFromObject(clone)
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
     const targetSize = MODEL_TARGET_SIZE.default
-    return { model: clone, center, scale: targetSize / maxDimension }
+    return { model: clone, center, scale: targetSize / maxDimension, modernSBodyMesh }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
-  useEffect(() => {
-    let largestModernSMesh: THREE.Mesh | null = null
-
-    if (shape.id === 'modern-s') {
-      const modernSMeshBounds: ModernSMeshBounds[] = []
-
-      model.traverse(obj => {
-        if (!(obj as THREE.Mesh).isMesh) return
-        const mesh = obj as THREE.Mesh
-        mesh.visible = true
-      })
-
-      model.updateMatrixWorld(true)
-
-      model.traverse(obj => {
-        if (!(obj as THREE.Mesh).isMesh) return
-        const mesh = obj as THREE.Mesh
-        if (!mesh.visible) return
-
-        const box = new THREE.Box3().setFromObject(mesh)
-        if (box.isEmpty()) return
-
-        const size = box.getSize(new THREE.Vector3())
-        const volume = size.x * size.y * size.z
-        const name = mesh.name || '<unnamed>'
-        const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-        const isBodyMesh = sourceMaterials.some(mat => materialRole(mat.name) === 'body')
-        console.log('[modern-s body-only] mesh volume:', name, volume)
-        modernSMeshBounds.push({
-          mesh,
-          name,
-          volume,
-          isBodyMesh,
-        })
-      })
-
-      const bodyMeshBounds = modernSMeshBounds.filter(({ isBodyMesh }) => isBodyMesh)
-      const largestModernSMeshBounds = (bodyMeshBounds.length > 0 ? bodyMeshBounds : modernSMeshBounds).reduce<ModernSMeshBounds | null>(
-        (largest, current) => (!largest || current.volume > largest.volume ? current : largest),
-        null,
-      )
-
-      if (!largestModernSMeshBounds) {
-        throw new Error('No visible meshes found in modern-s model.')
-      }
-
-      largestModernSMesh = largestModernSMeshBounds.mesh
-
-      const hiddenModernSMeshNames: string[] = []
-      modernSMeshBounds.forEach(({ mesh, name }) => {
-        const isLargestBodyMesh = mesh === largestModernSMesh
-        mesh.visible = isLargestBodyMesh
-        if (!isLargestBodyMesh) hiddenModernSMeshNames.push(name)
-      })
-
-      console.log('[modern-s body-only] showing mesh:', largestModernSMeshBounds.name)
-      console.log('[modern-s body-only] hidden meshes:', hiddenModernSMeshNames.join(', '))
-    }
-
+  useLayoutEffect(() => {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
 
       if (shape.id !== 'modern-s') {
         mesh.visible = true
-      } else if (mesh !== largestModernSMesh) {
+      } else if (mesh !== modernSBodyMesh) {
         return
       }
 
@@ -484,7 +474,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       })
     })
 
-  }, [colors, model, shape.id])
+  }, [colors, model, modernSBodyMesh, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
@@ -493,11 +483,11 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         {shape.id === 'modern-s' ? (
-          <group rotation={[Math.PI, 0, 0]}>
+          <group key={model.uuid} rotation={[0, 0, Math.PI]}>
             <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
           </group>
         ) : (
-          <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+          <primitive key={model.uuid} object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
         )}
       </group>
     </Center>
