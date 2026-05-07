@@ -22,7 +22,7 @@ const CAMERA_DISTANCE: Record<string, number> = {
 
 type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
 
-const MODERN_S_BODY_MODEL_PATH = '/models/fender_style_strat_3tone_sunburst.glb'
+const MODERN_S_BODY_MODEL_PATH = '/models/s-style-electric.glb'
 
 function bodyModelPath(shape: { id: string; modelPath?: string }) {
   return shape.id === 'modern-s' ? MODERN_S_BODY_MODEL_PATH : shape.modelPath
@@ -385,15 +385,27 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
+    let foundModernSBodyMaterial = false
+    const modernSMeshMaterialReport: string[] = []
+
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
-      if (shape.id === 'modern-s') {
-        mesh.visible = mesh.name === 'BODY'
-        if (!mesh.visible) return
-      }
       const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
-      console.log('MESH:', mesh.name, '| MAT:', (mat as THREE.MeshStandardMaterial).name)
+      const matName = (mat as THREE.MeshStandardMaterial).name
+
+      if (shape.id === 'modern-s') {
+        modernSMeshMaterialReport.push(`mesh="${mesh.name || '<unnamed>'}" material="${matName || '<unnamed>'}"`)
+        if (matName !== 'BodyMaterial') {
+          mesh.visible = false
+          return
+        }
+        foundModernSBodyMaterial = true
+        mesh.visible = true
+      } else {
+        mesh.visible = true
+      }
+
       mesh.castShadow = true
       mesh.receiveShadow = true
       if (!mesh.userData.baseMaterials) {
@@ -417,6 +429,10 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         enhanceMaterial(materialRole(mat.name), mat, colors)
       })
     })
+
+    if (shape.id === 'modern-s' && !foundModernSBodyMaterial) {
+      throw new Error(`No mesh with material name BodyMaterial found in modern-s model. Mesh/material report: ${modernSMeshMaterialReport.join('; ')}`)
+    }
   }, [colors, model, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
