@@ -503,7 +503,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
             <PickguardOverlay />
-            <NeckOverlay />
             <FretboardOverlay colors={colors} />
           </group>
         )}
