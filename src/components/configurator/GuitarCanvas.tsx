@@ -489,7 +489,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         {shape.id === 'modern-s' ? (
-          <group key={model.uuid} rotation={[0, Math.PI, Math.PI]}>
+          <group key={model.uuid} rotation={[0, 0, Math.PI]}>
             <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
           </group>
         ) : (
