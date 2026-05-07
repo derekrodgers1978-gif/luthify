@@ -6,6 +6,9 @@ import * as THREE from 'three'
 import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
 
+const STRAT_BODY_MODEL_PATH = '/models/fender_style_strat_3tone_sunburst.glb'
+const BODY_MESH_NAME = 'BODY'
+
 const MODEL_TARGET_SIZE: Record<string, number> = {
   cello: 4.8,
   banjo: 4.4,
@@ -30,12 +33,11 @@ const CAMERA_DISTANCE: Record<string, number> = {
 
 type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
 
-const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
+const MODEL_PATHS = [
+  ...BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean),
+  STRAT_BODY_MODEL_PATH,
+] as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
-useGLTF.preload('/models/fretboard_strat.glb')
-useGLTF.preload('/models/fretboard_gibson.glb')
-useGLTF.preload('/models/fender_style_pickguard_strat_s3.glb')
-useGLTF.preload('/models/fender_style_neck_no_fretboard.glb')
 
 const BURST_TEXTURE_PATHS: Record<string, string> = {
   'burst-amber':   '/models/gretsch_orange_2k_sunburst.png',
@@ -156,6 +158,24 @@ function applyBodyMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   }
   mat.metalness = 0.04
   mat.roughness = Math.min(colors.finishRoughness ?? 0.24, 0.24)
+}
+
+function findNamedMesh(root: THREE.Object3D, name: string) {
+  let result: THREE.Mesh | null = null
+  root.traverse(obj => {
+    if (!result && (obj as THREE.Mesh).isMesh && obj.name === name) {
+      result = obj as THREE.Mesh
+    }
+  })
+  return result
+}
+
+function cloneMeshOnly(mesh: THREE.Mesh) {
+  mesh.updateWorldMatrix(true, false)
+  const clone = mesh.clone(false)
+  clone.matrix.copy(mesh.matrixWorld)
+  clone.matrixAutoUpdate = false
+  return clone
 }
 
 function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
@@ -373,16 +393,29 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
+  const modelPath = shape.id === 'modern-s'
+    ? STRAT_BODY_MODEL_PATH
+    : shape.modelPath ?? BODY_SHAPES[0].modelPath!
   const { scene } = useGLTF(modelPath)
   const { model, center, scale } = useMemo(() => {
     const clone = scene.clone(true)
-    const box = new THREE.Box3().setFromObject(clone)
+    const model = new THREE.Group()
+    if (shape.id === 'modern-s') {
+      const bodyMesh = findNamedMesh(clone, BODY_MESH_NAME)
+      if (!bodyMesh) {
+        throw new Error(`${BODY_MESH_NAME} mesh not found in ${STRAT_BODY_MODEL_PATH}`)
+      }
+      model.name = `${BODY_MESH_NAME}_MODULE`
+      model.add(cloneMeshOnly(bodyMesh))
+    } else {
+      model.add(clone)
+    }
+    const box = new THREE.Box3().setFromObject(model)
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
     const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
-    return { model: clone, center, scale: targetSize / maxDimension }
+    return { model, center, scale: targetSize / maxDimension }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
@@ -390,8 +423,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
-      const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
-      console.log('MESH:', mesh.name, '| MAT:', (mat as THREE.MeshStandardMaterial).name)
       mesh.castShadow = true
       mesh.receiveShadow = true
       if (!mesh.userData.baseMaterials) {
@@ -406,7 +437,11 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors)
+          const material = mat as THREE.MeshStandardMaterial
+          if (!material.isMeshStandardMaterial || mesh.name !== BODY_MESH_NAME) return
+          material.envMapIntensity = 1.8
+          applyBodyMaterial(material, colors)
+          material.needsUpdate = true
         })
         return
       }
@@ -424,14 +459,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
-        {shape.id === 'modern-s' && (
-          <group scale={0.74}>
-            <StratOptionOverlays colors={colors} />
-            <PickguardOverlay />
-            <NeckOverlay />
-            <FretboardOverlay colors={colors} />
-          </group>
-        )}
       </group>
     </Center>
   )
