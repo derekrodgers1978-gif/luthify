@@ -51,9 +51,11 @@ function selectModernSBodyMesh(model: THREE.Object3D) {
     const size = box.getSize(new THREE.Vector3())
     const volume = size.x * size.y * size.z
     const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    const name = mesh.name || '<unnamed>'
+    console.log('[modern-s body-only] mesh volume:', name, volume)
     modernSMeshBounds.push({
       mesh,
-      name: mesh.name || '<unnamed>',
+      name,
       volume,
       isBodyMesh: sourceMaterials.some(mat => materialRole(mat.name) === 'body'),
     })
@@ -69,11 +71,15 @@ function selectModernSBodyMesh(model: THREE.Object3D) {
     throw new Error('No visible meshes found in modern-s model.')
   }
 
-  modernSMeshBounds.forEach(({ mesh }) => {
-    if (mesh !== largestModernSMeshBounds.mesh) {
-      mesh.parent?.remove(mesh)
-    }
+  const hiddenModernSMeshNames: string[] = []
+  modernSMeshBounds.forEach(({ mesh, name }) => {
+    const isLargestBodyMesh = mesh === largestModernSMeshBounds.mesh
+    mesh.visible = isLargestBodyMesh
+    if (!isLargestBodyMesh) hiddenModernSMeshNames.push(name)
   })
+
+  console.log('[modern-s body-only] showing mesh:', largestModernSMeshBounds.name)
+  console.log('[modern-s body-only] hidden meshes:', hiddenModernSMeshNames.join(', '))
 
   return largestModernSMeshBounds.mesh
 }
@@ -429,12 +435,12 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const { scene } = useGLTF(modelPath)
   const { model, center, scale, modernSBodyMesh } = useMemo(() => {
     const clone = scene.clone(true)
-    const modernSBodyMesh = shape.id === 'modern-s' ? selectModernSBodyMesh(clone) : null
     const box = new THREE.Box3().setFromObject(clone)
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
     const targetSize = MODEL_TARGET_SIZE.default
+    const modernSBodyMesh = shape.id === 'modern-s' ? selectModernSBodyMesh(clone) : null
     return { model: clone, center, scale: targetSize / maxDimension, modernSBodyMesh }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
