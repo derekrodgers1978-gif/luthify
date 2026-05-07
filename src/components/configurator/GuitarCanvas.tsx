@@ -27,8 +27,7 @@ const MODERN_S_BODY_MODEL_PATH = '/models/s-style-electric.glb'
 type ModernSMeshBounds = {
   mesh: THREE.Mesh
   name: string
-  size: THREE.Vector3
-  bodyScore: number
+  volume: number
 }
 
 function bodyModelPath(shape: { id: string; modelPath?: string }) {
@@ -95,12 +94,6 @@ function materialRole(matName: string): MaterialRole {
 
 function blendHexColors(from: string, to: string, amount: number) {
   return `#${new THREE.Color(from).lerp(new THREE.Color(to), amount).getHexString()}`
-}
-
-function modernSBodyScore(size: THREE.Vector3) {
-  // The body is the broadest visible face; long floating parts should not outrank it by length.
-  const dimensions = [size.x, size.y, size.z].sort((a, b) => b - a)
-  return dimensions[0] * dimensions[1]
 }
 
 function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOption, hw?: HardwareOption) {
@@ -420,23 +413,18 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         if (box.isEmpty()) return
 
         const size = box.getSize(new THREE.Vector3())
+        const volume = size.x * size.y * size.z
+        const name = mesh.name || '<unnamed>'
+        console.log('[modern-s body-only] mesh volume:', name, volume)
         modernSMeshBounds.push({
           mesh,
-          name: mesh.name || '<unnamed>',
-          size,
-          bodyScore: modernSBodyScore(size),
+          name,
+          volume,
         })
       })
 
-      console.info(
-        '[modern-s body-only] visible mesh bounds:',
-        modernSMeshBounds
-          .map(({ name, size }) => `${name}=(${size.x.toFixed(6)}, ${size.y.toFixed(6)}, ${size.z.toFixed(6)})`)
-          .join('; '),
-      )
-
       const largestModernSMeshBounds = modernSMeshBounds.reduce<ModernSMeshBounds | null>(
-        (largest, current) => (!largest || current.bodyScore > largest.bodyScore ? current : largest),
+        (largest, current) => (!largest || current.volume > largest.volume ? current : largest),
         null,
       )
 
@@ -453,8 +441,8 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         if (!isLargestBodyMesh) hiddenModernSMeshNames.push(name)
       })
 
-      console.info('[modern-s body-only] showing mesh:', largestModernSMeshBounds.name)
-      console.info('[modern-s body-only] hidden meshes:', hiddenModernSMeshNames.join(', '))
+      console.log('[modern-s body-only] showing mesh:', largestModernSMeshBounds.name)
+      console.log('[modern-s body-only] hidden meshes:', hiddenModernSMeshNames.join(', '))
     }
 
     model.traverse(obj => {
