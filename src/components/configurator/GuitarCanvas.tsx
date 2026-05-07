@@ -14,6 +14,7 @@ const MODEL_ROTATION: Record<string, [number, number, number]> = {
   'semi-hollow': [0, Math.PI / 2, 0],
   resonator: [Math.PI / 2, 0, 0],
 }
+const MODERN_S_FRONT_ROTATION: [number, number, number] = [0, Math.PI, 0]
 
 const CAMERA_DISTANCE: Record<string, number> = {
   cello: 8.4,
@@ -484,14 +485,17 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
   const yRotation = baseRotation[1] + (view === 'detail' ? -0.12 : 0.08)
+  const modelPosition: [number, number, number] = [-center.x * scale, -center.y * scale, -center.z * scale]
 
   return (
     <Center>
       {shape.id === 'modern-s' ? (
-        <primitive key={model.uuid} object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} rotation={[0, Math.PI, 0]} scale={scale} />
+        <group key={model.uuid} position={modelPosition} rotation={MODERN_S_FRONT_ROTATION} scale={scale}>
+          <primitive object={model} />
+        </group>
       ) : (
         <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
-          <primitive key={model.uuid} object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+          <primitive key={model.uuid} object={model} position={modelPosition} scale={scale} />
         </group>
       )}
     </Center>
