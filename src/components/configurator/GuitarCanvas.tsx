@@ -22,7 +22,13 @@ const CAMERA_DISTANCE: Record<string, number> = {
 
 type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
 
-const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
+const MODERN_S_BODY_MODEL_PATH = '/models/fender_style_strat_3tone_sunburst.glb'
+
+function bodyModelPath(shape: { id: string; modelPath?: string }) {
+  return shape.id === 'modern-s' ? MODERN_S_BODY_MODEL_PATH : shape.modelPath
+}
+
+const MODEL_PATHS = BODY_SHAPES.map(bodyModelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
 useGLTF.preload('/models/fretboard_strat.glb')
 useGLTF.preload('/models/fretboard_gibson.glb')
@@ -365,7 +371,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const neck = NECK_WOODS.find(n => n.id === store.neck)
   const board = FRETBOARDS.find(f => f.id === store.fretboard)
   const hw = HARDWARE_COLORS.find(h => h.id === store.hardware)
-  const modelPath = shape.modelPath ?? BODY_SHAPES[0].modelPath!
+  const modelPath = bodyModelPath(shape) ?? bodyModelPath(BODY_SHAPES[0])!
   const { scene } = useGLTF(modelPath)
   const { model, center, scale } = useMemo(() => {
     const clone = scene.clone(true)
@@ -382,6 +388,10 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
+      if (shape.id === 'modern-s') {
+        mesh.visible = mesh.name === 'BODY'
+        if (!mesh.visible) return
+      }
       const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
       console.log('MESH:', mesh.name, '| MAT:', (mat as THREE.MeshStandardMaterial).name)
       mesh.castShadow = true
