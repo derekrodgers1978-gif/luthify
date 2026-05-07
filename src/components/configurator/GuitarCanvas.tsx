@@ -28,7 +28,7 @@ const CAMERA_DISTANCE: Record<string, number> = {
   default: 6.4,
 }
 
-type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
+type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'strings' | 'pickguard' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -81,7 +81,8 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
 function materialRole(matName: string): MaterialRole {
   const name = matName.toLowerCase()
   if (name.includes('body')) return 'body'
-  if (name.includes('neck') || name.includes('wood') || name.includes('fret') || name.includes('board')) return 'neck'
+  if (name.includes('fret') || name.includes('board')) return 'fretboard'
+  if (name.includes('neck') || name.includes('wood')) return 'neck'
   if (name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
   if (name.includes('metal') || name.includes('chrome') || name.includes('hardware') || name.includes('knob')) return 'hardware'
   if (name.includes('string')) return 'strings'
@@ -164,12 +165,6 @@ function applyHardwareMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnTy
   mat.roughness = colors.hardwareRoughness
 }
 
-function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
-  mat.color = new THREE.Color(colors.neck)
-  mat.metalness = 0.02
-  mat.roughness = 0.44
-}
-
 function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
   return {
     color: colors.hardware,
@@ -178,30 +173,53 @@ function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
   }
 }
 
-function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function applyInstrumentOptionMaterial(
+  role: MaterialRole,
+  mesh: THREE.Mesh,
+  mat: THREE.MeshStandardMaterial,
+  colors: ReturnType<typeof makeColors>,
+  board: string,
+) {
+  if (role === 'neck') {
+    mat.color = new THREE.Color(colors.neck)
+    mat.metalness = 0.02
+    mat.roughness = 0.44
+    mat.needsUpdate = true
+  } else if (role === 'fretboard' || mesh.name === 'Fretboard') {
+    mat.color = new THREE.Color(FRETBOARD_COLORS[board] ?? FRETBOARD_COLORS.rosewood)
+    mat.roughness = 0.48
+    mat.metalness = 0.02
+    mat.envMapIntensity = 1.4
+    mat.needsUpdate = true
+  } else if (role === 'pickguard') {
+    mat.color = new THREE.Color(colors.pickguard)
+    mat.metalness = 0.02
+    mat.roughness = 0.34
+    mat.needsUpdate = true
+  }
+}
+
+function enhanceMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>, board: string) {
+  const role = materialRole(material.name)
   if (role === 'other') return
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   mat.envMapIntensity = 1.55
   if (role === 'hardware') {
     applyHardwareMaterial(mat, colors)
-  } else if (role === 'neck') {
-    applyWoodMaterial(mat, colors)
   } else if (role === 'strings') {
     mat.color = new THREE.Color(colors.strings)
     mat.metalness = 0.7
     mat.roughness = 0.26
-  } else if (role === 'pickguard') {
-    mat.color = new THREE.Color(colors.pickguard)
-    mat.metalness = 0.02
-    mat.roughness = 0.34
   } else if (role === 'body') {
     applyBodyMaterial(mat, colors)
+  } else {
+    applyInstrumentOptionMaterial(role, mesh, mat, colors, board)
   }
   mat.needsUpdate = true
 }
 
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function enhanceModernSMaterial(mesh: THREE.Mesh, material: THREE.Material, colors: ReturnType<typeof makeColors>, board: string) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
   const role = materialRole(mat.name)
@@ -209,21 +227,14 @@ function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typ
   mat.envMapIntensity = 1.8
   if (role === 'body') {
     applyBodyMaterial(mat, colors)
-  } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.02
-    mat.roughness = 0.44
-    mat.needsUpdate = true
   } else if (role === 'hardware') {
     applyHardwareMaterial(mat, colors)
   } else if (role === 'strings') {
     mat.color = new THREE.Color(colors.strings)
     mat.metalness = 0.7
     mat.roughness = 0.26
-  } else if (role === 'pickguard') {
-    mat.color = new THREE.Color(colors.pickguard)
-    mat.metalness = 0.02
-    mat.roughness = 0.34
+  } else {
+    applyInstrumentOptionMaterial(role, mesh, mat, colors, board)
   }
   mat.needsUpdate = true
 }
@@ -332,13 +343,7 @@ function FretboardOverlay({ colors }: {
       const mat = mesh.material as THREE.MeshStandardMaterial
       if (!mat?.isMeshStandardMaterial) return
 
-      if (mesh.name === 'Fretboard') {
-        mat.color = new THREE.Color(FRETBOARD_COLORS[board] ?? FRETBOARD_COLORS.rosewood)
-        mat.roughness = 0.48
-        mat.metalness = 0.02
-        mat.envMapIntensity = 1.4
-        mat.needsUpdate = true
-      }
+      applyInstrumentOptionMaterial(materialRole(mat.name), mesh, mat, colors, board)
       if (mesh.name === 'Frets') {
         mat.color = new THREE.Color('#C8C8C8')
         mat.metalness = 0.85
@@ -411,13 +416,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors)
+          enhanceModernSMaterial(mesh, mat, colors, store.fretboard)
         })
         return
       }
 
       materials.forEach(mat => {
-        enhanceMaterial(materialRole(mat.name), mat, colors)
+        enhanceMaterial(mesh, mat, colors, store.fretboard)
       })
     })
   }, [colors, model, shape.id])
