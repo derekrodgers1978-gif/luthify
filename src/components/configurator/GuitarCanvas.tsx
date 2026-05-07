@@ -7,9 +7,6 @@ import { useConfigStore } from '@/store/configStore'
 import { BODY_SHAPES, FINISHES, FRETBOARDS, HARDWARE_COLORS, NECK_WOODS } from '@/lib/configurator-options'
 
 const MODEL_TARGET_SIZE: Record<string, number> = {
-  cello: 4.8,
-  banjo: 4.4,
-  baritone: 4.6,
   default: 4.25,
 }
 
@@ -20,12 +17,7 @@ const MODEL_ROTATION: Record<string, [number, number, number]> = {
 
 const CAMERA_DISTANCE: Record<string, number> = {
   cello: 8.4,
-  baritone: 7.6,
-  banjo: 7.2,
-  'jazz-hollow': 7.1,
-  classical: 7.1,
-  resonator: 7.2,
-  default: 6.4,
+  default: 8,
 }
 
 type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
@@ -381,7 +373,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
-    const targetSize = MODEL_TARGET_SIZE[shape.id] ?? MODEL_TARGET_SIZE.default
+    const targetSize = MODEL_TARGET_SIZE.default
     return { model: clone, center, scale: targetSize / maxDimension }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
@@ -562,7 +554,7 @@ export default function GuitarCanvas() {
         <SingleCutFinishFallback />
       ) : (
         <Canvas
-          camera={{ position: [0.35, 0.25, 5.35], fov: 37 }}
+          camera={{ position: [0.35, 0.25, 8], fov: 37 }}
           gl={{ antialias: true, alpha: false }}
           style={{ background: 'radial-gradient(circle at 50% 45%, #17151a 0%, #09090B 62%)', width: '100%', height: '100%' }}
           shadows
