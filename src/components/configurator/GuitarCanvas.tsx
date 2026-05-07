@@ -489,7 +489,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
         {shape.id === 'modern-s' ? (
-          <group key={model.uuid} rotation={[0, 0, Math.PI]}>
+          <group key={model.uuid} rotation={[0, Math.PI, Math.PI]}>
             <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
           </group>
         ) : (
@@ -640,15 +640,15 @@ export default function GuitarCanvas() {
           <CameraControls view={view} />
           <Scene view={view === 'reset' ? 'standard' : view} />
           <OrbitControls
+            enableRotate={true}
             enablePan={false}
+            enableZoom={true}
             target={[0, 0, 0]}
             minDistance={3.2}
             maxDistance={10}
-            enableDamping
-            dampingFactor={0.08}
+            enableDamping={true}
+            dampingFactor={0.06}
             autoRotate={false}
-            maxPolarAngle={Math.PI * 0.75}
-            minPolarAngle={Math.PI * 0.2}
           />
         </Canvas>
       )}
