@@ -499,13 +499,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         ) : (
           <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
         )}
-        {shape.id === 'modern-s' && (
-          <group scale={0.74}>
-            <StratOptionOverlays colors={colors} />
-            <PickguardOverlay />
-            <FretboardOverlay colors={colors} />
-          </group>
-        )}
       </group>
     </Center>
   )
