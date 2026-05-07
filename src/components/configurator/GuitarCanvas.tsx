@@ -441,9 +441,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
     const maxDimension = Math.max(size.x, size.y, size.z) || 1
     const targetSize = MODEL_TARGET_SIZE.default
     const modernSBodyMesh = shape.id === 'modern-s' ? selectModernSBodyMesh(clone) : null
-    if (shape.id === 'modern-s') {
-      clone.rotation.set(0, Math.PI, 0)
-    }
     return { model: clone, center, scale: targetSize / maxDimension, modernSBodyMesh }
   }, [scene, shape.id])
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
@@ -491,7 +488,7 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   return (
     <Center>
       {shape.id === 'modern-s' ? (
-        <primitive key={model.uuid} object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+        <primitive key={model.uuid} object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} rotation={[0, Math.PI, 0]} scale={scale} />
       ) : (
         <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
           <primitive key={model.uuid} object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
