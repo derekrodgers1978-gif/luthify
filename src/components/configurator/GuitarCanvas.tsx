@@ -24,6 +24,13 @@ type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'ot
 
 const MODERN_S_BODY_MODEL_PATH = '/models/s-style-electric.glb'
 
+type ModernSMeshBounds = {
+  mesh: THREE.Mesh
+  name: string
+  size: THREE.Vector3
+  bodyScore: number
+}
+
 function bodyModelPath(shape: { id: string; modelPath?: string }) {
   return shape.id === 'modern-s' ? MODERN_S_BODY_MODEL_PATH : shape.modelPath
 }
@@ -88,6 +95,12 @@ function materialRole(matName: string): MaterialRole {
 
 function blendHexColors(from: string, to: string, amount: number) {
   return `#${new THREE.Color(from).lerp(new THREE.Color(to), amount).getHexString()}`
+}
+
+function modernSBodyScore(size: THREE.Vector3) {
+  // The body is the broadest visible face; long floating parts should not outrank it by length.
+  const dimensions = [size.x, size.y, size.z].sort((a, b) => b - a)
+  return dimensions[0] * dimensions[1]
 }
 
 function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOption, hw?: HardwareOption) {
@@ -385,25 +398,73 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   const colors = useMemo(() => makeColors(finish, neck, board, hw), [board, finish, hw, neck])
 
   useEffect(() => {
-    let foundModernSBodyMaterial = false
-    const modernSMeshMaterialReport: string[] = []
+    let largestModernSMesh: THREE.Mesh | null = null
+
+    if (shape.id === 'modern-s') {
+      const modernSMeshBounds: ModernSMeshBounds[] = []
+
+      model.traverse(obj => {
+        if (!(obj as THREE.Mesh).isMesh) return
+        const mesh = obj as THREE.Mesh
+        mesh.visible = true
+      })
+
+      model.updateMatrixWorld(true)
+
+      model.traverse(obj => {
+        if (!(obj as THREE.Mesh).isMesh) return
+        const mesh = obj as THREE.Mesh
+        if (!mesh.visible) return
+
+        const box = new THREE.Box3().setFromObject(mesh)
+        if (box.isEmpty()) return
+
+        const size = box.getSize(new THREE.Vector3())
+        modernSMeshBounds.push({
+          mesh,
+          name: mesh.name || '<unnamed>',
+          size,
+          bodyScore: modernSBodyScore(size),
+        })
+      })
+
+      console.info(
+        '[modern-s body-only] visible mesh bounds:',
+        modernSMeshBounds
+          .map(({ name, size }) => `${name}=(${size.x.toFixed(6)}, ${size.y.toFixed(6)}, ${size.z.toFixed(6)})`)
+          .join('; '),
+      )
+
+      const largestModernSMeshBounds = modernSMeshBounds.reduce<ModernSMeshBounds | null>(
+        (largest, current) => (!largest || current.bodyScore > largest.bodyScore ? current : largest),
+        null,
+      )
+
+      if (!largestModernSMeshBounds) {
+        throw new Error('No visible meshes found in modern-s model.')
+      }
+
+      largestModernSMesh = largestModernSMeshBounds.mesh
+
+      const hiddenModernSMeshNames: string[] = []
+      modernSMeshBounds.forEach(({ mesh, name }) => {
+        const isLargestBodyMesh = mesh === largestModernSMesh
+        mesh.visible = isLargestBodyMesh
+        if (!isLargestBodyMesh) hiddenModernSMeshNames.push(name)
+      })
+
+      console.info('[modern-s body-only] showing mesh:', largestModernSMeshBounds.name)
+      console.info('[modern-s body-only] hidden meshes:', hiddenModernSMeshNames.join(', '))
+    }
 
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
-      const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
-      const matName = (mat as THREE.MeshStandardMaterial).name
 
-      if (shape.id === 'modern-s') {
-        modernSMeshMaterialReport.push(`mesh="${mesh.name || '<unnamed>'}" material="${matName || '<unnamed>'}"`)
-        if (matName !== 'BodyMaterial') {
-          mesh.visible = false
-          return
-        }
-        foundModernSBodyMaterial = true
+      if (shape.id !== 'modern-s') {
         mesh.visible = true
-      } else {
-        mesh.visible = true
+      } else if (mesh !== largestModernSMesh) {
+        return
       }
 
       mesh.castShadow = true
@@ -430,9 +491,6 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       })
     })
 
-    if (shape.id === 'modern-s' && !foundModernSBodyMaterial) {
-      throw new Error(`No mesh with material name BodyMaterial found in modern-s model. Mesh/material report: ${modernSMeshMaterialReport.join('; ')}`)
-    }
   }, [colors, model, shape.id])
 
   const baseRotation = MODEL_ROTATION[shape.id] ?? [0, 0, 0]
@@ -441,7 +499,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
   return (
     <Center>
       <group rotation={[baseRotation[0], yRotation, baseRotation[2]]}>
-        <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+        {shape.id === 'modern-s' ? (
+          <group rotation={[0, 0, Math.PI]}>
+            <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+          </group>
+        ) : (
+          <primitive object={model} position={[-center.x * scale, -center.y * scale, -center.z * scale]} scale={scale} />
+        )}
         {shape.id === 'modern-s' && (
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
