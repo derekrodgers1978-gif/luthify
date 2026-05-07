@@ -23,66 +23,24 @@ const CAMERA_DISTANCE: Record<string, number> = {
 
 type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
 
-const MODERN_S_BODY_MODEL_PATH = '/models/s-style-electric.glb'
-
-type ModernSMeshBounds = {
-  mesh: THREE.Mesh
-  name: string
-  volume: number
-  isBodyMesh: boolean
-}
+const MODERN_S_BODY_MODEL_PATH = '/models/s-style-body-front-routed.glb'
 
 function selectModernSBodyMesh(model: THREE.Object3D) {
-  const modernSMeshBounds: ModernSMeshBounds[] = []
+  let bodyMesh: THREE.Mesh | null = null
 
   model.traverse(obj => {
     if (!(obj as THREE.Mesh).isMesh) return
     const mesh = obj as THREE.Mesh
-    mesh.visible = true
+    const isBodyMesh = mesh.name === 'BODY'
+    mesh.visible = isBodyMesh
+    if (isBodyMesh) bodyMesh = mesh
   })
 
-  model.updateMatrixWorld(true)
-
-  model.traverse(obj => {
-    if (!(obj as THREE.Mesh).isMesh) return
-    const mesh = obj as THREE.Mesh
-    const box = new THREE.Box3().setFromObject(mesh)
-    if (box.isEmpty()) return
-
-    const size = box.getSize(new THREE.Vector3())
-    const volume = size.x * size.y * size.z
-    const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    const name = mesh.name || '<unnamed>'
-    console.log('[modern-s body-only] mesh volume:', name, volume)
-    modernSMeshBounds.push({
-      mesh,
-      name,
-      volume,
-      isBodyMesh: sourceMaterials.some(mat => materialRole(mat.name) === 'body'),
-    })
-  })
-
-  const bodyMeshBounds = modernSMeshBounds.filter(({ isBodyMesh }) => isBodyMesh)
-  const largestModernSMeshBounds = (bodyMeshBounds.length > 0 ? bodyMeshBounds : modernSMeshBounds).reduce<ModernSMeshBounds | null>(
-    (largest, current) => (!largest || current.volume > largest.volume ? current : largest),
-    null,
-  )
-
-  if (!largestModernSMeshBounds) {
-    throw new Error('No visible meshes found in modern-s model.')
+  if (!bodyMesh) {
+    throw new Error('No BODY mesh found in modern-s model.')
   }
 
-  const hiddenModernSMeshNames: string[] = []
-  modernSMeshBounds.forEach(({ mesh, name }) => {
-    const isLargestBodyMesh = mesh === largestModernSMeshBounds.mesh
-    mesh.visible = isLargestBodyMesh
-    if (!isLargestBodyMesh) hiddenModernSMeshNames.push(name)
-  })
-
-  console.log('[modern-s body-only] showing mesh:', largestModernSMeshBounds.name)
-  console.log('[modern-s body-only] hidden meshes:', hiddenModernSMeshNames.join(', '))
-
-  return largestModernSMeshBounds.mesh
+  return bodyMesh
 }
 
 function bodyModelPath(shape: { id: string; modelPath?: string }) {
