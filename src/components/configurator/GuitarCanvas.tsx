@@ -28,7 +28,7 @@ const CAMERA_DISTANCE: Record<string, number> = {
   default: 6.4,
 }
 
-type MaterialRole = 'body' | 'neck' | 'hardware' | 'strings' | 'pickguard' | 'other'
+type MaterialRole = 'body' | 'neck' | 'fretboard' | 'hardware' | 'strings' | 'pickguard' | 'other'
 
 const MODEL_PATHS = BODY_SHAPES.map(shape => shape.modelPath).filter(Boolean) as string[]
 MODEL_PATHS.forEach(path => useGLTF.preload(path))
@@ -57,14 +57,14 @@ type BoardOption = { id: string; hex?: string }
 type HardwareOption = { id: string }
 
 const NECK_COLORS: Record<string, string> = {
-  maple: '#F2D49B',
+  maple: '#E8D4A8',
   mahogany: '#8B4513',
   walnut: '#5C3317',
   roasted: '#C68642',
 }
 
 const FRETBOARD_COLORS: Record<string, string> = {
-  rosewood: '#3D1C02',
+  rosewood: '#4A2C1A',
   ebony: '#1A0A00',
   maple: '#F2D49B',
   pau: '#3A1800',
@@ -81,11 +81,34 @@ const HARDWARE_FINISHES: Record<string, { color: string; metalness: number; roug
 function materialRole(matName: string): MaterialRole {
   const name = matName.toLowerCase()
   if (name.includes('body')) return 'body'
-  if (name.includes('neck') || name.includes('wood') || name.includes('fret') || name.includes('board')) return 'neck'
   if (name.includes('plastic') || name.includes('pickguard')) return 'pickguard'
+  if (name.includes('fretboard') || name.includes('fingerboard') || name.includes('board')) return 'fretboard'
+  if (name.includes('neck') || name.includes('wood')) return 'neck'
   if (name.includes('metal') || name.includes('chrome') || name.includes('hardware') || name.includes('knob')) return 'hardware'
   if (name.includes('string')) return 'strings'
   return 'other'
+}
+
+function meshMaterialRole(mesh: THREE.Mesh, material: THREE.Material): MaterialRole {
+  return materialRole(`${mesh.name} ${material.name}`)
+}
+
+function meshMaterials(material: THREE.Material | THREE.Material[]) {
+  return Array.isArray(material) ? material : [material]
+}
+
+function cloneMeshMaterial(material: THREE.Material | THREE.Material[]) {
+  return Array.isArray(material) ? material.map(mat => mat.clone()) : material.clone()
+}
+
+function cloneSceneWithIndependentMaterials(scene: THREE.Object3D) {
+  const clone = scene.clone(true)
+  clone.traverse(obj => {
+    if (!(obj as THREE.Mesh).isMesh) return
+    const mesh = obj as THREE.Mesh
+    mesh.material = cloneMeshMaterial(mesh.material as THREE.Material | THREE.Material[])
+  })
+  return clone
 }
 
 function blendHexColors(from: string, to: string, amount: number) {
@@ -111,7 +134,7 @@ function makeColors(finish?: FinishOption, neck?: WoodOption, board?: BoardOptio
     hardwareMetalness: hardware.metalness,
     hardwareRoughness: hardware.roughness,
     strings: '#DDE2EA',
-    pickguard: '#F2EEE2',
+    pickguard: '#F4F1EA',
   }
 }
 
@@ -170,6 +193,18 @@ function applyWoodMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<t
   mat.roughness = 0.44
 }
 
+function applyFretboardMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  mat.color = new THREE.Color(colors.board)
+  mat.metalness = 0.02
+  mat.roughness = 0.48
+}
+
+function applyPickguardMaterial(mat: THREE.MeshStandardMaterial, colors: ReturnType<typeof makeColors>) {
+  mat.color = new THREE.Color(colors.pickguard)
+  mat.metalness = 0.02
+  mat.roughness = 0.34
+}
+
 function hardwareMaterialProps(colors: ReturnType<typeof makeColors>) {
   return {
     color: colors.hardware,
@@ -187,33 +222,31 @@ function enhanceMaterial(role: MaterialRole, material: THREE.Material, colors: R
     applyHardwareMaterial(mat, colors)
   } else if (role === 'neck') {
     applyWoodMaterial(mat, colors)
+  } else if (role === 'fretboard') {
+    applyFretboardMaterial(mat, colors)
   } else if (role === 'strings') {
     mat.color = new THREE.Color(colors.strings)
     mat.metalness = 0.7
     mat.roughness = 0.26
   } else if (role === 'pickguard') {
-    mat.color = new THREE.Color(colors.pickguard)
-    mat.metalness = 0.02
-    mat.roughness = 0.34
+    applyPickguardMaterial(mat, colors)
   } else if (role === 'body') {
     applyBodyMaterial(mat, colors)
   }
   mat.needsUpdate = true
 }
 
-function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typeof makeColors>) {
+function enhanceModernSMaterial(role: MaterialRole, material: THREE.Material, colors: ReturnType<typeof makeColors>) {
   const mat = material as THREE.MeshStandardMaterial
   if (!mat.isMeshStandardMaterial) return
-  const role = materialRole(mat.name)
   if (role === 'other') return
   mat.envMapIntensity = 1.8
   if (role === 'body') {
     applyBodyMaterial(mat, colors)
   } else if (role === 'neck') {
-    mat.color = new THREE.Color(colors.neck)
-    mat.metalness = 0.02
-    mat.roughness = 0.44
-    mat.needsUpdate = true
+    applyWoodMaterial(mat, colors)
+  } else if (role === 'fretboard') {
+    applyFretboardMaterial(mat, colors)
   } else if (role === 'hardware') {
     applyHardwareMaterial(mat, colors)
   } else if (role === 'strings') {
@@ -221,9 +254,7 @@ function enhanceModernSMaterial(material: THREE.Material, colors: ReturnType<typ
     mat.metalness = 0.7
     mat.roughness = 0.26
   } else if (role === 'pickguard') {
-    mat.color = new THREE.Color(colors.pickguard)
-    mat.metalness = 0.02
-    mat.roughness = 0.34
+    applyPickguardMaterial(mat, colors)
   }
   mat.needsUpdate = true
 }
@@ -290,24 +321,46 @@ function StratOptionOverlays({ colors }: { colors: ReturnType<typeof makeColors>
   )
 }
 
-function PickguardOverlay() {
+function PickguardOverlay({ colors }: { colors: ReturnType<typeof makeColors> }) {
   const { scene } = useGLTF('/models/fender_style_pickguard_strat_s3.glb')
+  const model = useMemo(() => cloneSceneWithIndependentMaterials(scene), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      const mesh = obj as THREE.Mesh
+      meshMaterials(mesh.material as THREE.Material | THREE.Material[]).forEach(mat => {
+        enhanceMaterial('pickguard', mat, colors)
+      })
+    })
+  }, [colors, model])
 
   return (
     <primitive
-      object={scene}
+      object={model}
       position={[0, 0, 0.001]}
       name="PICKGUARD"
     />
   )
 }
 
-function NeckOverlay() {
+function NeckOverlay({ colors }: { colors: ReturnType<typeof makeColors> }) {
   const { scene } = useGLTF('/models/fender_style_neck_no_fretboard.glb')
+  const model = useMemo(() => cloneSceneWithIndependentMaterials(scene), [scene])
+
+  useEffect(() => {
+    model.traverse(obj => {
+      if (!(obj as THREE.Mesh).isMesh) return
+      const mesh = obj as THREE.Mesh
+      meshMaterials(mesh.material as THREE.Material | THREE.Material[]).forEach(mat => {
+        enhanceMaterial('neck', mat, colors)
+      })
+    })
+  }, [colors, model])
 
   return (
     <primitive
-      object={scene}
+      object={model}
       position={[0, 0, 0.001]}
       name="NECK_NO_FRETBOARD"
     />
@@ -318,43 +371,44 @@ function NeckOverlay() {
 function FretboardOverlay({ colors }: {
   colors: ReturnType<typeof makeColors>
 }) {
-  const board = useConfigStore(s => s.fretboard)
   const shape = useConfigStore(s => s.shape)
   const path = shape === 'modern-s' ? '/models/fretboard_strat.glb' : '/models/fretboard_gibson.glb'
   const { scene } = useGLTF(path)
 
-  const model = useMemo(() => scene.clone(true), [scene])
+  const model = useMemo(() => cloneSceneWithIndependentMaterials(scene), [scene])
 
   useEffect(() => {
     model.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const mesh = obj as THREE.Mesh
-      const mat = mesh.material as THREE.MeshStandardMaterial
-      if (!mat?.isMeshStandardMaterial) return
 
-      if (mesh.name === 'Fretboard') {
-        mat.color = new THREE.Color(FRETBOARD_COLORS[board] ?? FRETBOARD_COLORS.rosewood)
-        mat.roughness = 0.48
-        mat.metalness = 0.02
-        mat.envMapIntensity = 1.4
-        mat.needsUpdate = true
-      }
-      if (mesh.name === 'Frets') {
-        mat.color = new THREE.Color('#C8C8C8')
-        mat.metalness = 0.85
-        mat.roughness = 0.2
-        mat.envMapIntensity = 1.8
-        mat.needsUpdate = true
-      }
-      if (mesh.name === 'Inlays') {
-        mat.color = new THREE.Color('#E8E8EC')
-        mat.roughness = 0.1
-        mat.metalness = 0.0
-        mat.envMapIntensity = 2.0
-        mat.needsUpdate = true
-      }
+      meshMaterials(mesh.material as THREE.Material | THREE.Material[]).forEach(material => {
+        const mat = material as THREE.MeshStandardMaterial
+        if (!mat?.isMeshStandardMaterial) return
+
+        if (mesh.name === 'Frets') {
+          mat.color = new THREE.Color('#C8C8C8')
+          mat.metalness = 0.85
+          mat.roughness = 0.2
+          mat.envMapIntensity = 1.8
+          mat.needsUpdate = true
+          return
+        }
+
+        if (mesh.name === 'Inlays') {
+          mat.color = new THREE.Color('#E8E8EC')
+          mat.roughness = 0.1
+          mat.metalness = 0.0
+          mat.envMapIntensity = 2.0
+          mat.needsUpdate = true
+          return
+        }
+
+        const role = meshMaterialRole(mesh, material)
+        enhanceMaterial(role === 'other' ? 'fretboard' : role, material, colors)
+      })
     })
-  }, [board, colors, model])
+  }, [colors, model])
 
   return (
     <primitive
@@ -411,13 +465,13 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
       }
       if (shape.id === 'modern-s') {
         materials.forEach(mat => {
-          enhanceModernSMaterial(mat, colors)
+          enhanceModernSMaterial(meshMaterialRole(mesh, mat), mat, colors)
         })
         return
       }
 
       materials.forEach(mat => {
-        enhanceMaterial(materialRole(mat.name), mat, colors)
+        enhanceMaterial(meshMaterialRole(mesh, mat), mat, colors)
       })
     })
   }, [colors, model, shape.id])
@@ -432,8 +486,8 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         {shape.id === 'modern-s' && (
           <group scale={0.74}>
             <StratOptionOverlays colors={colors} />
-            <PickguardOverlay />
-            <NeckOverlay />
+            <PickguardOverlay colors={colors} />
+            <NeckOverlay colors={colors} />
             <FretboardOverlay colors={colors} />
           </group>
         )}
