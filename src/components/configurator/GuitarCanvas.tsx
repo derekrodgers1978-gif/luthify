@@ -28,6 +28,7 @@ type ModernSMeshBounds = {
   mesh: THREE.Mesh
   name: string
   volume: number
+  isBodyMesh: boolean
 }
 
 function bodyModelPath(shape: { id: string; modelPath?: string }) {
@@ -415,15 +416,19 @@ function GlbInstrument({ view }: { view: 'standard' | 'detail' }) {
         const size = box.getSize(new THREE.Vector3())
         const volume = size.x * size.y * size.z
         const name = mesh.name || '<unnamed>'
+        const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        const isBodyMesh = sourceMaterials.some(mat => materialRole(mat.name) === 'body')
         console.log('[modern-s body-only] mesh volume:', name, volume)
         modernSMeshBounds.push({
           mesh,
           name,
           volume,
+          isBodyMesh,
         })
       })
 
-      const largestModernSMeshBounds = modernSMeshBounds.reduce<ModernSMeshBounds | null>(
+      const bodyMeshBounds = modernSMeshBounds.filter(({ isBodyMesh }) => isBodyMesh)
+      const largestModernSMeshBounds = (bodyMeshBounds.length > 0 ? bodyMeshBounds : modernSMeshBounds).reduce<ModernSMeshBounds | null>(
         (largest, current) => (!largest || current.volume > largest.volume ? current : largest),
         null,
       )
